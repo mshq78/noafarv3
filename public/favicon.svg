@@ -1,0 +1,13 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Detached ninth dot - amber-300 accent -->
+  <circle cx="50" cy="8" r="7.5" fill="#FFCC6D" />
+  <!-- Eight dots forming Persian Nun (ن) -->
+  <circle cx="36" cy="30" r="9.5" fill="#0A0A0A" />
+  <circle cx="64" cy="30" r="9.5" fill="#0A0A0A" />
+  <circle cx="21" cy="50" r="9.5" fill="#0A0A0A" />
+  <circle cx="50" cy="50" r="9.5" fill="#0A0A0A" />
+  <circle cx="79" cy="50" r="9.5" fill="#0A0A0A" />
+  <circle cx="36" cy="70" r="9.5" fill="#0A0A0A" />
+  <circle cx="64" cy="70" r="9.5" fill="#0A0A0A" />
+  <circle cx="50" cy="90" r="9.5" fill="#0A0A0A" />
+</svg>
