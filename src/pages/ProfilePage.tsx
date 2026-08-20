@@ -16,6 +16,9 @@ import {
   ArrowLeft,
   ExternalLink,
   PlusCircle,
+  Shield,
+  ShieldAlert,
+  RotateCw,
 } from 'lucide-react';
 import {
   Submission,
@@ -182,13 +185,29 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
+                <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-black text-ink-900">
                     {user.displayName || 'کاربر نوآفر'}
                   </h1>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-sky-50 text-sky-700 border border-sky-200">
-                    {user.role === 'admin' ? 'مدیر ارشد' : 'کنشگر نوآوری اجتماعی'}
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${
+                    user.role === 'admin'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : user.role === 'operator'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-sky-50 text-sky-700 border-sky-200'
+                  }`}>
+                    {user.role === 'admin' ? 'مدیر ارشد سامانه' : user.role === 'operator' ? 'اپراتور و ناظر' : 'کنشگر نوآوری اجتماعی'}
                   </span>
+
+                  {(user.role === 'admin' || user.role === 'operator') && (
+                    <Link
+                      to="/admin"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-sky-800 bg-sky-100/90 hover:bg-sky-200/90 rounded-lg transition-colors"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>ورود به پنل مدیریت</span>
+                    </Link>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-ink-500 font-sans">

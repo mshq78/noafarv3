@@ -22,9 +22,9 @@ export const AttachmentsList: React.FC<AttachmentsListProps> = ({
       </div>
 
       <div className="space-y-2">
-        {attachments.map((att) => (
+        {attachments.filter((att) => Boolean(att?.url)).map((att) => (
           <a
-            key={att.id}
+            key={att.id || att.url}
             href={att.url}
             download={att.fileName || 'download'}
             className="flex items-center justify-between p-3 bg-white rounded-lg border border-ink-200 hover:border-sky-300 hover:shadow-xs transition-all group"

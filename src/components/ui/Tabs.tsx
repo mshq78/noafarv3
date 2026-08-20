@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { cn } from '../../utils/cn';
 
 export interface TabItem {
@@ -23,11 +23,60 @@ export const Tabs: React.FC<TabsProps> = ({
   className,
   variant = 'underline',
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftStartRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (e.deltaY !== 0 && Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
+      el.scrollBy({
+        left: -e.deltaY * 1.5,
+        behavior: 'auto',
+      });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (!el) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - el.offsetLeft;
+    scrollLeftStartRef.current = el.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startXRef.current) * 1.3;
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    el.scrollLeft = scrollLeftStartRef.current - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
+
   if (variant === 'pills') {
     return (
       <div
+        ref={containerRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
         className={cn(
-          'flex items-center gap-1.5 p-1 bg-ink-100/80 rounded-lg overflow-x-auto scrollbar-none',
+          'flex items-center gap-1.5 p-1 bg-ink-100/80 rounded-lg overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing select-none',
           className
         )}
         role="tablist"
@@ -39,7 +88,11 @@ export const Tabs: React.FC<TabsProps> = ({
               key={tab.id}
               role="tab"
               aria-selected={isActive}
-              onClick={() => onChange(tab.id)}
+              onClick={() => {
+                if (!hasMovedRef.current) {
+                  onChange(tab.id);
+                }
+              }}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md whitespace-nowrap transition-all select-none cursor-pointer',
                 isActive
@@ -68,8 +121,14 @@ export const Tabs: React.FC<TabsProps> = ({
 
   return (
     <div
+      ref={containerRef}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUpOrLeave}
+      onMouseLeave={handleMouseUpOrLeave}
       className={cn(
-        'flex items-center gap-6 border-b border-ink-200 overflow-x-auto scrollbar-none',
+        'flex items-center gap-6 border-b border-ink-200 overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing select-none',
         className
       )}
       role="tablist"
@@ -81,7 +140,11 @@ export const Tabs: React.FC<TabsProps> = ({
             key={tab.id}
             role="tab"
             aria-selected={isActive}
-            onClick={() => onChange(tab.id)}
+            onClick={() => {
+              if (!hasMovedRef.current) {
+                onChange(tab.id);
+              }
+            }}
             className={cn(
               'flex items-center gap-2 py-3.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors select-none cursor-pointer',
               isActive
@@ -107,3 +170,4 @@ export const Tabs: React.FC<TabsProps> = ({
     </div>
   );
 };
+

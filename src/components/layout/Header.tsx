@@ -11,6 +11,7 @@ import {
   Bookmark,
   LayoutDashboard,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { Logo } from '../brand/Logo';
 import { SECTION_LIST } from '../../config/sections';
@@ -140,6 +141,16 @@ export const Header: React.FC = () => {
                     </div>
 
                     <div className="py-1">
+                      {(user.role === 'admin' || user.role === 'operator') && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-sky-700 bg-sky-50/70 hover:bg-sky-100/70 border-b border-sky-100/60"
+                        >
+                          <Shield className="w-4 h-4 text-sky-600" />
+                          <span>پنل مدیریت سایت</span>
+                        </Link>
+                      )}
                       <Link
                         to="/profile"
                         onClick={() => setIsUserMenuOpen(false)}
@@ -225,7 +236,17 @@ export const Header: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 pt-2 border-t border-ink-100">
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-ink-100">
+            {(user?.role === 'admin' || user?.role === 'operator') && (
+              <Link
+                to="/admin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full p-2 text-center text-xs font-bold text-sky-800 bg-sky-100/80 rounded-lg flex items-center justify-center gap-1.5"
+              >
+                <Shield className="w-4 h-4" />
+                <span>ورود به پنل مدیریت سایت</span>
+              </Link>
+            )}
             <Link
               to="/blog"
               onClick={() => setIsMobileMenuOpen(false)}

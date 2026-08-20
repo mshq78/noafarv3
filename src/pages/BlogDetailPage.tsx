@@ -83,10 +83,10 @@ export const BlogDetailPage: React.FC = () => {
         </div>
 
         {/* Hero Image */}
-        {post.heroImage && (
+        {post.heroImage?.url && (
           <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
             <img
-              src={post.heroImage.url || '/mock/blog-cover.svg'}
+              src={post.heroImage.url}
               alt={post.title}
               className="w-full h-full object-cover"
             />
@@ -104,18 +104,14 @@ export const BlogDetailPage: React.FC = () => {
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-ink-100">
             <span className="text-xs text-ink-400">برچسب‌ها:</span>
-            {post.tags.map((t, idx) => {
-              const tagKey = typeof t === 'string' ? t : t.id || t.slug || t.nameFa || `tag-${idx}`;
-              const tagName = typeof t === 'string' ? t : t.nameFa || t.slug || '';
-              return (
-                <span
-                  key={tagKey}
-                  className="text-xs bg-ink-100 text-ink-700 px-2.5 py-1 rounded-md"
-                >
-                  #{tagName}
-                </span>
-              );
-            })}
+            {post.tags.map((t) => (
+              <span
+                key={t}
+                className="text-xs bg-ink-100 text-ink-700 px-2.5 py-1 rounded-md"
+              >
+                #{t}
+              </span>
+            ))}
           </div>
         )}
 

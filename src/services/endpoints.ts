@@ -18,6 +18,8 @@ import {
   Category,
   SectionMeta,
   Paginated,
+  ContactMessage,
+  EventRegistration,
 } from '../types';
 import { mockDb, paginateArray, SECTION_LIST } from '../mocks';
 import {
@@ -302,7 +304,7 @@ export async function postComment(
 }
 
 // ==========================================
-// 5. COURSES & PROGRESS
+// 5. COURSES & PROGRESS & VIDEO
 // ==========================================
 
 export async function updateCourseProgress(
@@ -316,6 +318,49 @@ export async function updateCourseProgress(
     mockHandler: () => {
       mockDb.updateCourseProgress(courseId, percent);
       return { success: true };
+    },
+  });
+}
+
+export async function updateCourseVideo(
+  courseId: string,
+  videoUrl: string,
+  lessonIndex?: number
+): Promise<{ success: boolean; course: Course | null }> {
+  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/video`, {
+    method: 'POST',
+    body: JSON.stringify({ videoUrl, lessonIndex }),
+    mockHandler: () => {
+      const course = mockDb.updateCourseVideo(courseId, videoUrl, lessonIndex);
+      return { success: true, course };
+    },
+  });
+}
+
+export async function addCourseLesson(
+  courseId: string,
+  lesson: { title: string; durationMinutes: number; videoUrl?: string; description?: string }
+): Promise<{ success: boolean; course: Course | null }> {
+  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/lessons`, {
+    method: 'POST',
+    body: JSON.stringify(lesson),
+    mockHandler: () => {
+      const course = mockDb.addCourseLesson(courseId, lesson);
+      return { success: true, course };
+    },
+  });
+}
+
+export async function updateCourseLessons(
+  courseId: string,
+  syllabus: any[]
+): Promise<{ success: boolean; course: Course | null }> {
+  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/syllabus`, {
+    method: 'PUT',
+    body: JSON.stringify({ syllabus }),
+    mockHandler: () => {
+      const course = mockDb.updateCourseLessons(courseId, syllabus);
+      return { success: true, course };
     },
   });
 }
@@ -339,8 +384,18 @@ export async function submitIdea(formData: FormData | Record<string, unknown>): 
     method: 'POST',
     body: formData instanceof FormData ? formData : JSON.stringify(formData),
     mockHandler: () => {
-      const title = (formData instanceof FormData ? formData.get('title') : (formData as { title: string }).title) as string || 'ایده جدید';
-      return mockDb.addIdeaSubmission(title, '', '');
+      let data: any = {};
+      if (formData instanceof FormData) {
+        data = {
+          title: formData.get('title') as string,
+          fieldSlug: formData.get('fieldSlug') as string,
+          summary: formData.get('summary') as string,
+          body: formData.get('body') as string,
+        };
+      } else {
+        data = formData;
+      }
+      return mockDb.addIdeaSubmission(data);
     },
   });
 }
@@ -350,8 +405,21 @@ export async function submitExperience(formData: FormData | Record<string, unkno
     method: 'POST',
     body: formData instanceof FormData ? formData : JSON.stringify(formData),
     mockHandler: () => {
-      const title = (formData instanceof FormData ? formData.get('title') : (formData as { title: string }).title) as string || 'تجربه جدید';
-      return mockDb.addExperienceSubmission(title, '');
+      let data: any = {};
+      if (formData instanceof FormData) {
+        data = {
+          title: formData.get('title') as string,
+          fieldSlug: formData.get('fieldSlug') as string,
+          summary: formData.get('summary') as string,
+          body: formData.get('body') as string,
+          region: formData.get('region') as string,
+          organization: formData.get('organization') as string,
+          keyImpactMetric: formData.get('keyImpactMetric') as string,
+        };
+      } else {
+        data = formData;
+      }
+      return mockDb.addExperienceSubmission(data);
     },
   });
 }
@@ -422,7 +490,7 @@ export async function deleteMyCanvas(id: string): Promise<{ success: boolean }> 
   return request<{ success: boolean }>(`/me/canvases/${id}`, {
     method: 'DELETE',
     mockHandler: () => {
-      mockDb.canvases = mockDb.canvases.filter((c) => c.id !== id);
+      mockDb.deleteCanvas(id);
       return { success: true };
     },
   });
@@ -543,10 +611,194 @@ export async function getBlogPostDetail(slug: string): Promise<BlogPost> {
   });
 }
 
-export async function submitContact(data: { name: string; phone: string; message: string }): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>('/contact', {
+export async function submitContact(data: { name: string; phone: string; subject?: string; message: string }): Promise<{ success: boolean; id: string }> {
+  return request<{ success: boolean; id: string }>('/contact', {
     method: 'POST',
     body: JSON.stringify(data),
-    mockHandler: () => ({ success: true }),
+    mockHandler: () => {
+      const msg = mockDb.addContactMessage(
+        data.name,
+        data.phone,
+        data.subject || 'پیام از سایت',
+        data.message
+      );
+      return { success: true, id: msg.id };
+    },
   });
+}
+
+// ==========================================
+// 10. EVENT REGISTRATION
+// ==========================================
+
+export async function registerForEvent(eventId: string): Promise<EventRegistration> {
+  return request<EventRegistration>(`/events/${eventId}/register`, {
+    method: 'POST',
+    mockHandler: () => mockDb.registerForEvent(eventId),
+  });
+}
+
+export async function getMyEventRegistrations(): Promise<EventRegistration[]> {
+  return request<EventRegistration[]>('/me/events', {
+    method: 'GET',
+    mockHandler: () => mockDb.eventRegistrations.filter((r) => r.userId === mockDb.user.id),
+  });
+}
+
+// ==========================================
+// 11. ADMIN MANAGEMENT API
+// ==========================================
+
+export async function adminAddContent(section: SectionSlug | 'blog', content: any): Promise<ContentBase> {
+  return request<ContentBase>('/admin/content', {
+    method: 'POST',
+    body: JSON.stringify({ section, content }),
+    mockHandler: () => mockDb.addContent(section, content),
+  });
+}
+
+export async function adminUpdateContent(id: string, updates: Partial<ContentBase>): Promise<ContentBase | null> {
+  return request<ContentBase | null>(`/admin/content/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+    mockHandler: () => mockDb.updateContent(id, updates),
+  });
+}
+
+export async function adminDeleteContent(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/content/${id}`, {
+    method: 'DELETE',
+    mockHandler: () => {
+      const ok = mockDb.deleteContent(id);
+      return { success: ok };
+    },
+  });
+}
+
+export async function adminGetAllSubmissions(status?: string): Promise<Submission[]> {
+  return request<Submission[]>('/admin/submissions', {
+    method: 'GET',
+    params: { status },
+    mockHandler: () => {
+      let list = mockDb.submissions;
+      if (status && status !== 'all') {
+        list = list.filter((s) => s.status === status);
+      }
+      return list;
+    },
+  });
+}
+
+export async function adminApproveSubmission(id: string, operatorMessage?: string): Promise<Submission | null> {
+  return request<Submission | null>(`/admin/submissions/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ operatorMessage }),
+    mockHandler: () => mockDb.approveSubmission(id, operatorMessage),
+  });
+}
+
+export async function adminRequestRevisionSubmission(id: string, operatorMessage: string): Promise<Submission | null> {
+  return request<Submission | null>(`/admin/submissions/${id}/revision`, {
+    method: 'POST',
+    body: JSON.stringify({ operatorMessage }),
+    mockHandler: () => mockDb.requestRevisionSubmission(id, operatorMessage),
+  });
+}
+
+export async function adminRejectSubmission(id: string, operatorMessage?: string): Promise<Submission | null> {
+  return request<Submission | null>(`/admin/submissions/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ operatorMessage }),
+    mockHandler: () => mockDb.rejectSubmission(id, operatorMessage),
+  });
+}
+
+export async function adminGetAllComments(): Promise<(Comment & { contentTitle?: string })[]> {
+  return request<(Comment & { contentTitle?: string })[]>('/admin/comments', {
+    method: 'GET',
+    mockHandler: () => mockDb.getAllCommentsList(),
+  });
+}
+
+export async function adminApproveComment(commentId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/comments/${commentId}/approve`, {
+    method: 'POST',
+    mockHandler: () => ({ success: mockDb.approveComment(commentId) }),
+  });
+}
+
+export async function adminDeleteComment(commentId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/comments/${commentId}`, {
+    method: 'DELETE',
+    mockHandler: () => ({ success: mockDb.deleteComment(commentId) }),
+  });
+}
+
+export async function adminGetAllContactMessages(): Promise<ContactMessage[]> {
+  return request<ContactMessage[]>('/admin/contact-messages', {
+    method: 'GET',
+    mockHandler: () => mockDb.contactMessages,
+  });
+}
+
+export async function adminUpdateContactMessage(id: string, status: 'unread' | 'read' | 'replied', note?: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/contact-messages/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, note }),
+    mockHandler: () => ({ success: mockDb.updateContactMessageStatus(id, status, note) }),
+  });
+}
+
+export async function adminDeleteContactMessage(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/contact-messages/${id}`, {
+    method: 'DELETE',
+    mockHandler: () => ({ success: mockDb.deleteContactMessage(id) }),
+  });
+}
+
+export async function adminGetAllEventRegistrations(): Promise<EventRegistration[]> {
+  return request<EventRegistration[]>('/admin/event-registrations', {
+    method: 'GET',
+    mockHandler: () => mockDb.eventRegistrations,
+  });
+}
+
+export async function adminGetAllUsers(): Promise<User[]> {
+  return request<User[]>('/admin/users', {
+    method: 'GET',
+    mockHandler: () => mockDb.users,
+  });
+}
+
+export async function adminUpdateUserRole(userId: string, role: any): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+    mockHandler: () => ({ success: mockDb.updateUserRole(userId, role) }),
+  });
+}
+
+export async function adminAwardPoints(userId: string, points: number, reasonFa: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/admin/users/${userId}/points`, {
+    method: 'POST',
+    body: JSON.stringify({ points, reasonFa }),
+    mockHandler: () => {
+      mockDb.awardUserPoints(points, reasonFa, 'share');
+      return { success: true };
+    },
+  });
+}
+
+export async function adminExportDatabase(): Promise<string> {
+  return mockDb.exportJson();
+}
+
+export async function adminImportDatabase(jsonString: string): Promise<{ success: boolean }> {
+  const ok = mockDb.importJson(jsonString);
+  return { success: ok };
+}
+
+export async function adminResetDatabase(): Promise<{ success: boolean }> {
+  mockDb.resetToDefaults();
+  return { success: true };
 }

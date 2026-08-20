@@ -13,7 +13,7 @@ export const BlogPostCard: React.FC<BlogPostCardProps> = ({ post }) => {
   return (
     <div className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-sky-300 transition-all duration-200">
       <Link to={`/blog/${post.slug}`} className="relative aspect-[16/9] bg-ink-100 overflow-hidden block">
-        {post.heroImage && (
+        {post.heroImage?.url && (
           <img
             src={post.heroImage.url}
             alt={post.title}

@@ -19,6 +19,7 @@ import { BlogDetailPage } from './pages/BlogDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
+import { AdminPage } from './pages/AdminPage';
 
 // Scroll to top on route change helper
 const ScrollToTop: React.FC = () => {
@@ -138,6 +139,14 @@ export default function App() {
               element={
                 <MainLayout>
                   <ContactPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <MainLayout>
+                  <AdminPage />
                 </MainLayout>
               }
             />

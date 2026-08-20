@@ -29,7 +29,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         className="relative aspect-[16/9] bg-ink-100 overflow-hidden block"
       >
         <img
-          src={event.heroImage.url}
+          src={event.heroImage?.url || '/mock/event-cover.svg'}
           alt={event.title}
           className={cn(
             'w-full h-full object-cover transition-transform duration-300',

@@ -17,7 +17,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({ experience }) =>
         className="relative aspect-video bg-ink-100 overflow-hidden block"
       >
         <img
-          src={experience.heroImage?.url || '/mock/exp-cover.svg'}
+          src={experience.heroImage?.url || '/mock/journey-cover.svg'}
           alt={experience.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"

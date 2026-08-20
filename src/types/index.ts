@@ -1,18 +1,18 @@
 export type SectionSlug = 'academy' | 'toolbox' | 'library' | 'journey' | 'gathering' | 'spark';
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected' | 'needs_revision';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'beginner' | 'intermediate' | 'advanced';
-export type UserRole = 'guest' | 'member' | 'operator' | 'admin';
+export type UserRole = 'guest' | 'member' | 'operator' | 'admin' | 'user' | 'facilitator' | 'reviewer';
 
 export interface Category {
   id: string;
   slug: string;
   nameFa: string;
-  sectionSlug: SectionSlug;
+  sectionSlug?: SectionSlug;
 }
 
 export interface Tag {
   id: string;
-  slug: string;
+  slug?: string;
   nameFa: string;
 }
 
@@ -64,6 +64,9 @@ export interface CourseLesson {
   id: string;
   title: string;
   durationMinutes: number;
+  videoUrl?: string;
+  description?: string;
+  isCompleted?: boolean;
 }
 
 export interface Course extends ContentBase {
@@ -153,11 +156,43 @@ export interface Submission {
   sectionSlug?: string;
   slug?: string;
   body?: string;
+  fieldSlug?: string;
+  fieldNameFa?: string;
+  region?: string;
+  organization?: string;
+  keyImpactMetric?: string;
+  tags?: string[];
+  submitterId?: string;
+  submitterName?: string;
+  submitterPhone?: string;
   status: SubmissionStatus;
   operatorMessage?: string;
   submittedAt: string;
   createdAt?: string;
   publishedSlug?: string;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  phoneOrEmail: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  status: 'unread' | 'read' | 'replied';
+  adminNotes?: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  registeredAt: string;
+  ticketCode: string;
+  status: 'confirmed' | 'cancelled';
 }
 
 export interface SavedCanvas {
@@ -166,6 +201,7 @@ export interface SavedCanvas {
   toolTitle: string;
   toolSlug?: string;
   title?: string;
+  notes?: Record<string, string>;
   provider: string;
   externalCanvasId: string;
   embedUrl: string;

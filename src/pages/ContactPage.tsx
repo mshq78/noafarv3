@@ -3,8 +3,11 @@ import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2 } from 'lucide-r
 import { Button, Input, Textarea } from '../components/ui';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { DotPattern } from '../components/brand/DotPattern';
+import { submitContact } from '../services/endpoints';
+import { useToast } from '../components/ui/Toast';
 
 export const ContactPage: React.FC = () => {
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('همکاری در تولید محتوا');
@@ -12,13 +15,23 @@ export const ContactPage: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await submitContact({
+        name,
+        phone: email,
+        subject,
+        message,
+      });
       setIsSubmitted(true);
-    }, 600);
+      showToast('پیام شما با موفقیت در دبیرخانه ثبت شد.', 'success');
+    } catch {
+      showToast('خطا در ارسال پیام. لطفاً دوباره امتحان کنید.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

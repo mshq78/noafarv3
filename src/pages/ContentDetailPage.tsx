@@ -7,6 +7,8 @@ import {
   TrendingUp,
   Layout,
   ExternalLink,
+  CheckCircle2,
+  Ticket,
 } from 'lucide-react';
 import {
   SectionSlug,
@@ -14,27 +16,32 @@ import {
   Course,
   Experience,
   Event,
+  EventRegistration,
 } from '../types';
 import { SECTIONS } from '../config/sections';
-import { getContentDetail, getRelatedContent } from '../services/endpoints';
+import { getContentDetail, getRelatedContent, registerForEvent, getMyEventRegistrations } from '../services/endpoints';
 import { CoursePlayer } from '../components/course/CoursePlayer';
 import { ContentActions } from '../components/content/ContentActions';
 import { CommentSection } from '../components/content/CommentSection';
 import { RelatedContent } from '../components/content/RelatedContent';
 import { AttachmentsList } from '../components/content/AttachmentsList';
 import { Chip, Button, Skeleton } from '../components/ui';
+import { useToast } from '../components/ui/Toast';
 import { formatPersianDate } from '../utils/date';
 import { toFaDigits } from '../utils/format';
 
 export const ContentDetailPage: React.FC = () => {
   const { sectionSlug, slug } = useParams<{ sectionSlug: string; slug: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const validSection = (sectionSlug as SectionSlug) || 'academy';
   const currentSection = SECTIONS[validSection];
 
   const [content, setContent] = useState<ContentBase | null>(null);
   const [related, setRelated] = useState<ContentBase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [myRegistration, setMyRegistration] = useState<EventRegistration | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
     if (!sectionSlug || !slug) return;
@@ -50,6 +57,14 @@ export const ContentDetailPage: React.FC = () => {
           getRelatedContent(data.sectionSlug, data.slug).then((rel) => {
             if (isMounted) setRelated(rel);
           });
+
+          // If this is an event, check if already registered
+          if (data.sectionSlug === 'gathering') {
+            getMyEventRegistrations().then((regs) => {
+              const reg = regs.find((r) => r.eventId === data.id && r.status === 'confirmed');
+              if (isMounted && reg) setMyRegistration(reg);
+            });
+          }
         }
       })
       .catch(() => {
@@ -63,6 +78,20 @@ export const ContentDetailPage: React.FC = () => {
       isMounted = false;
     };
   }, [validSection, slug, navigate, sectionSlug]);
+
+  const handleEventRegister = async () => {
+    if (!content) return;
+    setIsRegistering(true);
+    try {
+      const reg = await registerForEvent(content.id);
+      setMyRegistration(reg);
+      showToast(`ثبت‌نام شما با موفقیت تایید شد! کد بلیط: ${reg.ticketCode}`, 'success');
+    } catch {
+      showToast('خطا در ثبت‌نام رویداد. لطفاً دوباره تلاش کنید.', 'error');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   if (isLoading || !content) {
     return (
@@ -246,25 +275,41 @@ export const ContentDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {((content as Event).status === 'registering' || (content as Event).registrationStatus === 'registering') && (
+            {myRegistration ? (
+              <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-bold block">شما در این رویداد ثبت‌نام کرده‌اید.</span>
+                    <span className="text-emerald-700">کد رهگیری و بلیط شما: <strong className="font-sans font-black">{myRegistration.ticketCode}</strong></span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-emerald-700 font-medium">
+                  <Ticket className="w-4 h-4" />
+                  <span>ثبت‌شده در پروفایل شما</span>
+                </div>
+              </div>
+            ) : ((content as Event).status === 'registering' || (content as Event).registrationStatus === 'registering') ? (
               <div className="pt-2 flex justify-end">
                 <Button
                   variant="accent"
                   size="md"
-                  rightIcon={<ExternalLink className="w-4 h-4" />}
+                  onClick={handleEventRegister}
+                  isLoading={isRegistering}
+                  rightIcon={<Ticket className="w-4 h-4" />}
                 >
-                  ثبت‌نام در این کارگاه
+                  ثبت‌نام مستقیم در این کارگاه (+۳۰ امتیاز)
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
         {/* Hero image for Library / Articles / General */}
-        {content.sectionSlug !== 'academy' && content.heroImage && (
+        {content.sectionSlug !== 'academy' && (content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url) && (
           <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
             <img
-              src={content.heroImage.url || '/mock/blog-cover.svg'}
+              src={content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url}
               alt={content.title}
               className="w-full h-full object-cover"
             />

@@ -29,7 +29,7 @@ export const BookCard: React.FC<BookCardProps> = ({ book }) => {
         className="relative aspect-[3/4] bg-ink-100 overflow-hidden block flex items-center justify-center"
       >
         <img
-          src={book.heroImage?.url || '/mock/book-cover.svg'}
+          src={book.coverImage?.url || book.heroImage?.url || '/mock/book-cover.svg'}
           alt={book.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"

@@ -1,11 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Heart, Send } from 'lucide-react';
+import { Mail, Phone, MapPin, Heart, Send, Shield } from 'lucide-react';
 import { Logo } from '../brand/Logo';
 import { TricolorRule } from '../brand/TricolorRule';
 import { SECTION_LIST } from '../../config/sections';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Footer: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'operator');
   return (
     <footer className="bg-ink-900 text-ink-300 text-xs border-t border-ink-800">
       {/* Top Tricolor Brand Rule */}
@@ -90,6 +93,14 @@ export const Footer: React.FC = () => {
                   تماس و همکاری سازمانی
                 </Link>
               </li>
+              {isAdmin && (
+                <li>
+                  <Link to="/admin" className="text-sky-400 hover:text-sky-300 transition-colors font-bold flex items-center gap-1">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>پنل مدیریت و راهبری</span>
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

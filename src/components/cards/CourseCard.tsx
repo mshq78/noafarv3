@@ -20,7 +20,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
         className="relative aspect-video bg-ink-100 overflow-hidden block"
       >
         <img
-          src={course.heroImage?.url || '/mock/course-thumb.svg'}
+          src={course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"
