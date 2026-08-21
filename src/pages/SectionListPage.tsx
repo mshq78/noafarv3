@@ -9,6 +9,7 @@ import { SectionFilters } from '../components/layout/SectionFilters';
 import { Button, Skeleton, EmptyState } from '../components/ui';
 import { DotPattern } from '../components/brand/DotPattern';
 import { TricolorRule } from '../components/brand/TricolorRule';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 interface SectionListPageProps {
   explicitSection?: SectionSlug;
@@ -29,6 +30,10 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  // The list refetches once typing settles rather than on every keystroke.
+  const debouncedSearch = useDebouncedValue(searchQuery, 350);
 
   // Load categories on section change
   useEffect(() => {
@@ -52,23 +57,24 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
     let isMounted = true;
     setIsLoading(true);
 
+    setLoadError('');
     getContentList(currentSlug, {
       page,
       pageSize: 12,
       category: selectedCategory,
-      q: searchQuery,
+      q: debouncedSearch,
       ...extraFilters,
     })
       .then((res) => {
-        if (isMounted) {
-          if (page === 1) {
-            setItems(res.items);
-          } else {
-            setItems((prev) => [...prev, ...res.items]);
-          }
-          setTotalCount(res.total);
-          setHasMore(res.hasMore);
-        }
+        if (!isMounted) return;
+        setItems((prev) => (page === 1 ? res.items : [...prev, ...res.items]));
+        setTotalCount(res.total);
+        setHasMore(res.hasMore);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setLoadError('بارگذاری فهرست محتوا ناموفق بود. لطفاً دوباره تلاش کنید.');
+        if (page === 1) setItems([]);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -77,7 +83,7 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
     return () => {
       isMounted = false;
     };
-  }, [currentSlug, selectedCategory, searchQuery, extraFilters, page]);
+  }, [currentSlug, selectedCategory, debouncedSearch, extraFilters, page]);
 
   const handleExtraFilterChange = (key: string, value: string | undefined) => {
     setExtraFilters((prev) => ({ ...prev, [key]: value }));
@@ -97,11 +103,7 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
         {/* Section Header Banner */}
         <div className="relative bg-white rounded-2xl p-6 sm:p-10 border border-ink-200 shadow-2xs overflow-hidden">
           <DotPattern
-            width={200}
-            height={200}
-            rows={5}
-            cols={5}
-            dotColor={
+            color={
               sectionMeta.color === 'sky'
                 ? '#0077b6'
                 : sectionMeta.color === 'pink'
@@ -159,7 +161,7 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           </div>
 
           <div className="mt-6 pt-4 border-t border-ink-100 max-w-xs">
-            <TricolorRule height={2} />
+            <TricolorRule />
           </div>
         </div>
 
@@ -182,6 +184,12 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           onClearAll={handleClearAll}
           totalCount={totalCount}
         />
+
+        {loadError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
+            {loadError}
+          </div>
+        )}
 
         {/* Cards Grid */}
         {isLoading && page === 1 ? (

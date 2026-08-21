@@ -4,6 +4,7 @@ import { Comment } from '../../types';
 import { getComments, postComment } from '../../services/endpoints';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, RichTextEditor } from '../ui';
+import { SafeHtml } from '../ui/SafeHtml';
 import { LoginPromptModal } from '../modals/LoginPromptModal';
 import { useToast } from '../ui/Toast';
 import { formatTimeAgo } from '../../utils/date';
@@ -148,9 +149,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
                 )}
               </div>
 
-              <div 
+              <SafeHtml
                 className="text-sm text-ink-700 leading-relaxed ps-10 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: comment.body }}
+                html={comment.body}
               />
             </div>
           ))

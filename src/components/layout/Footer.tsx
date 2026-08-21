@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-ink-900 text-ink-300 text-xs border-t border-ink-800">
       {/* Top Tricolor Brand Rule */}
-      <TricolorRule height={4} />
+      <TricolorRule />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
@@ -35,7 +35,7 @@ export const Footer: React.FC = () => {
                 <Send className="w-4 h-4" />
               </a>
               <a
-                href="mailto:{settings.contactEmail}"
+                href={`mailto:${settings.contactEmail ?? ''}`}
                 className="p-2 bg-ink-800 hover:bg-sky-600 hover:text-white rounded-lg transition-colors"
                 aria-label="ایمیل نوآفر"
               >

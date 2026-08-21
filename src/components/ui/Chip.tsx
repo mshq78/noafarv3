@@ -3,7 +3,8 @@ import { cn } from '../../utils/cn';
 
 interface ChipProps {
   children: React.ReactNode;
-  variant?: 'default' | 'sky' | 'pink' | 'amber' | 'ink';
+  /** `primary` and `neutral` are legacy aliases of `sky` and `default`. */
+  variant?: 'default' | 'sky' | 'pink' | 'amber' | 'ink' | 'primary' | 'neutral';
   size?: 'sm' | 'md';
   className?: string;
   onClick?: () => void;
@@ -39,6 +40,9 @@ export const Chip: React.FC<ChipProps> = ({
     ink: 'bg-ink-50 text-ink-700 border-ink-200',
   };
 
+  const resolvedVariant =
+    variant === 'primary' ? 'sky' : variant === 'neutral' ? 'default' : variant;
+
   return (
     <span
       onClick={onClick}
@@ -46,7 +50,7 @@ export const Chip: React.FC<ChipProps> = ({
         'inline-flex items-center rounded-full font-medium border whitespace-nowrap select-none transition-colors',
         onClick ? 'cursor-pointer' : '',
         sizeClasses[size],
-        variantClasses[variant],
+        variantClasses[resolvedVariant],
         className
       )}
     >

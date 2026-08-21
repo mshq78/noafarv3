@@ -1,27 +1,28 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 import { User } from '../types';
-import { getAuthToken, setAuthToken, clearAuthToken } from './api';
-import { requestOtp as apiRequestOtp, verifyOtp as apiVerifyOtp, getMe, syncMockUserWithFirebase } from './endpoints';
-import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  getMe,
+  logout as apiLogout,
+  requestOtp as apiRequestOtp,
+  verifyOtp as apiVerifyOtp,
+  type OtpRequestResult,
+} from './endpoints';
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 type AuthAction =
-  | { type: 'LOGIN'; payload: { user: User; token: string } }
+  | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SET_USER'; payload: User }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'MERGE_USER'; payload: Partial<User> }
+  | { type: 'READY' };
 
 const initialAuthState: AuthState = {
   user: null,
-  token: null,
   isAuthenticated: false,
   isLoading: true,
 };
@@ -29,43 +30,29 @@ const initialAuthState: AuthState = {
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'LOGIN':
-      return {
-        ...state,
-        user: action.payload.user,
-        token: action.payload.token,
-        isAuthenticated: true,
-        isLoading: false,
-      };
-    case 'LOGOUT':
-      return {
-        ...state,
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      };
+      return { user: action.payload, isAuthenticated: true, isLoading: false };
     case 'SET_USER':
-      return {
-        ...state,
-        user: action.payload,
-      };
-    case 'SET_LOADING':
-      return {
-        ...state,
-        isLoading: action.payload,
-      };
+      return { ...state, user: action.payload, isAuthenticated: true };
+    case 'MERGE_USER':
+      return state.user
+        ? { ...state, user: { ...state.user, ...action.payload } }
+        : state;
+    case 'LOGOUT':
+      return { user: null, isAuthenticated: false, isLoading: false };
+    case 'READY':
+      return { ...state, isLoading: false };
     default:
       return state;
   }
 }
 
 export interface AuthContextType extends AuthState {
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
   refreshProfile: () => Promise<void>;
-  requestOtp: (phone: string) => Promise<{ expiresInSeconds: number }>;
-  verifyOtp: (phone: string, code: string) => Promise<{ token: string; user: User }>;
+  requestOtp: (phone: string) => Promise<OtpRequestResult>;
+  verifyOtp: (phone: string, code: string) => Promise<{ user: User }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,92 +60,73 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
 
+  /**
+   * The session lives in an httpOnly cookie, so the only way to know who the
+   * visitor is, is to ask the server. Nothing about identity or role is read
+   * from localStorage, which is what made the old client-side "admin" flag
+   * forgeable.
+   */
   useEffect(() => {
-    // Check localStorage on mount
-    const savedToken = getAuthToken();
-    const savedUserJson = localStorage.getItem('noafar:auth:user');
-    
-    // Listen to Firebase Auth state
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Fetch custom user profile from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as User;
-          syncMockUserWithFirebase(userData);
-          dispatch({ type: 'LOGIN', payload: { user: userData, token: await firebaseUser.getIdToken() } });
-        } else {
-          dispatch({ type: 'SET_LOADING', payload: false });
-        }
-      } else {
-        // Clear auth state if firebase says logged out
-        clearAuthToken();
-        localStorage.removeItem('noafar:auth:user');
-        dispatch({ type: 'LOGOUT' });
-      }
-    });
-
-    return () => unsubscribe();
+    let cancelled = false;
+    getMe()
+      .then((user) => {
+        if (!cancelled) dispatch({ type: 'LOGIN', payload: user });
+      })
+      .catch(() => {
+        if (!cancelled) dispatch({ type: 'LOGOUT' });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = (token: string, user: User) => {
-    setAuthToken(token);
-    syncMockUserWithFirebase(user);
-    localStorage.setItem('noafar:auth:user', JSON.stringify(user));
-    dispatch({ type: 'LOGIN', payload: { user, token } });
-  };
+  const login = useCallback((user: User) => {
+    dispatch({ type: 'LOGIN', payload: user });
+  }, []);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    clearAuthToken();
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  const updateUser = (updatedFields: Partial<User>) => {
-    if (state.user) {
-      const newUser = { ...state.user, ...updatedFields };
-      localStorage.setItem('noafar:auth:user', JSON.stringify(newUser));
-      dispatch({ type: 'SET_USER', payload: newUser });
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiLogout();
+    } finally {
+      dispatch({ type: 'LOGOUT' });
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const updateUser = useCallback((updatedFields: Partial<User>) => {
+    dispatch({ type: 'MERGE_USER', payload: updatedFields });
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
     try {
       const freshUser = await getMe();
-      if (freshUser) {
-        localStorage.setItem('noafar:auth:user', JSON.stringify(freshUser));
-        dispatch({ type: 'SET_USER', payload: freshUser });
-      }
+      dispatch({ type: 'SET_USER', payload: freshUser });
     } catch {
-      // Ignore
+      // A refresh failure must not sign the user out of a working session.
     }
-  };
+  }, []);
 
-  const requestOtp = async (phone: string) => {
-    return apiRequestOtp(phone);
-  };
+  const requestOtp = useCallback((phone: string) => apiRequestOtp(phone), []);
 
-  const verifyOtp = async (phone: string, code: string) => {
-    const res = await apiVerifyOtp(phone, code);
-    login(res.token, res.user);
-    return res;
-  };
+  const verifyOtp = useCallback(async (phone: string, code: string) => {
+    const result = await apiVerifyOtp(phone, code);
+    dispatch({ type: 'LOGIN', payload: result.user });
+    return { user: result.user };
+  }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        ...state,
-        login,
-        logout: handleLogout,
-        updateUser,
-        refreshProfile,
-        requestOtp,
-        verifyOtp,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      ...state,
+      login,
+      logout: handleLogout,
+      updateUser,
+      refreshProfile,
+      requestOtp,
+      verifyOtp,
+    }),
+    [state, login, handleLogout, updateUser, refreshProfile, requestOtp, verifyOtp],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export function useAuth(): AuthContextType {
@@ -167,4 +135,9 @@ export function useAuth(): AuthContextType {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+/** True for roles allowed into the admin panel. */
+export function isOperatorRole(role: User['role'] | undefined): boolean {
+  return role === 'admin' || role === 'operator';
 }

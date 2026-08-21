@@ -8,6 +8,12 @@ interface LogoProps {
   markAccent?: string;
   className?: string;
   showText?: boolean;
+  /**
+   * Marks the logo as sitting on a dark background. The wordmark is an SVG
+   * image, so the caller supplies the colour treatment through `className`
+   * (the footer already does); this only records the intent.
+   */
+  invert?: boolean;
 }
 
 export const Logo: React.FC<LogoProps> = ({
@@ -15,6 +21,7 @@ export const Logo: React.FC<LogoProps> = ({
   markAccent = '#FFCC6D',
   className = '',
   showText = true,
+  invert: _invert = false,
 }) => {
   const markSizes = {
     sm: 28,

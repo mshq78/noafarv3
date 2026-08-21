@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AuthProvider } from './services/auth';
+import { SiteSettingsProvider } from './services/siteSettings';
 import { ToastProvider } from './components/ui/Toast';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
@@ -19,7 +20,13 @@ import { BlogDetailPage } from './pages/BlogDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
-import { AdminPage } from './pages/AdminPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// The admin panel is large and only ever opened by staff, so it is split into
+// its own chunk instead of weighing down every visitor's first load.
+const AdminPage = lazy(() =>
+  import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })),
+);
 
 // Scroll to top on route change helper
 const ScrollToTop: React.FC = () => {
@@ -37,17 +44,27 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-white text-ink-900 selection:bg-sky-100 selection:text-sky-900">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </main>
       <Footer />
     </div>
   );
 };
 
+/** Placeholder shown while a code-split route is fetched. */
+const RouteFallback: React.FC = () => (
+  <div className="min-h-[60vh] flex items-center justify-center text-xs text-ink-400">
+    در حال بارگذاری…
+  </div>
+);
+
 export default function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <BrowserRouter>
+      <SiteSettingsProvider>
+        <ToastProvider>
+          <BrowserRouter>
           <ScrollToTop />
           <Routes>
             {/* Fullscreen Canvas Route (without default header/footer) */}
@@ -146,7 +163,9 @@ export default function App() {
               path="/admin"
               element={
                 <MainLayout>
-                  <AdminPage />
+                  <Suspense fallback={<RouteFallback />}>
+                    <AdminPage />
+                  </Suspense>
                 </MainLayout>
               }
             />
@@ -219,19 +238,20 @@ export default function App() {
                   <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
                     <h2 className="text-4xl font-black text-ink-900">۴۰۴</h2>
                     <p className="text-sm text-ink-500">صفحه مورد نظر شما در نوآفر یافت نشد.</p>
-                    <a
-                      href="/"
+                    <Link
+                      to="/"
                       className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors"
                     >
                       بازگشت به صفحه اصلی
-                    </a>
+                    </Link>
                   </div>
                 </MainLayout>
               }
             />
           </Routes>
         </BrowserRouter>
-      </ToastProvider>
+        </ToastProvider>
+      </SiteSettingsProvider>
     </AuthProvider>
   );
 }

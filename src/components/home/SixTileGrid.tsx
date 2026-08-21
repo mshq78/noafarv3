@@ -35,43 +35,58 @@ const itemVariants = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { type: "spring", stiffness: 100, damping: 15 }
+    transition: { type: "spring" as const, stiffness: 100, damping: 15 }
   }
 };
 
 const SectionTile: React.FC<TileProps> = ({ section }) => {
   const { ref, isInView } = useInViewColor<HTMLAnchorElement>();
 
-  // Color classes for active/hover states
+  /**
+   * Every class is written out in full, including its `hover:` /
+   * `group-hover:` variants. Tailwind scans the source for literal class
+   * names, so a class assembled at runtime (the previous
+   * `'hover:' + theme.activeBg`) produced no CSS at all — and, because the
+   * concatenation only prefixed the first class, `text-white` also escaped its
+   * hover state and left white titles on white cards.
+   */
   const colorThemes: Record<
     string,
     {
       cardBorder: string;
       activeBg: string;
+      hoverBg: string;
       iconBg: string;
       activeIconBg: string;
+      hoverIconBg: string;
       accentText: string;
     }
   > = {
     sky: {
       cardBorder: 'hover:border-sky-500',
       activeBg: 'bg-sky-700 text-white',
+      hoverBg: 'hover:bg-sky-700 hover:text-white',
       iconBg: 'bg-sky-50 text-sky-700',
       activeIconBg: 'bg-white/20 text-white',
+      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
       accentText: 'text-sky-700',
     },
     pink: {
       cardBorder: 'hover:border-pink-500',
       activeBg: 'bg-pink-600 text-white',
+      hoverBg: 'hover:bg-pink-600 hover:text-white',
       iconBg: 'bg-pink-50 text-pink-700',
       activeIconBg: 'bg-white/20 text-white',
+      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
       accentText: 'text-pink-600',
     },
     amber: {
       cardBorder: 'hover:border-amber-500',
       activeBg: 'bg-amber-600 text-white',
+      hoverBg: 'hover:bg-amber-600 hover:text-white',
       iconBg: 'bg-amber-50 text-amber-800',
       activeIconBg: 'bg-white/20 text-white',
+      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
       accentText: 'text-amber-800',
     },
   };
@@ -87,7 +102,7 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
           'group relative h-full flex flex-col justify-between p-6 sm:p-7 rounded-2xl border transition-all duration-300 overflow-hidden',
           'bg-white border-ink-200 shadow-2xs hover:shadow-lg',
           theme.cardBorder,
-          isInView ? theme.activeBg : 'hover:' + theme.activeBg
+          isInView ? theme.activeBg : theme.hoverBg
         )}
       >
         {/* Background Section Mark/Watermark */}
@@ -102,7 +117,7 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
               className={cn(
                 'p-3 rounded-xl transition-colors duration-200',
                 isInView ? theme.activeIconBg : theme.iconBg,
-                'group-hover:' + theme.activeIconBg
+                theme.hoverIconBg
               )}
             >
               {ICON_MAP[section.iconName]}

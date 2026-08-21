@@ -21,11 +21,7 @@ export const BlogListPage: React.FC = () => {
         {/* Header */}
         <div className="relative bg-white rounded-2xl p-6 sm:p-10 border border-ink-200 shadow-2xs overflow-hidden">
           <DotPattern
-            width={180}
-            height={180}
-            rows={5}
-            cols={5}
-            dotColor="#0077b6"
+            color="#0077b6"
             className="opacity-30 end-0 -top-8"
           />
 

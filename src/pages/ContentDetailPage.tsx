@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Calendar,
   User,
@@ -26,28 +26,53 @@ import { CommentSection } from '../components/content/CommentSection';
 import { RelatedContent } from '../components/content/RelatedContent';
 import { AttachmentsList } from '../components/content/AttachmentsList';
 import { Chip, Button, Skeleton } from '../components/ui';
+import { SmartImage } from '../components/ui/SmartImage';
+import { NotFoundPage } from './NotFoundPage';
+import { LoginPromptModal } from '../components/modals/LoginPromptModal';
+import { useAuth } from '../hooks/useAuth';
+import { ApiError } from '../services/api';
+import { SafeHtml } from '../components/ui/SafeHtml';
 import { useToast } from '../components/ui/Toast';
 import { formatPersianDate } from '../utils/date';
 import { toFaDigits } from '../utils/format';
 
+const VALID_SECTIONS: SectionSlug[] = [
+  'academy',
+  'toolbox',
+  'library',
+  'journey',
+  'gathering',
+  'spark',
+];
+
 export const ContentDetailPage: React.FC = () => {
   const { sectionSlug, slug } = useParams<{ sectionSlug: string; slug: string }>();
-  const navigate = useNavigate();
   const { showToast } = useToast();
-  const validSection = (sectionSlug as SectionSlug) || 'academy';
-  const currentSection = SECTIONS[validSection];
+  const { isAuthenticated } = useAuth();
+  // An unknown section is a 404, not a silent fallback to the academy.
+  const isKnownSection = VALID_SECTIONS.includes(sectionSlug as SectionSlug);
+  const validSection = sectionSlug as SectionSlug;
+  const currentSection = isKnownSection ? SECTIONS[validSection] : undefined;
+  const [notFound, setNotFound] = useState(false);
 
   const [content, setContent] = useState<ContentBase | null>(null);
   const [related, setRelated] = useState<ContentBase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [myRegistration, setMyRegistration] = useState<EventRegistration | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     if (!sectionSlug || !slug) return;
+    if (!isKnownSection) {
+      setNotFound(true);
+      setIsLoading(false);
+      return;
+    }
 
     let isMounted = true;
     setIsLoading(true);
+    setNotFound(false);
 
     getContentDetail(validSection, slug)
       .then((data) => {
@@ -68,7 +93,7 @@ export const ContentDetailPage: React.FC = () => {
         }
       })
       .catch(() => {
-        if (isMounted) navigate(`/${validSection}`);
+        if (isMounted) setNotFound(true);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -77,21 +102,33 @@ export const ContentDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [validSection, slug, navigate, sectionSlug]);
+  }, [validSection, slug, sectionSlug, isKnownSection]);
 
   const handleEventRegister = async () => {
     if (!content) return;
+    if (!isAuthenticated) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
     setIsRegistering(true);
     try {
       const reg = await registerForEvent(content.id);
       setMyRegistration(reg);
       showToast(`ثبت‌نام شما با موفقیت تایید شد! کد بلیط: ${reg.ticketCode}`, 'success');
-    } catch {
-      showToast('خطا در ثبت‌نام رویداد. لطفاً دوباره تلاش کنید.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ثبت‌نام رویداد. لطفاً دوباره تلاش کنید.',
+        'error',
+      );
     } finally {
       setIsRegistering(false);
     }
   };
+
+  if (notFound) {
+    return <NotFoundPage />;
+  }
 
   if (isLoading || !content) {
     return (
@@ -308,10 +345,11 @@ export const ContentDetailPage: React.FC = () => {
         {/* Hero image for Library / Articles / General */}
         {content.sectionSlug !== 'academy' && (content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url) && (
           <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
-            <img
+            <SmartImage
               src={content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url}
               alt={content.title}
               className="w-full h-full object-cover"
+              fallbackSrc="/mock/course-thumb.svg"
             />
           </div>
         )}
@@ -319,10 +357,7 @@ export const ContentDetailPage: React.FC = () => {
         {/* Detailed Body Narrative (Markdown / Paragraphs) */}
         {content.body && (
           <div className="prose prose-ink max-w-none text-ink-800 text-sm sm:text-base leading-loose space-y-4 pt-4">
-            <div 
-              className="leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: content.body }}
-            />
+            <SafeHtml className="leading-relaxed" html={content.body} />
           </div>
         )}
 
@@ -352,6 +387,13 @@ export const ContentDetailPage: React.FC = () => {
         {/* Comments & Discussion */}
         <CommentSection contentId={content.id} />
       </div>
+
+      <LoginPromptModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        title="ورود برای ثبت‌نام در رویداد"
+        description="برای ثبت‌نام در کارگاه‌ها و دریافت بلیط، لطفاً وارد حساب کاربری خود شوید."
+      />
     </div>
   );
 };

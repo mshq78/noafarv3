@@ -7,6 +7,7 @@ import { TricolorRule } from '../brand/TricolorRule';
 import { DotPattern } from '../brand/DotPattern';
 import { useAuth } from '../../hooks/useAuth';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
+import { SmartImage } from '../ui/SmartImage';
 import { motion } from 'framer-motion';
 
 export const LandingHero: React.FC = () => {
@@ -24,10 +25,11 @@ export const LandingHero: React.FC = () => {
     <section className="relative overflow-hidden bg-white border-b border-ink-100">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/70 lg:to-white/40 z-10" />
-        <img 
+        <SmartImage 
           src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1600&auto=format&fit=crop&q=80" 
           alt="همکاری اجتماعی و تیمی" 
           className="w-full h-full object-cover opacity-60"
+          fallbackSrc="/mock/journey-cover.svg"
         />
       </div>
 
@@ -47,7 +49,7 @@ export const LandingHero: React.FC = () => {
           <p className="text-base sm:text-lg text-ink-700 leading-relaxed font-medium whitespace-pre-line">{settings.heroSubtitle}</p>
 
           <div className="max-w-xs py-2">
-            <TricolorRule height={4} />
+            <TricolorRule />
           </div>
 
           {/* CTAs */}

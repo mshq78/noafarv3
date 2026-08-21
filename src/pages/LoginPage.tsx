@@ -1,61 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, Phone, CheckCircle2, Award } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { isOperatorRole } from '../services/auth';
+import { ApiError } from '../services/api';
 import { Button, Input } from '../components/ui';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { Logo } from '../components/brand/Logo';
-import { MOCK_CURRENT_USER } from '../mocks';
-import { User } from '../types';
-import { toFaDigits } from '../utils/format';
+import { toFaDigits, toEnDigits } from '../utils/format';
+
+/** Keeps an internal-only, safe redirect target: never an absolute URL. */
+function safeReturnTo(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/profile';
+  return value;
+}
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get('returnTo') || '/profile';
-  
-  const { login, isAuthenticated } = useAuth();
-  
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
+
+  const { isAuthenticated, requestOtp, verifyOtp } = useAuth();
+
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('09123456789');
-  const [otp, setOtp] = useState('12345');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+
+  // Countdown for the "request a new code" affordance.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendIn]);
+
+  const sendOtp = async () => {
+    // Persian digits are normalised so a keyboard switch never blocks login.
+    const normalised = toEnDigits(phone).replace(/\D/g, '');
+    if (!/^09\d{9}$/.test(normalised)) {
+      setError('شماره موبایل باید ۱۱ رقم بوده و با ۰۹ شروع شود (مثال: ۰۹۱۲۳۴۵۶۷۸۹).');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+    try {
+      const result = await requestOtp(normalised);
+      setPhone(normalised);
+      setStep('otp');
+      setResendIn(result.resendAfterSeconds || 60);
+      if (!result.delivered) {
+        setError('ارسال پیامک با مشکل روبه‌رو شد. لطفاً چند لحظه دیگر دوباره تلاش کنید.');
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'خطا در ارسال کد تأیید.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) {
-      setError('شماره تلفن همراه را به درستی وارد کنید.');
-      return;
-    }
-    setError('');
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('otp');
-    }, 400);
+    void sendOtp();
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp || otp.length < 4) {
-      setError('کد تأیید پیامک‌شده را وارد کنید.');
+    const code = toEnDigits(otp).replace(/\D/g, '');
+    if (code.length !== 5) {
+      setError('کد تأیید باید ۵ رقم باشد.');
       return;
     }
+
     setError('');
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const { user } = await verifyOtp(phone, code);
+      // The destination follows the role the server assigned, never a value
+      // the browser chose for itself.
+      navigate(isOperatorRole(user.role) ? '/admin' : returnTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'کد وارد شده صحیح نیست.');
+    } finally {
       setIsLoading(false);
-      const isAdmin = phone === '09000000000' || phone === '09123456789'; // Simple mock admin logic
-      const user: User = {
-        ...MOCK_CURRENT_USER,
-        displayName: '', // User will set this in profile
-        phone: phone,
-        role: isAdmin ? 'admin' : 'member',
-      };
-      login('token_' + Date.now(), user);
-      navigate(isAdmin ? '/admin' : returnTo);
-    }, 400);
+    }
   };
 
   if (isAuthenticated) {
@@ -102,7 +132,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Form Card */}
         <div className="bg-white border border-ink-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6 relative overflow-hidden">
-          <TricolorRule height={3} />
+          <TricolorRule />
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4 pt-4">
@@ -114,6 +144,8 @@ export const LoginPage: React.FC = () => {
                   <Phone className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
                   <Input
                     type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="۰۹۱۲۳۴۵۶۷۸۹"
@@ -149,7 +181,11 @@ export const LoginPage: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setStep('phone')}
+                  onClick={() => {
+                    setStep('phone');
+                    setOtp('');
+                    setError('');
+                  }}
                   className="text-xs text-sky-600 font-bold hover:underline"
                 >
                   ویرایش شماره
@@ -164,8 +200,10 @@ export const LoginPage: React.FC = () => {
                   <ShieldCheck className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
                   <Input
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={(e) => setOtp(toEnDigits(e.target.value).replace(/\D/g, '').slice(0, 5))}
                     placeholder="۱۲۳۴۵"
                     className="ps-10 font-sans text-center tracking-widest text-base"
                     maxLength={5}
@@ -188,6 +226,22 @@ export const LoginPage: React.FC = () => {
               >
                 ورود به سامانه
               </Button>
+
+              <div className="text-center">
+                {resendIn > 0 ? (
+                  <span className="text-[11px] text-ink-400 font-sans">
+                    دریافت کد جدید تا {toFaDigits(resendIn)} ثانیه دیگر
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void sendOtp()}
+                    className="text-[11px] text-sky-600 font-bold hover:underline"
+                  >
+                    ارسال دوباره کد تأیید
+                  </button>
+                )}
+              </div>
             </form>
           )}
         </div>

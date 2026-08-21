@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Footprints, Send, RotateCcw, MapPin, TrendingUp } from 'lucide-react';
 import { Input, Textarea, Select, ChipInput, FileUpload, Button, RichTextEditor } from '../ui';
 import { JOURNEY_FIELDS } from '../../config/categories';
-import { submitExperience } from '../../services/endpoints';
+import { submitExperience, uploadSubmissionImage } from '../../services/endpoints';
+import { ApiError } from '../../services/api';
+import { JOURNEY_FIELDS as JOURNEY_FIELD_LIST } from '../../config/categories';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../ui/Toast';
 import { useDraft } from '../../hooks/useDraft';
@@ -93,12 +95,26 @@ export const ExperienceSubmissionForm: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await submitExperience(formData);
+      // The chosen image used to be collected and then thrown away; it is now
+      // uploaded and attached to the submission.
+      let heroImageUrl: string | undefined;
+      if (file) {
+        heroImageUrl = (await uploadSubmissionImage(file)).url;
+      }
+
+      await submitExperience({
+        ...formData,
+        heroImageUrl,
+        fieldNameFa: JOURNEY_FIELD_LIST.find((f) => f.slug === formData.fieldSlug)?.nameFa,
+      });
       clearDraft();
       showToast('روایت تجربه شما با موفقیت ثبت شد و ۱۰۰ امتیاز نوآفری دریافت کردید!', 'success');
       navigate('/profile');
-    } catch {
-      showToast('خطا در ثبت تجربه. لطفاً دوباره تلاش فرمایید.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ثبت تجربه. لطفاً دوباره تلاش فرمایید.',
+        'error',
+      );
     } finally {
       setIsSubmitting(false);
     }

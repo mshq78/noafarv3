@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getSiteSettings, updateSiteSettings } from '../../services/endpoints';
+import { getSiteSettings, updateSiteSettings, uploadMedia } from '../../services/endpoints';
+import { ApiError } from '../../services/api';
+import { useRefreshSiteSettings } from '../../hooks/useSiteSettings';
 import { SiteSettings } from '../../types';
 import { Button, Input, RichTextEditor, FileUpload } from '../ui';
 import { useToast } from '../ui/Toast';
@@ -8,26 +10,33 @@ export const SiteSettingsManager: React.FC = () => {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const { showToast } = useToast();
+  const refreshSiteSettings = useRefreshSiteSettings();
 
   useEffect(() => {
-    getSiteSettings().then(data => {
-      setSettings(data);
-      setIsLoading(false);
-    });
-  }, []);
+    getSiteSettings()
+      .then(setSettings)
+      .catch(() => showToast('بارگذاری تنظیمات سایت ناموفق بود.', 'error'))
+      .finally(() => setIsLoading(false));
+  }, [showToast]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
     setIsSaving(true);
     try {
-      await updateSiteSettings(settings);
+      const saved = await updateSiteSettings(settings);
+      setSettings(saved);
+      // Refreshes the shared settings context, so the header, footer and
+      // contact page update immediately without reloading the page.
+      await refreshSiteSettings();
       showToast('تنظیمات سایت با موفقیت ذخیره شد.', 'success');
-      // For immediate effect across the site without react context for now:
-      setTimeout(() => window.location.reload(), 1000);
-    } catch {
-      showToast('خطا در ذخیره تنظیمات.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ذخیره تنظیمات.',
+        'error',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -53,22 +62,30 @@ export const SiteSettingsManager: React.FC = () => {
                 value={settings.logoUrl}
                 onChange={(file) => {
                   if (!file) {
-                    setSettings({...settings, logoUrl: ""});
+                    setSettings((prev) => ({ ...(prev ?? {}), logoUrl: '' }));
                     return;
                   }
-                  if (typeof file === "string") {
-                    setSettings({...settings, logoUrl: file});
-                  } else {
-                    const reader = new FileReader();
-                    reader.onload = (evt) => {
-                      setSettings({...settings, logoUrl: evt.target?.result});
-                    };
-                    reader.readAsDataURL(file);
-                  }
+                  // Uploaded to the server so the logo is a real asset URL
+                  // rather than a base64 blob stored inside the settings row.
+                  setIsUploadingLogo(true);
+                  uploadMedia(file)
+                    .then((asset) =>
+                      setSettings((prev) => ({ ...(prev ?? {}), logoUrl: asset.url })),
+                    )
+                    .catch((error) =>
+                      showToast(
+                        error instanceof ApiError ? error.message : 'بارگذاری لوگو ناموفق بود.',
+                        'error',
+                      ),
+                    )
+                    .finally(() => setIsUploadingLogo(false));
                 }}
-                accept="image/*"
-                maxSizeMB={2}
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                maxSizeBytes={2 * 1024 * 1024}
                 label="آپلود لوگوی جدید"
+                helperText={
+                  isUploadingLogo ? 'در حال بارگذاری…' : 'فرمت PNG یا WEBP، حداکثر ۲ مگابایت'
+                }
               />
               {settings.logoUrl && (
                 <div className="mt-2 p-4 bg-ink-50 rounded-lg flex items-center justify-center border border-ink-100">

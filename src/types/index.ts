@@ -73,9 +73,20 @@ export interface CourseLesson {
   isCompleted?: boolean;
 }
 
+export interface Instructor {
+  name: string;
+  avatarUrl?: string;
+  affiliation?: string;
+}
+
 export interface Course extends ContentBase {
   sectionSlug: 'academy';
   videoUrl: string;
+  /** Shown on the course card and detail header. */
+  instructor?: Instructor;
+  difficulty?: Difficulty;
+  level?: string;
+  duration?: string;
   posterUrl?: string;
   durationSeconds: number;
   durationMinutes?: number;
@@ -94,6 +105,8 @@ export interface Tool extends ContentBase {
   estimatedMinutes: number;
   printablePdfUrl?: string;
   supportsDigitalCanvas: boolean;
+  /** Optional line-art preview used on the toolbox card. */
+  previewSvgUrl?: string;
 }
 
 export type LibraryKind = 'book' | 'booklet' | 'reading' | 'article' | 'podcast' | 'video';
@@ -103,6 +116,11 @@ export interface Book extends ContentBase {
   kind: LibraryKind;
   coverImage: MediaAsset;
   author?: string;
+  /** Multiple credited authors; `author` stays for single-author entries. */
+  authors?: string[];
+  translators?: string[];
+  publisher?: string;
+  publishedYear?: number;
   pageCount?: number;
   downloadUrl?: string;
 }
@@ -117,6 +135,7 @@ export interface Experience extends ContentBase {
   outcome: string;
   keyImpactMetric?: string;
   region?: string;
+  organization?: string;
   submittedBy?: Pick<User, 'id' | 'displayName'>;
 }
 

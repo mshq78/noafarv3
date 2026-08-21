@@ -1,14 +1,8 @@
-import { request } from './api';
+import { del, get, patch, post, put, request } from './api';
 import {
   SectionSlug,
   ContentBase,
   Course,
-  Tool,
-  Book,
-  Experience,
-  Idea,
-  Event,
-  BlogPost,
   Comment,
   Submission,
   SavedCanvas,
@@ -21,117 +15,63 @@ import {
   Paginated,
   ContactMessage,
   EventRegistration,
+  MediaAsset,
+  BlogPost,
 } from '../types';
-import { mockDb, paginateArray, SECTION_LIST } from '../mocks';
-import {
-  ACADEMY_CATEGORIES,
-  TOOLBOX_STAGES,
-  JOURNEY_FIELDS,
-} from '../config/categories';
-import { auth, db } from './firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { SECTION_LIST } from '../config/sections';
+import { ACADEMY_CATEGORIES, TOOLBOX_STAGES, JOURNEY_FIELDS } from '../config/categories';
 
 // ==========================================
-// 1. AUTH ENDPOINTS
+// 1. AUTH
 // ==========================================
 
-export async function requestOtp(phone: string): Promise<{ expiresInSeconds: number }> {
-  // In a real app we'd trigger an SMS OTP.
-  // For this Firebase implementation, we use a custom email/password mechanism where password is the OTP.
-  // To allow users to login easily without setting up Twilio, we just return success and accept any 5 digit code as password for existing accounts, or just '12345' for new ones.
-  return { expiresInSeconds: 120 };
+export interface OtpRequestResult {
+  expiresInSeconds: number;
+  resendAfterSeconds: number;
+  delivered: boolean;
+  /** Only present when the server runs with OTP_DEBUG_RETURN outside production. */
+  debugCode?: string;
 }
 
-export async function verifyOtp(
-  phone: string,
-  code: string
-): Promise<{ token: string; user: User }> {
-  const email = `${phone}@noafar.local`;
-  const defaultPassword = 'noafar-secure-pass';
-  
-  let userCredential;
-  try {
-    userCredential = await signInWithEmailAndPassword(auth, email, defaultPassword);
-  } catch (error: any) {
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
-      // Create user if not exists
-      userCredential = await createUserWithEmailAndPassword(auth, email, defaultPassword);
-    } else {
-      throw error;
-    }
-  }
-
-  const userDocRef = doc(db, 'users', userCredential.user.uid);
-  let userDoc = await getDoc(userDocRef);
-  let userData: User;
-
-  if (!userDoc.exists()) {
-    userData = {
-      id: userCredential.user.uid,
-      displayName: 'کاربر نوآفر',
-      phone,
-      role: 'member',
-      joinedAt: new Date().toISOString(),
-      membershipDays: 0,
-      points: 0,
-      profileComplete: false
-    };
-    await setDoc(userDocRef, userData);
-  } else {
-    userData = userDoc.data() as User;
-  }
-
-  const token = await userCredential.user.getIdToken();
-  return { token, user: userData };
+export function requestOtp(phone: string): Promise<OtpRequestResult> {
+  return post<OtpRequestResult>('/auth/otp/request', { phone });
 }
 
-export async function logout(): Promise<void> {
-  await signOut(auth);
+export function verifyOtp(phone: string, code: string): Promise<{ token: string; user: User }> {
+  return post<{ token: string; user: User }>('/auth/otp/verify', { phone, code });
 }
 
-export async function getMe(): Promise<User> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-  
-  const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-  if (!userDoc.exists()) throw new Error('User not found');
-  
-  return userDoc.data() as User;
+export function logout(): Promise<{ success: boolean }> {
+  return post<{ success: boolean }>('/auth/logout');
 }
 
-export async function updateProfile(data: Partial<User>): Promise<User> {
-  mockDb.data.user = { ...mockDb.data.user, ...data };
-  mockDb.save();
-  return Promise.resolve(mockDb.data.user);
+export function getMe(): Promise<User> {
+  // A signed-out visitor is an expected state here, not a reason to redirect.
+  return request<User>('/auth/me', { method: 'GET', redirectOnUnauthorized: false });
+}
+
+export function updateProfile(data: Partial<User>): Promise<User> {
+  return patch<User>('/auth/me', data as Record<string, unknown>);
 }
 
 // ==========================================
 // 2. SECTIONS & TAXONOMY
 // ==========================================
 
+/** Section metadata and taxonomies are design-time constants, not content. */
 export async function getSections(): Promise<SectionMeta[]> {
-  return request<SectionMeta[]>('/sections', {
-    method: 'GET',
-    mockHandler: () => SECTION_LIST,
-  });
+  return SECTION_LIST;
 }
 
 export async function getCategories(section?: SectionSlug): Promise<Category[]> {
-  return request<Category[]>('/categories', {
-    method: 'GET',
-    params: { section },
-    mockHandler: () => {
-      if (section === 'academy' || section === 'library') return ACADEMY_CATEGORIES;
-      if (section === 'toolbox') return TOOLBOX_STAGES;
-      if (section === 'journey' || section === 'spark') return JOURNEY_FIELDS;
-      return [...ACADEMY_CATEGORIES, ...TOOLBOX_STAGES, ...JOURNEY_FIELDS];
-    },
-  });
+  if (section === 'academy' || section === 'library') return ACADEMY_CATEGORIES;
+  if (section === 'toolbox') return TOOLBOX_STAGES;
+  if (section === 'journey' || section === 'spark') return JOURNEY_FIELDS;
+  return [...ACADEMY_CATEGORIES, ...TOOLBOX_STAGES, ...JOURNEY_FIELDS];
 }
 
 // ==========================================
-// 3. CONTENT LIST & DETAILS
+// 3. CONTENT
 // ==========================================
 
 export interface ContentListParams {
@@ -139,8 +79,8 @@ export interface ContentListParams {
   pageSize?: number;
   category?: string;
   tags?: string[];
-  stage?: string;
-  format?: string;
+  stage?: string | string[];
+  format?: string | string[];
   difficulty?: string;
   status?: string;
   kind?: string;
@@ -149,412 +89,179 @@ export interface ContentListParams {
   sort?: 'latest' | 'popular' | 'views';
 }
 
-export async function getContentList<T extends ContentBase = ContentBase>(
+export function getContentList<T extends ContentBase = ContentBase>(
   section: SectionSlug,
-  params: ContentListParams = {}
+  params: ContentListParams = {},
 ): Promise<Paginated<T>> {
   const { page = 1, pageSize = 12, ...filters } = params;
-
-  return request<Paginated<T>>(`/content/${section}`, {
-    method: 'GET',
-    params: { page, pageSize, ...filters },
-    mockHandler: () => {
-      let items = mockDb.getAllContentBySection(section) as T[];
-
-      // Filter by category
-      if (filters.category) {
-        items = items.filter((item) => item.category?.slug === filters.category);
-      }
-
-      // Filter for toolbox stages & format & difficulty
-      if (section === 'toolbox') {
-        const toolItems = items as unknown as Tool[];
-        let filtered = toolItems;
-        if (filters.stage) {
-          const stages = Array.isArray(filters.stage) ? filters.stage : [filters.stage];
-          filtered = filtered.filter((t) => stages.includes(t.stage?.slug));
-        }
-        if (filters.format) {
-          const formats = Array.isArray(filters.format) ? filters.format : [filters.format];
-          filtered = filtered.filter((t) => formats.includes(t.format));
-        }
-        if (filters.difficulty) {
-          filtered = filtered.filter((t) => t.difficulty === filters.difficulty);
-        }
-        items = filtered as unknown as T[];
-      }
-
-      // Filter for library kinds
-      if (section === 'library' && filters.kind) {
-        const bookItems = items as unknown as Book[];
-        items = bookItems.filter((b) => b.kind === filters.kind) as unknown as T[];
-      }
-
-      // Filter for journey/spark fields
-      if ((section === 'journey' || section === 'spark') && (filters.field || filters.category)) {
-        const fieldSlug = filters.field || filters.category;
-        items = items.filter((i) => {
-          const itemWithField = i as unknown as { field?: Category };
-          return itemWithField.field?.slug === fieldSlug;
-        });
-      }
-
-      // Filter for gathering kind and status
-      if (section === 'gathering') {
-        const eventItems = items as unknown as Event[];
-        let filtered = eventItems;
-        if (filters.kind) {
-          filtered = filtered.filter((e) => e.kind === filters.kind);
-        }
-        if (filters.status) {
-          filtered = filtered.filter((e) => e.status === filters.status);
-        }
-        items = filtered as unknown as T[];
-      }
-
-      // Search query
-      if (filters.q) {
-        const query = filters.q.toLowerCase().trim();
-        items = items.filter(
-          (item) =>
-            item.title.toLowerCase().includes(query) ||
-            item.summary.toLowerCase().includes(query)
-        );
-      }
-
-      return paginateArray(items, page, pageSize) as Paginated<T>;
-    },
-  });
+  return get<Paginated<T>>(`/content/${section}`, { page, pageSize, ...filters });
 }
 
-export async function getContentDetail<T extends ContentBase>(
+export function getContentDetail<T extends ContentBase>(
   section: SectionSlug,
-  slug: string
+  slug: string,
 ): Promise<T> {
-  return request<T>(`/content/${section}/${slug}`, {
-    method: 'GET',
-    mockHandler: () => {
-      const item = mockDb.findContentBySlug(section, slug);
-      if (!item) {
-        throw new Error('محتوای مورد نظر یافت نشد.');
-      }
-      return item as T;
-    },
-  });
+  return get<T>(`/content/${section}/${encodeURIComponent(slug)}`);
 }
 
-export async function getRelatedContent(
-  section: SectionSlug,
-  slug: string
-): Promise<ContentBase[]> {
-  return request<ContentBase[]>(`/content/${section}/${slug}/related`, {
-    method: 'GET',
-    mockHandler: () => {
-      const item = mockDb.findContentBySlug(section, slug);
-      return mockDb.getRelatedContent(item?.id || 'default', section, 3);
-    },
-  });
+export function getRelatedContent(section: SectionSlug, slug: string): Promise<ContentBase[]> {
+  return get<ContentBase[]>(`/content/${section}/${encodeURIComponent(slug)}/related`);
 }
 
 // ==========================================
-// 4. INTERACTIONS (LIKE, BOOKMARK, COMMENTS)
+// 4. INTERACTIONS
 // ==========================================
 
-export async function likeContent(
-  id: string
-): Promise<{ likeCount: number; isLikedByMe: boolean }> {
-  return request<{ likeCount: number; isLikedByMe: boolean }>(`/content/${id}/like`, {
-    method: 'POST',
-    mockHandler: () => mockDb.toggleLike(id),
-  });
+export function likeContent(id: string): Promise<{ likeCount: number; isLikedByMe: boolean }> {
+  return post(`/content/${encodeURIComponent(id)}/like`);
 }
 
-export async function unlikeContent(
-  id: string
-): Promise<{ likeCount: number; isLikedByMe: boolean }> {
-  return request<{ likeCount: number; isLikedByMe: boolean }>(`/content/${id}/like`, {
-    method: 'DELETE',
-    mockHandler: () => mockDb.toggleLike(id),
-  });
+export function unlikeContent(id: string): Promise<{ likeCount: number; isLikedByMe: boolean }> {
+  return del(`/content/${encodeURIComponent(id)}/like`);
 }
 
-export async function bookmarkContent(
-  id: string
-): Promise<{ isBookmarkedByMe: boolean }> {
-  return request<{ isBookmarkedByMe: boolean }>(`/content/${id}/bookmark`, {
-    method: 'POST',
-    mockHandler: () => mockDb.toggleBookmark(id),
-  });
+export function bookmarkContent(id: string): Promise<{ isBookmarkedByMe: boolean }> {
+  return post(`/content/${encodeURIComponent(id)}/bookmark`);
 }
 
-export async function unbookmarkContent(
-  id: string
-): Promise<{ isBookmarkedByMe: boolean }> {
-  return request<{ isBookmarkedByMe: boolean }>(`/content/${id}/bookmark`, {
-    method: 'DELETE',
-    mockHandler: () => mockDb.toggleBookmark(id),
-  });
+export function unbookmarkContent(id: string): Promise<{ isBookmarkedByMe: boolean }> {
+  return del(`/content/${encodeURIComponent(id)}/bookmark`);
 }
 
-export async function toggleBookmark(id: string): Promise<{ isBookmarkedByMe: boolean }> {
-  return bookmarkContent(id);
+export function getComments(contentId: string, page = 1): Promise<Paginated<Comment>> {
+  return get<Paginated<Comment>>(`/content/${encodeURIComponent(contentId)}/comments`, { page });
 }
 
-export async function getComments(
-  contentId: string,
-  page = 1
-): Promise<Paginated<Comment>> {
-  return request<Paginated<Comment>>(`/content/${contentId}/comments`, {
-    method: 'GET',
-    params: { page },
-    mockHandler: () => {
-      const comments = mockDb.getComments(contentId, mockDb.user.id);
-      return paginateArray(comments, page, 20);
-    },
-  });
-}
-
-export async function postComment(
-  contentId: string,
-  body: string
-): Promise<Comment> {
-  return request<Comment>(`/content/${contentId}/comments`, {
-    method: 'POST',
-    body: JSON.stringify({ body }),
-    mockHandler: () => mockDb.addComment(contentId, body),
-  });
+export function postComment(contentId: string, body: string): Promise<Comment> {
+  return post<Comment>(`/content/${encodeURIComponent(contentId)}/comments`, { body });
 }
 
 // ==========================================
-// 5. COURSES & PROGRESS & VIDEO
+// 5. COURSES
 // ==========================================
 
-export async function updateCourseProgress(
+export function updateCourseProgress(
   courseId: string,
   percent: number,
-  positionSeconds?: number
-): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/courses/${courseId}/progress`, {
-    method: 'POST',
-    body: JSON.stringify({ percent, positionSeconds }),
-    mockHandler: () => {
-      mockDb.updateCourseProgress(courseId, percent);
-      return { success: true };
-    },
+  positionSeconds?: number,
+  completedLessons?: string[],
+): Promise<{ success: boolean; percent: number }> {
+  return post(`/courses/${encodeURIComponent(courseId)}/progress`, {
+    percent,
+    positionSeconds,
+    completedLessons,
   });
 }
 
-export async function updateCourseVideo(
+/** Video and syllabus edits go through the content API — operators only. */
+export function updateCourseVideo(
   courseId: string,
   videoUrl: string,
-  lessonIndex?: number
-): Promise<{ success: boolean; course: Course | null }> {
-  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/video`, {
-    method: 'POST',
-    body: JSON.stringify({ videoUrl, lessonIndex }),
-    mockHandler: () => {
-      const course = mockDb.updateCourseVideo(courseId, videoUrl, lessonIndex);
-      return { success: true, course };
-    },
-  });
+  lessonIndex: number | undefined,
+  course: Course,
+): Promise<Course> {
+  if (lessonIndex === undefined || !course.syllabus?.[lessonIndex]) {
+    return adminUpdateContent<Course>(courseId, { data: { videoUrl } });
+  }
+  const syllabus = course.syllabus.map((lesson, index) =>
+    index === lessonIndex ? { ...lesson, videoUrl } : lesson,
+  );
+  return adminUpdateContent<Course>(courseId, { data: { syllabus } });
 }
 
-export async function addCourseLesson(
+export function addCourseLesson(
   courseId: string,
-  lesson: { title: string; durationMinutes: number; videoUrl?: string; description?: string }
-): Promise<{ success: boolean; course: Course | null }> {
-  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/lessons`, {
-    method: 'POST',
-    body: JSON.stringify(lesson),
-    mockHandler: () => {
-      const course = mockDb.addCourseLesson(courseId, lesson);
-      return { success: true, course };
+  course: Course,
+  lesson: { title: string; durationMinutes: number; videoUrl?: string; description?: string },
+): Promise<Course> {
+  const syllabus = [
+    ...(course.syllabus ?? []),
+    { id: `les-${Date.now().toString(36)}`, ...lesson },
+  ];
+  return adminUpdateContent<Course>(courseId, {
+    data: {
+      syllabus,
+      lessonsCount: syllabus.length,
+      durationMinutes: syllabus.reduce((sum, item) => sum + (item.durationMinutes || 0), 0),
+      durationSeconds: syllabus.reduce((sum, item) => sum + (item.durationMinutes || 0), 0) * 60,
     },
   });
 }
 
-export async function updateCourseLessons(
-  courseId: string,
-  syllabus: any[]
-): Promise<{ success: boolean; course: Course | null }> {
-  return request<{ success: boolean; course: Course | null }>(`/courses/${courseId}/syllabus`, {
-    method: 'PUT',
-    body: JSON.stringify({ syllabus }),
-    mockHandler: () => {
-      const course = mockDb.updateCourseLessons(courseId, syllabus);
-      return { success: true, course };
-    },
-  });
-}
-
-export async function getMyProgress(): Promise<{ courseId: string; percent: number }[]> {
-  return request<{ courseId: string; percent: number }[]>('/me/progress', {
-    method: 'GET',
-    mockHandler: () =>
-      mockDb.courses
-        .filter((c) => (c.myProgressPercent || 0) > 0)
-        .map((c) => ({ courseId: c.id, percent: c.myProgressPercent || 0 })),
-  });
+export function getMyProgress(): Promise<{ courseId: string; percent: number }[]> {
+  return get('/me/progress');
 }
 
 // ==========================================
 // 6. SUBMISSIONS
 // ==========================================
 
-export async function submitIdea(formData: FormData | Record<string, unknown>): Promise<Submission> {
-  return request<Submission>('/submissions/idea', {
-    method: 'POST',
-    body: formData instanceof FormData ? formData : JSON.stringify(formData),
-    mockHandler: () => {
-      let data: any = {};
-      if (formData instanceof FormData) {
-        data = {
-          title: formData.get('title') as string,
-          fieldSlug: formData.get('fieldSlug') as string,
-          summary: formData.get('summary') as string,
-          body: formData.get('body') as string,
-        };
-      } else {
-        data = formData;
-      }
-      return mockDb.addIdeaSubmission(data);
-    },
-  });
+export function submitIdea(data: Record<string, unknown>): Promise<Submission> {
+  return post<Submission>('/submissions/idea', data);
 }
 
-export async function submitExperience(formData: FormData | Record<string, unknown>): Promise<Submission> {
-  return request<Submission>('/submissions/experience', {
-    method: 'POST',
-    body: formData instanceof FormData ? formData : JSON.stringify(formData),
-    mockHandler: () => {
-      let data: any = {};
-      if (formData instanceof FormData) {
-        data = {
-          title: formData.get('title') as string,
-          fieldSlug: formData.get('fieldSlug') as string,
-          summary: formData.get('summary') as string,
-          body: formData.get('body') as string,
-          region: formData.get('region') as string,
-          organization: formData.get('organization') as string,
-          keyImpactMetric: formData.get('keyImpactMetric') as string,
-        };
-      } else {
-        data = formData;
-      }
-      return mockDb.addExperienceSubmission(data);
-    },
-  });
+export function submitExperience(data: Record<string, unknown>): Promise<Submission> {
+  return post<Submission>('/submissions/experience', data);
 }
 
-export async function getMySubmissions(kind?: 'idea' | 'experience'): Promise<Paginated<Submission>> {
-  return request<Paginated<Submission>>('/me/submissions', {
-    method: 'GET',
-    params: { kind },
-    mockHandler: () => {
-      let list = mockDb.submissions;
-      if (kind) list = list.filter((s) => s.kind === kind);
-      return paginateArray(list, 1, 50);
-    },
-  });
+export function getMySubmissions(kind?: 'idea' | 'experience'): Promise<Paginated<Submission>> {
+  return get<Paginated<Submission>>('/submissions/mine', { kind });
 }
 
-export async function resubmitSubmission(id: string, formData: FormData | Record<string, unknown>): Promise<Submission> {
-  return request<Submission>(`/submissions/${id}`, {
-    method: 'PATCH',
-    body: formData instanceof FormData ? formData : JSON.stringify(formData),
-    mockHandler: () => {
-      const sub = mockDb.submissions.find((s) => s.id === id);
-      if (sub) {
-        sub.status = 'pending';
-        sub.submittedAt = new Date().toISOString();
-        return sub;
-      }
-      return mockDb.submissions[0];
-    },
-  });
+export function resubmitSubmission(
+  id: string,
+  data: Record<string, unknown>,
+): Promise<Submission> {
+  return patch<Submission>(`/submissions/${encodeURIComponent(id)}`, data);
 }
 
 // ==========================================
-// 7. CANVAS & TOOLBOX
+// 7. CANVASES
 // ==========================================
 
-export async function createToolCanvas(toolId: string): Promise<SavedCanvas> {
-  return request<SavedCanvas>(`/tools/${toolId}/canvas`, {
-    method: 'POST',
-    mockHandler: () => {
-      const tool = mockDb.tools.find((t) => t.id === toolId);
-      const canvasId = `canvas-${Date.now()}`;
-      const newCanvas: SavedCanvas = {
-        id: canvasId,
-        toolId,
-        toolTitle: tool?.title || 'بوم نوآوری',
-        provider: 'excalidraw',
-        externalCanvasId: `excal-${canvasId}`,
-        embedUrl: `https://excalidraw.com/#room=${canvasId}`,
-        thumbnailUrl: '/mock/canvas-preview.svg',
-        updatedAt: new Date().toISOString(),
-        shareUrl: `https://noafar.com/toolbox/${tool?.slug || 'canvas'}/canvas/${canvasId}`,
-      };
-      mockDb.canvases.unshift(newCanvas);
-      return newCanvas;
-    },
-  });
+export function saveToolCanvas(
+  toolId: string,
+  notes: Record<string, string>,
+  title?: string,
+): Promise<SavedCanvas> {
+  return post<SavedCanvas>('/me/canvases', { toolId, notes, title });
 }
 
-export async function getMyCanvases(): Promise<SavedCanvas[]> {
-  return request<SavedCanvas[]>('/me/canvases', {
-    method: 'GET',
-    mockHandler: () => mockDb.canvases,
-  });
+export function getMyCanvases(): Promise<SavedCanvas[]> {
+  return get<SavedCanvas[]>('/me/canvases');
 }
 
-export async function deleteMyCanvas(id: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/me/canvases/${id}`, {
-    method: 'DELETE',
-    mockHandler: () => {
-      mockDb.deleteCanvas(id);
-      return { success: true };
-    },
-  });
+export function getCanvasForTool(toolId: string): Promise<SavedCanvas | null> {
+  return getMyCanvases().then(
+    (canvases) => canvases.find((canvas) => canvas.toolId === toolId) ?? null,
+  );
+}
+
+export function deleteMyCanvas(id: string): Promise<{ success: boolean }> {
+  return del(`/me/canvases/${encodeURIComponent(id)}`);
 }
 
 export const deleteSavedCanvas = deleteMyCanvas;
 
 // ==========================================
-// 8. PROFILE & BOOKMARKS & POINTS
+// 8. PROFILE
 // ==========================================
 
-export async function getMyBookmarks(section?: SectionSlug): Promise<Paginated<ContentBase>> {
-  return request<Paginated<ContentBase>>('/me/bookmarks', {
-    method: 'GET',
-    params: { section },
-    mockHandler: () => {
-      let bookmarked = mockDb.getAllItemsCombined().filter((i) => i.isBookmarkedByMe);
-      if (section) {
-        bookmarked = bookmarked.filter((i) => i.sectionSlug === section);
-      }
-      return paginateArray(bookmarked, 1, 50);
-    },
-  });
+export function getMyBookmarks(section?: SectionSlug): Promise<Paginated<ContentBase>> {
+  return get<Paginated<ContentBase>>('/me/bookmarks', { section });
 }
 
-export async function getMyPoints(): Promise<{ total: number; entries: PointEntry[] }> {
-  return request<{ total: number; entries: PointEntry[] }>('/me/points', {
-    method: 'GET',
-    mockHandler: () => ({
-      total: mockDb.user.points,
-      entries: mockDb.pointEntries,
-    }),
-  });
+export function getMyPoints(): Promise<{ total: number; entries: PointEntry[] }> {
+  return get('/me/points');
 }
 
 export async function getMyPointTransactions(): Promise<PointTransaction[]> {
-  const res = await getMyPoints();
-  return res.entries;
+  const result = await getMyPoints();
+  return result.entries;
 }
 
 // ==========================================
-// 9. SEARCH & BLOG & CONTACT
+// 9. SEARCH, BLOG, CONTACT
 // ==========================================
 
 export interface GroupedSearchResults {
@@ -562,286 +269,195 @@ export interface GroupedSearchResults {
   bySection: Record<SectionSlug | 'blog', { count: number; items: ContentBase[] }>;
 }
 
-export async function searchContent(q: string, section?: SectionSlug | 'blog'): Promise<GroupedSearchResults> {
-  return request<GroupedSearchResults>('/search', {
-    method: 'GET',
-    params: { q, section },
-    mockHandler: () => {
-      const query = q.toLowerCase().trim();
-      const all = mockDb.getAllItemsCombined();
-      const blogItems = mockDb.blog as unknown as ContentBase[];
-
-      const matches = (item: ContentBase) =>
-        item.title.toLowerCase().includes(query) ||
-        item.summary.toLowerCase().includes(query) ||
-        item.tags.some((t) => t.nameFa.toLowerCase().includes(query));
-
-      const filteredAll = query ? all.filter(matches) : all;
-      const filteredBlog = query ? blogItems.filter(matches) : blogItems;
-
-      const bySection: GroupedSearchResults['bySection'] = {
-        academy: { count: 0, items: [] },
-        toolbox: { count: 0, items: [] },
-        library: { count: 0, items: [] },
-        journey: { count: 0, items: [] },
-        gathering: { count: 0, items: [] },
-        spark: { count: 0, items: [] },
-        blog: { count: filteredBlog.length, items: filteredBlog },
-      };
-
-      filteredAll.forEach((item) => {
-        if (bySection[item.sectionSlug]) {
-          bySection[item.sectionSlug].items.push(item);
-          bySection[item.sectionSlug].count += 1;
-        }
-      });
-
-      const total =
-        Object.values(bySection).reduce((acc, curr) => acc + curr.count, 0);
-
-      return { total, bySection };
-    },
-  });
+export function searchContent(
+  q: string,
+  section?: SectionSlug | 'blog',
+): Promise<GroupedSearchResults> {
+  return get<GroupedSearchResults>('/search', { q, section });
 }
 
 export async function searchAll(q: string, section?: SectionSlug): Promise<ContentBase[]> {
-  const res = await searchContent(q, section);
-  if (section) {
-    return res.bySection[section]?.items || [];
-  }
-  const all: ContentBase[] = [];
-  Object.values(res.bySection).forEach((s) => all.push(...s.items));
-  return all;
+  const result = await searchContent(q, section);
+  if (section) return result.bySection[section]?.items ?? [];
+  return Object.values(result.bySection).flatMap((bucket) => bucket.items);
 }
 
-export async function getBlogPosts(page = 1): Promise<BlogPost[]> {
-  return request<BlogPost[]>('/blog', {
-    method: 'GET',
-    params: { page },
-    mockHandler: () => mockDb.blog,
-  });
+export function getBlogPosts(page = 1): Promise<BlogPost[]> {
+  return get<BlogPost[]>('/blog', { page });
 }
 
-export async function getBlogPostDetail(slug: string): Promise<BlogPost> {
-  return request<BlogPost>(`/blog/${slug}`, {
-    method: 'GET',
-    mockHandler: () => {
-      const post = mockDb.blog.find((b) => b.slug === slug);
-      if (!post) throw new Error('مطلب بلاگ یافت نشد.');
-      return post;
-    },
-  });
+export function getBlogPostDetail(slug: string): Promise<BlogPost> {
+  return get<BlogPost>(`/blog/${encodeURIComponent(slug)}`);
 }
 
-export async function submitContact(data: { name: string; phone: string; subject?: string; message: string }): Promise<{ success: boolean; id: string }> {
-  return request<{ success: boolean; id: string }>('/contact', {
-    method: 'POST',
-    body: JSON.stringify(data),
-    mockHandler: () => {
-      const msg = mockDb.addContactMessage({
-        id: 'msg-' + Date.now(),
-        name: data.name,
-        phoneOrEmail: data.phone,
-        subject: data.subject || 'پیام از سایت',
-        message: data.message,
-        createdAt: new Date().toISOString(),
-        status: 'unread'
-      });
-      return { success: true, id: msg.id };
-    },
-  });
+export function submitContact(data: {
+  name: string;
+  phone: string;
+  subject?: string;
+  message: string;
+}): Promise<{ success: boolean; id: string }> {
+  return post('/contact', data);
 }
 
 // ==========================================
-// 10. EVENT REGISTRATION
+// 10. EVENTS
 // ==========================================
 
-export async function registerForEvent(eventId: string): Promise<EventRegistration> {
-  return request<EventRegistration>(`/events/${eventId}/register`, {
-    method: 'POST',
-    mockHandler: () => mockDb.registerForEvent(eventId),
-  });
+export function registerForEvent(eventId: string): Promise<EventRegistration> {
+  return post<EventRegistration>(`/events/${encodeURIComponent(eventId)}/register`);
 }
 
-export async function getMyEventRegistrations(): Promise<EventRegistration[]> {
-  return request<EventRegistration[]>('/me/events', {
-    method: 'GET',
-    mockHandler: () => mockDb.eventRegistrations.filter((r) => r.userId === mockDb.user.id),
-  });
+export function getMyEventRegistrations(): Promise<EventRegistration[]> {
+  return get<EventRegistration[]>('/me/events');
 }
 
 // ==========================================
-// 11. ADMIN MANAGEMENT API
+// 11. UPLOADS
 // ==========================================
 
-export async function adminAddContent(section: SectionSlug | 'blog', content: any): Promise<ContentBase> {
-  return request<ContentBase>('/admin/content', {
-    method: 'POST',
-    body: JSON.stringify({ section, content }),
-    mockHandler: () => mockDb.addContent(section, content),
-  });
+async function upload(endpoint: string, file: File): Promise<MediaAsset> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<MediaAsset>(endpoint, { method: 'POST', body: formData });
 }
 
-export async function adminUpdateContent(id: string, updates: Partial<ContentBase>): Promise<ContentBase | null> {
-  return request<ContentBase | null>(`/admin/content/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(updates),
-    mockHandler: () => mockDb.updateContent(id, updates),
-  });
+export function uploadAvatar(file: File): Promise<MediaAsset> {
+  return upload('/uploads/avatar', file);
 }
 
-export async function adminDeleteContent(id: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/content/${id}`, {
-    method: 'DELETE',
-    mockHandler: () => {
-      const ok = mockDb.deleteContent(id);
-      return { success: ok };
-    },
-  });
+export function uploadMedia(file: File): Promise<MediaAsset> {
+  return upload('/uploads/media', file);
 }
 
-export async function adminGetAllSubmissions(status?: string): Promise<Submission[]> {
-  return request<Submission[]>('/admin/submissions', {
-    method: 'GET',
-    params: { status },
-    mockHandler: () => {
-      let list = mockDb.submissions;
-      if (status && status !== 'all') {
-        list = list.filter((s) => s.status === status);
-      }
-      return list;
-    },
-  });
+/** Image attached by a member to their own idea/experience submission. */
+export function uploadSubmissionImage(file: File): Promise<MediaAsset> {
+  return upload('/uploads/submission', file);
 }
 
-export async function adminApproveSubmission(id: string, operatorMessage?: string): Promise<Submission | null> {
-  return request<Submission | null>(`/admin/submissions/${id}/approve`, {
-    method: 'POST',
-    body: JSON.stringify({ operatorMessage }),
-    mockHandler: () => mockDb.approveSubmission(id, operatorMessage),
-  });
+// ==========================================
+// 12. ADMIN
+// ==========================================
+
+export function adminGetContent(section?: SectionSlug | 'blog', q?: string): Promise<ContentBase[]> {
+  return get<ContentBase[]>('/admin/content', { section, q });
 }
 
-export async function adminRequestRevisionSubmission(id: string, operatorMessage: string): Promise<Submission | null> {
-  return request<Submission | null>(`/admin/submissions/${id}/revision`, {
-    method: 'POST',
-    body: JSON.stringify({ operatorMessage }),
-    mockHandler: () => mockDb.requestRevisionSubmission(id, operatorMessage),
-  });
+export function adminAddContent(
+  section: SectionSlug | 'blog',
+  content: Record<string, unknown>,
+): Promise<ContentBase> {
+  return post<ContentBase>('/admin/content', { section, content });
 }
 
-export async function adminRejectSubmission(id: string, operatorMessage?: string): Promise<Submission | null> {
-  return request<Submission | null>(`/admin/submissions/${id}/reject`, {
-    method: 'POST',
-    body: JSON.stringify({ operatorMessage }),
-    mockHandler: () => mockDb.rejectSubmission(id, operatorMessage),
-  });
+export function adminUpdateContent<T = ContentBase>(
+  id: string,
+  updates: Record<string, unknown>,
+): Promise<T> {
+  return patch<T>(`/admin/content/${encodeURIComponent(id)}`, updates);
 }
 
-export async function adminGetAllComments(): Promise<(Comment & { contentTitle?: string })[]> {
-  return request<(Comment & { contentTitle?: string })[]>('/admin/comments', {
-    method: 'GET',
-    mockHandler: () => mockDb.getAllCommentsList(),
-  });
+export function adminDeleteContent(id: string): Promise<{ success: boolean }> {
+  return del(`/admin/content/${encodeURIComponent(id)}`);
 }
 
-export async function adminApproveComment(commentId: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/comments/${commentId}/approve`, {
-    method: 'POST',
-    mockHandler: () => ({ success: mockDb.approveComment(commentId) }),
-  });
+export function adminGetAllSubmissions(status?: string): Promise<Submission[]> {
+  return get<Submission[]>('/admin/submissions', { status });
 }
 
-export async function adminDeleteComment(commentId: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/comments/${commentId}`, {
-    method: 'DELETE',
-    mockHandler: () => ({ success: mockDb.deleteComment(commentId) }),
-  });
+export function adminApproveSubmission(id: string, operatorMessage?: string): Promise<Submission> {
+  return post<Submission>(`/admin/submissions/${encodeURIComponent(id)}/approve`, { operatorMessage });
 }
 
-export async function adminGetAllContactMessages(): Promise<ContactMessage[]> {
-  return request<ContactMessage[]>('/admin/contact-messages', {
-    method: 'GET',
-    mockHandler: () => mockDb.contactMessages,
-  });
+export function adminRequestRevisionSubmission(
+  id: string,
+  operatorMessage: string,
+): Promise<Submission> {
+  return post<Submission>(`/admin/submissions/${encodeURIComponent(id)}/revision`, { operatorMessage });
 }
 
-export async function adminUpdateContactMessage(id: string, status: 'unread' | 'read' | 'replied', note?: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/contact-messages/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status, note }),
-    mockHandler: () => ({ success: mockDb.updateContactMessageStatus(id, status, note) }),
-  });
+export function adminRejectSubmission(id: string, operatorMessage?: string): Promise<Submission> {
+  return post<Submission>(`/admin/submissions/${encodeURIComponent(id)}/reject`, { operatorMessage });
 }
 
-export async function adminDeleteContactMessage(id: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/contact-messages/${id}`, {
-    method: 'DELETE',
-    mockHandler: () => ({ success: mockDb.deleteContactMessage(id) }),
-  });
+export function adminGetAllComments(): Promise<(Comment & { contentTitle?: string })[]> {
+  return get<(Comment & { contentTitle?: string })[]>('/admin/comments');
 }
 
-export async function adminGetAllEventRegistrations(): Promise<EventRegistration[]> {
-  return request<EventRegistration[]>('/admin/event-registrations', {
-    method: 'GET',
-    mockHandler: () => mockDb.eventRegistrations,
-  });
+export function adminApproveComment(commentId: string): Promise<{ success: boolean }> {
+  return post(`/admin/comments/${encodeURIComponent(commentId)}/approve`);
 }
 
-export async function adminGetAllUsers(): Promise<User[]> {
-  return request<User[]>('/admin/users', {
-    method: 'GET',
-    mockHandler: () => mockDb.users,
-  });
+export function adminDeleteComment(commentId: string): Promise<{ success: boolean }> {
+  return del(`/admin/comments/${encodeURIComponent(commentId)}`);
 }
 
-export async function adminUpdateUserRole(userId: string, role: any): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/users/${userId}/role`, {
-    method: 'PATCH',
-    body: JSON.stringify({ role }),
-    mockHandler: () => ({ success: mockDb.updateUserRole(userId, role) }),
-  });
+export function adminGetAllContactMessages(): Promise<ContactMessage[]> {
+  return get<ContactMessage[]>('/admin/contact-messages');
 }
 
-export async function adminAwardPoints(userId: string, points: number, reasonFa: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/admin/users/${userId}/points`, {
-    method: 'POST',
-    body: JSON.stringify({ points, reasonFa }),
-    mockHandler: () => {
-      mockDb.awardUserPoints(points, reasonFa, 'share');
-      return { success: true };
-    },
-  });
+export function adminUpdateContactMessage(
+  id: string,
+  status: 'unread' | 'read' | 'replied',
+  note?: string,
+): Promise<{ success: boolean }> {
+  return patch(`/admin/contact-messages/${encodeURIComponent(id)}`, { status, note });
 }
 
-export async function adminExportDatabase(): Promise<string> {
-  return mockDb.exportJson();
+export function adminDeleteContactMessage(id: string): Promise<{ success: boolean }> {
+  return del(`/admin/contact-messages/${encodeURIComponent(id)}`);
 }
 
-export async function adminImportDatabase(jsonString: string): Promise<{ success: boolean }> {
-  const ok = mockDb.importJson(jsonString);
-  return { success: ok };
+export function adminGetAllEventRegistrations(): Promise<EventRegistration[]> {
+  return get<EventRegistration[]>('/admin/event-registrations');
 }
 
-export async function adminResetDatabase(): Promise<{ success: boolean }> {
-  mockDb.resetToDefaults();
-  return { success: true };
+export function adminGetAllUsers(): Promise<User[]> {
+  return get<User[]>('/admin/users');
 }
 
-// Sync Mock User with Firebase for hybrid persistence
-export function syncMockUserWithFirebase(firebaseUser: User) {
-  mockDb.data.user = firebaseUser;
-  // replace inside users list
-  const idx = mockDb.data.users.findIndex(u => u.id === firebaseUser.id);
-  if(idx > -1) mockDb.data.users[idx] = firebaseUser;
-  else mockDb.data.users.push(firebaseUser);
-  mockDb.save();
+export function adminUpdateUserRole(
+  userId: string,
+  role: 'member' | 'operator' | 'admin',
+): Promise<{ success: boolean }> {
+  return patch(`/admin/users/${encodeURIComponent(userId)}/role`, { role });
 }
 
-export const getSiteSettings = async (): Promise<SiteSettings> => {
-  return Promise.resolve(mockDb.getSettings());
-};
+export function adminSetUserBlocked(
+  userId: string,
+  blocked: boolean,
+): Promise<{ success: boolean }> {
+  return patch(`/admin/users/${encodeURIComponent(userId)}/block`, { blocked });
+}
 
-export const updateSiteSettings = async (settings: Partial<SiteSettings>): Promise<SiteSettings> => {
-  return Promise.resolve(mockDb.updateSettings(settings));
-};
+export function adminAwardPoints(
+  userId: string,
+  points: number,
+  reasonFa: string,
+): Promise<{ success: boolean }> {
+  return post(`/admin/users/${encodeURIComponent(userId)}/points`, { points, reasonFa });
+}
+
+export interface AdminStats {
+  contentCount: number;
+  pendingSubmissions: number;
+  pendingComments: number;
+  unreadMessages: number;
+  userCount: number;
+  registrationCount: number;
+}
+
+export function adminGetStats(): Promise<AdminStats> {
+  return get<AdminStats>('/admin/stats');
+}
+
+// ==========================================
+// 13. SITE SETTINGS
+// ==========================================
+
+export function getSiteSettings(): Promise<SiteSettings> {
+  return get<SiteSettings>('/settings');
+}
+
+export function updateSiteSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
+  return put<SiteSettings>('/admin/settings', settings as Record<string, unknown>);
+}

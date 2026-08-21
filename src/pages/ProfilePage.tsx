@@ -32,9 +32,11 @@ import {
   getMyBookmarks,
   getMyPointTransactions,
   deleteSavedCanvas,
-  toggleBookmark as apiToggleBookmark,
+  unbookmarkContent,
   updateProfile,
+  uploadAvatar,
 } from '../services/endpoints';
+import { ApiError } from '../services/api';
 import { POINT_REASONS_FA } from '../config/points';
 import { useAuth } from '../hooks/useAuth';
 import { Button, Input, RichTextEditor, Tabs, Chip, EmptyState, FileUpload } from '../components/ui';
@@ -43,8 +45,16 @@ import { useToast } from '../components/ui/Toast';
 import { formatPersianDate, formatTimeAgo } from '../utils/date';
 import { toFaDigits } from '../utils/format';
 
+/** Labels the activity score shown next to the points total. */
+function pointsLevel(points: number): string {
+  if (points >= 1000) return 'پیشگام نوآوری';
+  if (points >= 500) return 'کنشگر باتجربه';
+  if (points >= 150) return 'کنشگر فعال';
+  return 'کنشگر تازه‌وارد';
+}
+
 export const ProfilePage: React.FC = () => {
-  const { user, isAuthenticated, refreshProfile } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,7 +65,7 @@ export const ProfilePage: React.FC = () => {
   const [canvases, setCanvases] = useState<SavedCanvas[]>([]);
   const [bookmarks, setBookmarks] = useState<ContentBase[]>([]);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Edit profile state
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -71,39 +81,51 @@ export const ProfilePage: React.FC = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isResubmitOpen, setIsResubmitOpen] = useState(false);
 
+  // Redirect only once the session check has actually finished, so a signed-in
+  // visitor is never bounced to /login during the initial load.
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login?returnTo=/profile');
-      return;
+    if (!isAuthLoading && !isAuthenticated) {
+      navigate('/login?returnTo=/profile', { replace: true });
     }
+  }, [isAuthLoading, isAuthenticated, navigate]);
 
-    if (user) {
-      setDisplayName(user.displayName);
-      setBio(user.bio || '');
-      setNationalId(user.nationalId || '');
-      setBirthYear(user.birthYear || '');
-      setCity(user.city || '');
-      setInterests(user.interests?.join('، ') || '');
-      setAvatarFile(user.avatarUrl || null);
-    }
+  // Seed the edit form whenever the signed-in identity changes.
+  useEffect(() => {
+    if (!user) return;
+    setDisplayName(user.displayName);
+    setBio(user.bio || '');
+    setNationalId(user.nationalId || '');
+    setBirthYear(user.birthYear || '');
+    setCity(user.city || '');
+    setInterests(user.interests?.join('، ') || '');
+    setAvatarFile(user.avatarUrl || null);
+  }, [user?.id]);
 
+  // Load the dashboard data once per session, not on every profile edit.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
     setIsLoading(true);
-    Promise.all([
-      getMySubmissions(),
-      getMyCanvases(),
-      getMyBookmarks(),
-      getMyPointTransactions(),
-    ])
+
+    Promise.all([getMySubmissions(), getMyCanvases(), getMyBookmarks(), getMyPointTransactions()])
       .then(([subs, cans, bks, txs]) => {
-        setSubmissions(subs.items || (subs as unknown as Submission[]));
+        if (cancelled) return;
+        setSubmissions(subs.items ?? []);
         setCanvases(cans);
-        setBookmarks(bks.items || (bks as unknown as ContentBase[]));
+        setBookmarks(bks.items ?? []);
         setTransactions(txs);
       })
+      .catch(() => {
+        if (!cancelled) showToast('بارگذاری اطلاعات میز کار ناموفق بود.', 'error');
+      })
       .finally(() => {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       });
-  }, [isAuthenticated, user, navigate]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, showToast]);
 
   const handleTabChange = (tabId: string) => {
     setSearchParams({ tab: tabId });
@@ -116,51 +138,61 @@ export const ProfilePage: React.FC = () => {
 
   const handleRefreshSubmissions = async () => {
     const updated = await getMySubmissions();
-    setSubmissions(updated.items || (updated as unknown as Submission[]));
+    setSubmissions(updated.items ?? []);
   };
 
   const handleDeleteCanvas = async (id: string) => {
-    await deleteSavedCanvas(id);
-    setCanvases((prev) => prev.filter((c) => c.id !== id));
-    showToast('بوم با موفقیت حذف شد.', 'info');
+    try {
+      await deleteSavedCanvas(id);
+      setCanvases((prev) => prev.filter((c) => c.id !== id));
+      showToast('بوم با موفقیت حذف شد.', 'info');
+    } catch {
+      showToast('حذف بوم ناموفق بود.', 'error');
+    }
   };
 
   const handleRemoveBookmark = async (item: ContentBase) => {
-    await apiToggleBookmark(item.id);
-    setBookmarks((prev) => prev.filter((b) => b.id !== item.id));
-    showToast('مطلب از نشان‌ها حذف شد.', 'info');
+    try {
+      await unbookmarkContent(item.id);
+      setBookmarks((prev) => prev.filter((b) => b.id !== item.id));
+      showToast('مطلب از نشان‌ها حذف شد.', 'info');
+    } catch {
+      showToast('حذف نشان ناموفق بود.', 'error');
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
-      let finalAvatarUrl = typeof avatarFile === 'string' ? avatarFile : undefined;
-      
+      // The avatar is uploaded to the server; it is never inlined as a data
+      // URL, which used to bloat every profile payload.
+      let finalAvatarUrl = typeof avatarFile === 'string' ? avatarFile : '';
       if (avatarFile instanceof File) {
-        finalAvatarUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (evt) => resolve(evt.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(avatarFile);
-        });
-      } else if (avatarFile === null) {
-        finalAvatarUrl = ''; // Clear avatar
+        const asset = await uploadAvatar(avatarFile);
+        finalAvatarUrl = asset.url;
       }
 
-      await updateProfile({ 
-        displayName, 
-        bio, 
+      await updateProfile({
+        displayName,
+        bio,
         avatarUrl: finalAvatarUrl,
         nationalId,
         birthYear,
         city,
-        interests: interests.split('،').map(i => i.trim()).filter(Boolean)
+        // Accept both the Persian comma and the Latin one, as the label says.
+        interests: interests
+          .split(/[،,]/)
+          .map((entry) => entry.trim())
+          .filter(Boolean),
       });
-      if (refreshProfile) await refreshProfile();
+      await refreshProfile();
       showToast('اطلاعات حساب کاربری با موفقیت به‌روزرسانی شد.', 'success');
-    } catch {
-      showToast('خطا در به‌روزرسانی اطلاعات.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در به‌روزرسانی اطلاعات.',
+        'error',
+      );
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -248,7 +280,7 @@ export const ProfilePage: React.FC = () => {
                   </span>
                   <span className="flex items-center gap-1 text-ink-600">
                     <Calendar className="w-3.5 h-3.5 text-ink-400" />
-                    <span>کسوت نوآفری: ۱۹۴ روز همراهی</span>
+                    <span>کسوت نوآفری: {toFaDigits(user.membershipDays)} روز همراهی</span>
                   </span>
                 </div>
 
@@ -270,7 +302,7 @@ export const ProfilePage: React.FC = () => {
                 {toFaDigits(user.points)}
               </div>
               <span className="text-[11px] text-amber-700 block">
-                سطح: پیشگام نوآوری
+                سطح: {pointsLevel(user.points)}
               </span>
             </div>
           </div>
@@ -353,6 +385,12 @@ export const ProfilePage: React.FC = () => {
                             <span>نیازمند ویرایش و اصلاح</span>
                           </span>
                         )}
+                        {sub.status === 'rejected' && (
+                          <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>تایید نشد</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -362,7 +400,7 @@ export const ProfilePage: React.FC = () => {
                       </p>
                     )}
 
-                    {/* Operator Message Box for Needs Revision */}
+                    {/* Reviewer note — shown whenever the reviewers left one */}
                     {sub.status === 'needs_revision' && sub.operatorMessage && (
                       <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-lg space-y-2">
                         <div className="flex items-center gap-1.5 text-amber-800 text-xs font-bold">
@@ -381,6 +419,18 @@ export const ProfilePage: React.FC = () => {
                             ویرایش و ارسال مجدد
                           </Button>
                         </div>
+                      </div>
+                    )}
+
+                    {sub.status === 'rejected' && sub.operatorMessage && (
+                      <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-lg space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-rose-800 text-xs font-bold">
+                          <AlertTriangle className="w-4 h-4 text-rose-600" />
+                          <span>پیام داور نوآفر:</span>
+                        </div>
+                        <p className="text-xs text-rose-900 leading-relaxed ps-5">
+                          {sub.operatorMessage}
+                        </p>
                       </div>
                     )}
 
@@ -520,6 +570,12 @@ export const ProfilePage: React.FC = () => {
               ریز تراکنش‌های امتیازات نوآفری
             </h3>
 
+            {transactions.length === 0 && (
+              <p className="text-xs text-ink-400 py-6 text-center">
+                هنوز امتیازی ثبت نشده است. با ثبت ایده، تجربه یا تکمیل بوم امتیاز بگیرید.
+              </p>
+            )}
+
             <div className="divide-y divide-ink-100">
               {transactions.map((tx) => (
                 <div
@@ -535,8 +591,15 @@ export const ProfilePage: React.FC = () => {
                     </p>
                   </div>
 
-                  <span className="font-bold text-sm text-amber-800 font-sans bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
-                    +{toFaDigits(tx.points)} امتیاز
+                  <span
+                    className={
+                      tx.points < 0
+                        ? 'font-bold text-sm text-rose-800 font-sans bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200'
+                        : 'font-bold text-sm text-amber-800 font-sans bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200'
+                    }
+                  >
+                    {tx.points < 0 ? '−' : '+'}
+                    {toFaDigits(Math.abs(tx.points))} امتیاز
                   </span>
                 </div>
               ))}

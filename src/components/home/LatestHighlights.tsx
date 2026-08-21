@@ -1,13 +1,70 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, Wrench, Footprints, Calendar } from 'lucide-react';
 import { CourseCard, ToolCard, ExperienceCard, EventCard } from '../cards';
-import { MOCK_COURSES, MOCK_TOOLS, MOCK_EXPERIENCES, MOCK_EVENTS } from '../../mocks';
-import { Tabs } from '../ui';
+import { Course, Tool, Experience, Event } from '../../types';
+import { getContentList } from '../../services/endpoints';
+import { Skeleton, Tabs } from '../ui';
 import { motion, AnimatePresence } from 'framer-motion';
 
+type HighlightTab = 'courses' | 'tools' | 'experiences' | 'events';
+
+/** Which section each tab pulls its three highlight cards from. */
+const TAB_SECTIONS = {
+  courses: 'academy',
+  tools: 'toolbox',
+  experiences: 'journey',
+  events: 'gathering',
+} as const;
+
 export const LatestHighlights: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'courses' | 'tools' | 'experiences' | 'events'>('courses');
+  const [activeTab, setActiveTab] = useState<HighlightTab>('courses');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
+
+  // Each tab fetches once, the first time it is opened.
+  useEffect(() => {
+    if (loadedTabs[activeTab]) return;
+    let cancelled = false;
+    const section = TAB_SECTIONS[activeTab];
+
+    getContentList(section, { page: 1, pageSize: 3 })
+      .then((result) => {
+        if (cancelled) return;
+        if (activeTab === 'courses') setCourses(result.items as unknown as Course[]);
+        else if (activeTab === 'tools') setTools(result.items as unknown as Tool[]);
+        else if (activeTab === 'experiences') setExperiences(result.items as unknown as Experience[]);
+        else setEvents(result.items as unknown as Event[]);
+      })
+      .catch(() => {
+        // A highlights strip that cannot load simply stays empty.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedTabs((prev) => ({ ...prev, [activeTab]: true }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, loadedTabs]);
+
+  const isTabLoading = !loadedTabs[activeTab];
+
+  const skeletonGrid = (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="bg-white p-4 rounded-xl border border-ink-200 space-y-3">
+          <Skeleton className="aspect-video w-full rounded-lg" />
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
 
   const tabs = [
     { id: 'courses', label: 'دوره‌های آموزشی', icon: <GraduationCap className="w-4 h-4" /> },
@@ -34,7 +91,7 @@ export const LatestHighlights: React.FC = () => {
             <Tabs
               tabs={tabs}
               activeTab={activeTab}
-              onChange={(id) => setActiveTab(id as any)}
+              onChange={(id) => setActiveTab(id as HighlightTab)}
               variant="pills"
             />
           </div>
@@ -52,11 +109,15 @@ export const LatestHighlights: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-                  {MOCK_COURSES.slice(0, 3).map((course) => (
-                    <CourseCard key={course.id} course={course} />
-                  ))}
-                </div>
+                {isTabLoading ? (
+                  skeletonGrid
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                    {courses.map((course) => (
+                      <CourseCard key={course.id} course={course} />
+                    ))}
+                  </div>
+                )}
                 <div className="text-center pt-4">
                   <Link
                     to="/academy"
@@ -78,11 +139,15 @@ export const LatestHighlights: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-                  {MOCK_TOOLS.slice(0, 3).map((tool) => (
-                    <ToolCard key={tool.id} tool={tool} />
-                  ))}
-                </div>
+                {isTabLoading ? (
+                  skeletonGrid
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                    {tools.map((tool) => (
+                      <ToolCard key={tool.id} tool={tool} />
+                    ))}
+                  </div>
+                )}
                 <div className="text-center pt-4">
                   <Link
                     to="/toolbox"
@@ -104,11 +169,15 @@ export const LatestHighlights: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-                  {MOCK_EXPERIENCES.slice(0, 3).map((exp) => (
-                    <ExperienceCard key={exp.id} experience={exp} />
-                  ))}
-                </div>
+                {isTabLoading ? (
+                  skeletonGrid
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                    {experiences.map((exp) => (
+                      <ExperienceCard key={exp.id} experience={exp} />
+                    ))}
+                  </div>
+                )}
                 <div className="text-center pt-4">
                   <Link
                     to="/journey"
@@ -130,11 +199,15 @@ export const LatestHighlights: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-                  {MOCK_EVENTS.slice(0, 3).map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                {isTabLoading ? (
+                  skeletonGrid
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                    {events.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                )}
                 <div className="text-center pt-4">
                   <Link
                     to="/gathering"
