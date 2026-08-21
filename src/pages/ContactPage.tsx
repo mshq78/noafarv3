@@ -91,7 +91,7 @@ export const ContactPage: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-ink-200 space-y-6 shadow-2xs">
               <h3 className="text-base font-bold text-ink-900">اطلاعات تماس مستقیم</h3>
-              <TricolorRule />
+              <TricolorRule height={3} />
 
               <div className="space-y-4 text-xs text-ink-600">
                 <div className="flex items-start gap-3">

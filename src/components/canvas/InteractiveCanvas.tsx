@@ -35,7 +35,10 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(true);
+  // Open by default only where there is room for it beside the board.
+  const [showInstructions, setShowInstructions] = useState(
+    () => typeof window === 'undefined' || window.matchMedia('(min-width: 1024px)').matches,
+  );
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>(canvasData?.notes ?? {});
@@ -132,28 +135,33 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
 
   return (
     <div className="flex flex-col h-screen bg-ink-100 overflow-hidden select-none">
-      {/* Canvas Top Bar */}
-      <div className="h-14 bg-white border-b border-ink-200 px-4 flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-3">
+      {/*
+        Top bar. On a phone the four labelled controls did not fit in 360px and
+        overflowed off-screen, so below `sm` the two actions collapse to icons
+        and the title block gets the remaining room.
+      */}
+      <div className="h-14 bg-white border-b border-ink-200 px-3 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-20">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={() => navigate(`/toolbox/${tool.slug}`)}
-            className="p-1.5 hover:bg-ink-100 rounded-md text-ink-600 hover:text-ink-900 transition-colors"
+            className="p-1.5 hover:bg-ink-100 rounded-md text-ink-600 hover:text-ink-900 transition-colors shrink-0"
             aria-label="بازگشت به صفحه ابزار"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-bold text-ink-900 line-clamp-1">
-              میز کار بوم: {tool.title}
+              <span className="hidden sm:inline">میز کار بوم: </span>
+              {tool.title}
             </h2>
-            <span className="text-[11px] text-ink-400 font-sans">
+            <span className="text-[11px] text-ink-400 font-sans line-clamp-1">
               اتاق ابری نوآفر • {savedAt ? 'ذخیره خودکار' : 'ذخیره‌نشده'}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <IconButton
             aria-label="راهنمای تکمیل"
             variant="ghost"
@@ -171,21 +179,40 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
             <Share2 className="w-4 h-4" />
           </IconButton>
 
+          {/* Phones: icon only. Tablets and up: the original labelled buttons. */}
+          <IconButton
+            aria-label="خروجی متنی بوم"
+            variant="secondary"
+            onClick={handleExport}
+            className="sm:hidden"
+          >
+            <Download className="w-4 h-4" />
+          </IconButton>
           <Button
             size="sm"
             variant="secondary"
             onClick={handleExport}
             rightIcon={<Download className="w-3.5 h-3.5" />}
+            className="hidden sm:inline-flex"
           >
             خروجی PNG
           </Button>
 
+          <IconButton
+            aria-label="ذخیره در میز کار"
+            variant="primary"
+            onClick={handleSave}
+            className="sm:hidden"
+          >
+            <Save className="w-4 h-4" />
+          </IconButton>
           <Button
             size="sm"
             variant="primary"
             onClick={handleSave}
             isLoading={isSaving}
             rightIcon={<Save className="w-3.5 h-3.5" />}
+            className="hidden sm:inline-flex"
           >
             ذخیره در میز کار
           </Button>
@@ -195,21 +222,22 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
       {/* Main Canvas Workspace + Instructions Sidebar */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Visual Interactive Canvas Workspace */}
-        <div className="flex-1 bg-white p-6 overflow-auto flex items-center justify-center relative">
+        <div className="flex-1 bg-white p-3 sm:p-6 overflow-auto flex items-start sm:items-center justify-center relative">
           {/* Subtle Grid Background */}
           <div
             className="absolute inset-0 bg-[radial-gradient(#d5d7e0_1px,transparent_1px)] [background-size:20px_20px] opacity-60 pointer-events-none"
           />
 
           {/* Canvas Board Template Container */}
-          <div className="w-full max-w-5xl bg-white border-2 border-ink-300 rounded-xl shadow-lg p-6 relative z-10 space-y-6">
-            <div className="flex items-center justify-between border-b-2 border-ink-200 pb-3">
-              <div>
+          <div className="w-full max-w-5xl bg-white border-2 border-ink-300 rounded-xl shadow-lg p-4 sm:p-6 relative z-10 space-y-6">
+            {/* Stacks on phones, where the badge otherwise wrapped to three lines. */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 border-b-2 border-ink-200 pb-3">
+              <div className="min-w-0">
                 <h3 className="text-lg font-black text-ink-900">{tool.title}</h3>
                 <p className="text-xs text-ink-500">{tool.summary}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-1 bg-pink-50 text-pink-700 border border-pink-200 rounded-md font-bold">
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs px-2 py-1 bg-pink-50 text-pink-700 border border-pink-200 rounded-md font-bold whitespace-nowrap">
                   نسخه تعاملی نوآفر
                 </span>
               </div>
@@ -327,9 +355,21 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
           </div>
         </div>
 
-        {/* Collapsible Step-by-Step Instructions Sidebar */}
+        {/*
+          Instructions. On a phone this used to sit beside the board and take
+          320px of a 360px screen, squeezing the canvas into an unusable
+          sliver; below `lg` it now floats over the board as a drawer.
+        */}
         {showInstructions && (
-          <aside className="w-80 bg-white border-s border-ink-200 p-5 overflow-y-auto shrink-0 space-y-4">
+          <button
+            type="button"
+            aria-label="بستن راهنما"
+            onClick={() => setShowInstructions(false)}
+            className="lg:hidden fixed inset-0 top-14 bg-ink-900/30 z-30 cursor-default"
+          />
+        )}
+        {showInstructions && (
+          <aside className="fixed lg:static inset-y-14 lg:inset-y-auto start-0 z-40 w-[85%] max-w-xs lg:w-80 lg:max-w-none bg-white border-s border-ink-200 p-5 overflow-y-auto shrink-0 space-y-4 shadow-2xl lg:shadow-none">
             <div className="flex items-center justify-between border-b border-ink-100 pb-3">
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-sky-600" />

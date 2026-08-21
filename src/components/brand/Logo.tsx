@@ -8,11 +8,7 @@ interface LogoProps {
   markAccent?: string;
   className?: string;
   showText?: boolean;
-  /**
-   * Marks the logo as sitting on a dark background. The wordmark is an SVG
-   * image, so the caller supplies the colour treatment through `className`
-   * (the footer already does); this only records the intent.
-   */
+  /** Renders the wordmark light, for use on a dark background (the footer). */
   invert?: boolean;
 }
 
@@ -21,7 +17,7 @@ export const Logo: React.FC<LogoProps> = ({
   markAccent = '#FFCC6D',
   className = '',
   showText = true,
-  invert: _invert = false,
+  invert = false,
 }) => {
   const markSizes = {
     sm: 28,
@@ -48,7 +44,9 @@ export const Logo: React.FC<LogoProps> = ({
         <img
           src={settings.logoUrl}
           alt="لوگوی سایت"
-          className={`${textHeights[size]} w-auto object-contain select-none`}
+          className={`${textHeights[size]} w-auto object-contain select-none${
+            invert ? ' brightness-0 invert' : ''
+          }`}
         />
       </Link>
     );
@@ -66,7 +64,9 @@ export const Logo: React.FC<LogoProps> = ({
         <img
           src="/brand/noafar-logotype.svg"
           alt="لوگوتایپ نوآفر"
-          className={`${textHeights[size]} w-auto select-none`}
+          className={`${textHeights[size]} w-auto select-none${
+            invert ? ' brightness-0 invert' : ''
+          }`}
         />
       )}
     </Link>

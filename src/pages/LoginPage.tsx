@@ -132,7 +132,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Form Card */}
         <div className="bg-white border border-ink-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6 relative overflow-hidden">
-          <TricolorRule />
+          <TricolorRule height={3} />
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4 pt-4">

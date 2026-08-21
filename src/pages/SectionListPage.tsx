@@ -102,14 +102,9 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Section Header Banner */}
         <div className="relative bg-white rounded-2xl p-6 sm:p-10 border border-ink-200 shadow-2xs overflow-hidden">
+          {/* Tinted with the section's own accent colour. */}
           <DotPattern
-            color={
-              sectionMeta.color === 'sky'
-                ? '#0077b6'
-                : sectionMeta.color === 'pink'
-                ? '#e07a5f'
-                : '#f2cc8f'
-            }
+            dotColor={sectionMeta.accentColorHex}
             className="opacity-30 end-0 -top-8"
           />
 
@@ -161,7 +156,7 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           </div>
 
           <div className="mt-6 pt-4 border-t border-ink-100 max-w-xs">
-            <TricolorRule />
+            <TricolorRule height={2} />
           </div>
         </div>
 

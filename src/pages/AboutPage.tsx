@@ -148,14 +148,15 @@ export const AboutPage: React.FC = () => {
           <p className="text-xs text-ink-500 max-w-md mx-auto">
             تجربه یا ایده خود را ثبت کنید و به جریان تحول اجتماعی کشور بپیوندید.
           </p>
-          <div className="flex justify-center gap-3">
+          {/* Side by side once there is room; stacked on a narrow phone. */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
             <Link to="/spark/submit">
-              <Button variant="primary" size="md">
+              <Button variant="primary" size="md" className="w-full sm:w-auto">
                 ثبت ایده نوآوری اجتماعی
               </Button>
             </Link>
             <Link to="/contact">
-              <Button variant="secondary" size="md">
+              <Button variant="secondary" size="md" className="w-full sm:w-auto">
                 ارتباط با دبیرخانه
               </Button>
             </Link>

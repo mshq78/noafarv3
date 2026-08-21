@@ -197,7 +197,13 @@ export const SixTileGrid: React.FC = () => {
           <span className="text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
             نقشه جامع پلتفرم
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-ink-900 leading-tight whitespace-nowrap">
+          {/*
+            `whitespace-nowrap` kept this heading on one line at every width.
+            On a phone the line is ~455px wide inside a ~350px column, which
+            pushed the whole document 74px sideways. It stays on one line from
+            `sm` up, where there is room for it.
+          */}
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-ink-900 leading-tight text-balance sm:whitespace-nowrap">
             شش درگاه تخصصی برای مسیر رشد نوآوری شما
           </h2>
           <p className="text-sm sm:text-base text-ink-600 leading-relaxed max-w-xl mx-auto whitespace-normal">

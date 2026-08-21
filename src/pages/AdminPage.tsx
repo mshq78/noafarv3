@@ -986,6 +986,12 @@ export const AdminPage: React.FC = () => {
                   </button>
                 </div>
 
+                {messages.length === 0 && (
+                  <p className="text-xs text-ink-400 py-8 text-center">
+                    صندوق پیام‌ها خالی است. پیام‌های تازهٔ فرم تماس اینجا نمایش داده می‌شوند.
+                  </p>
+                )}
+
                 {messages.slice(0, 3).map((msg) => (
                   <div
                     key={msg.id}

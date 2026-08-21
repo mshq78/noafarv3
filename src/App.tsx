@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './services/auth';
 import { SiteSettingsProvider } from './services/siteSettings';
 import { ToastProvider } from './components/ui/Toast';
@@ -20,6 +20,7 @@ import { BlogDetailPage } from './pages/BlogDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // The admin panel is large and only ever opened by staff, so it is split into
@@ -235,16 +236,7 @@ export default function App() {
               path="*"
               element={
                 <MainLayout>
-                  <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-                    <h2 className="text-4xl font-black text-ink-900">۴۰۴</h2>
-                    <p className="text-sm text-ink-500">صفحه مورد نظر شما در نوآفر یافت نشد.</p>
-                    <Link
-                      to="/"
-                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors"
-                    >
-                      بازگشت به صفحه اصلی
-                    </Link>
-                  </div>
+                  <NotFoundPage />
                 </MainLayout>
               }
             />

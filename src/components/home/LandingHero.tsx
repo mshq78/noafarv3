@@ -49,7 +49,7 @@ export const LandingHero: React.FC = () => {
           <p className="text-base sm:text-lg text-ink-700 leading-relaxed font-medium whitespace-pre-line">{settings.heroSubtitle}</p>
 
           <div className="max-w-xs py-2">
-            <TricolorRule />
+            <TricolorRule height={3} />
           </div>
 
           {/* CTAs */}
