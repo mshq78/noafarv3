@@ -41,6 +41,44 @@ export function verifyOtp(phone: string, code: string): Promise<{ token: string;
   return post<{ token: string; user: User }>('/auth/otp/verify', { phone, code });
 }
 
+// ---- email + password --------------------------------------------------
+
+export function registerWithEmail(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<{ token: string; user: User }> {
+  return post<{ token: string; user: User }>('/auth/register', { email, password, displayName });
+}
+
+export function loginWithEmail(
+  email: string,
+  password: string,
+): Promise<{ token: string; user: User }> {
+  return post<{ token: string; user: User }>('/auth/login', { email, password });
+}
+
+/** Sets or changes the password; `email` attaches an address to a phone account. */
+export function setPassword(input: {
+  currentPassword?: string;
+  newPassword: string;
+  email?: string;
+}): Promise<User> {
+  return post<User>('/auth/password', input);
+}
+
+/** Always resolves, whether or not the address has an account. */
+export function requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+  return post('/auth/password/forgot', { email });
+}
+
+export function resetPassword(
+  token: string,
+  password: string,
+): Promise<{ token: string; user: User }> {
+  return post<{ token: string; user: User }>('/auth/password/reset', { token, password });
+}
+
 export function logout(): Promise<{ success: boolean }> {
   return post<{ success: boolean }>('/auth/logout');
 }

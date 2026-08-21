@@ -29,7 +29,12 @@ export interface MediaAsset {
 export interface User {
   id: string;
   displayName: string;
+  /** Empty for accounts created with an email address. */
   phone: string;
+  /** Present once the account has an address for email sign-in. */
+  email?: string;
+  /** True when a password is set, so the UI offers "change" instead of "create". */
+  hasPassword?: boolean;
   nationalId?: string;
   birthYear?: string;
   city?: string;

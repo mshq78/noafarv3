@@ -653,7 +653,7 @@ adminRouter.get(
 
 // ================================================================== users ===
 
-const USER_COLUMNS = `id, phone, display_name, national_id, birth_year, city, interests,
+const USER_COLUMNS = `id, phone, email, display_name, national_id, birth_year, city, interests,
                       role, avatar_url, bio, points, profile_complete, joined_at`;
 
 adminRouter.get(

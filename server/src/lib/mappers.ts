@@ -74,7 +74,10 @@ export function mapContent(row: ContentRow): Record<string, unknown> {
 
 export interface UserRow {
   id: string;
-  phone: string;
+  /** Null for accounts created with an email address instead of a phone. */
+  phone: string | null;
+  /** Null for accounts created with a phone number instead of an address. */
+  email?: string | null;
   display_name: string;
   national_id: string | null;
   birth_year: string | null;
@@ -86,6 +89,7 @@ export interface UserRow {
   points: number;
   profile_complete: boolean;
   is_blocked?: boolean;
+  has_password?: boolean;
   joined_at: Date | string;
 }
 
@@ -99,7 +103,10 @@ export function mapUser(row: UserRow): Record<string, unknown> {
   return {
     id: row.id,
     displayName: row.display_name,
-    phone: row.phone,
+    phone: row.phone ?? '',
+    email: row.email ?? undefined,
+    /** True once a password is set, so the UI can offer "change" vs "create". */
+    hasPassword: Boolean(row.has_password),
     nationalId: row.national_id ?? undefined,
     birthYear: row.birth_year ?? undefined,
     city: row.city ?? undefined,

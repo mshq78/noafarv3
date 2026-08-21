@@ -12,17 +12,36 @@ import {
   setSessionCookie,
   verifyOtpHash,
 } from '../lib/auth.js';
-import { asyncRoute, badRequest, tooManyRequests, unauthorized } from '../lib/http.js';
+import { asyncRoute, badRequest, conflict, tooManyRequests, unauthorized } from '../lib/http.js';
 import { clientIp, consume, rateLimit } from '../lib/rateLimit.js';
 import { mapUser, type UserRow } from '../lib/mappers.js';
 import { sanitizePlainText } from '../lib/sanitize.js';
 import { sendOtpSms } from '../lib/sms.js';
+import { buildPasswordResetMail, sendMail } from '../lib/mailer.js';
+import {
+  burnPasswordTime,
+  checkPasswordStrength,
+  generateResetToken,
+  hashPassword,
+  hashResetToken,
+  verifyPassword,
+} from '../lib/password.js';
 import { awardPoints } from '../lib/points.js';
 
 export const authRouter = Router();
 
-const USER_COLUMNS = `id, phone, display_name, national_id, birth_year, city, interests,
-                      role, avatar_url, bio, points, profile_complete, is_blocked, joined_at`;
+const USER_COLUMNS = `id, phone, email, display_name, national_id, birth_year, city, interests,
+                      role, avatar_url, bio, points, profile_complete, is_blocked, joined_at,
+                      (password_hash IS NOT NULL) AS has_password`;
+
+/** Lower-cased and trimmed; `''` when the value is not a usable address. */
+function normaliseEmail(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  const value = input.trim().toLowerCase();
+  if (value.length < 5 || value.length > 200) return null;
+  // Deliberately permissive: one @, no spaces, a dotted domain.
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(value) ? value : null;
+}
 
 /** Accepts Persian/Arabic digits and common separators, normalises to 09xxxxxxxxx. */
 function normalisePhone(input: unknown): string | null {
@@ -302,5 +321,326 @@ authRouter.patch(
       updated.id,
     ]);
     res.json(mapUser(fresh ?? updated));
+  }),
+);
+
+// ==========================================================================
+// EMAIL + PASSWORD
+// ==========================================================================
+
+/**
+ * Both sign-in and sign-up answer with the same shape as the OTP flow, so the
+ * client treats every route to a session identically.
+ */
+async function issueSession(
+  user: UserRow,
+  req: Parameters<typeof createSession>[1],
+  res: Parameters<typeof setSessionCookie>[0],
+): Promise<void> {
+  const session = await createSession(user.id, req);
+  setSessionCookie(res, session.token, session.expiresAt);
+  res.json({ token: session.token, user: mapUser(user) });
+}
+
+const registerSchema = z.object({
+  email: z.string().min(1),
+  password: z.string().min(1),
+  displayName: z.string().max(120).optional(),
+});
+
+authRouter.post(
+  '/register',
+  rateLimit({
+    name: 'register-ip',
+    limit: 10,
+    windowSeconds: 60 * 60,
+    message: 'تعداد ثبت‌نام‌ها از این دستگاه بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.',
+  }),
+  asyncRoute(async (req, res) => {
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) throw badRequest('نشانی رایانامه و گذرواژه را وارد کنید.');
+
+    const email = normaliseEmail(parsed.data.email);
+    if (!email) throw badRequest('نشانی رایانامه معتبر نیست.');
+
+    const strength = checkPasswordStrength(parsed.data.password, email);
+    if (!strength.ok) throw badRequest(strength.message!);
+
+    const existing = await queryOne<{ id: string }>(
+      `SELECT id FROM users WHERE lower(email) = $1`,
+      [email],
+    );
+    if (existing) {
+      throw conflict('این نشانی رایانامه قبلاً ثبت شده است. وارد شوید یا گذرواژه را بازیابی کنید.');
+    }
+
+    const passwordHash = await hashPassword(parsed.data.password);
+    const displayName = sanitizePlainText(parsed.data.displayName ?? '', 120);
+
+    let created: UserRow | null;
+    try {
+      created = await queryOne<UserRow>(
+        `INSERT INTO users (email, password_hash, display_name, role)
+              VALUES ($1, $2, $3, 'member')
+           RETURNING ${USER_COLUMNS}`,
+        [email, passwordHash, displayName],
+      );
+    } catch (error) {
+      // The unique index is the real guard against two simultaneous sign-ups.
+      if ((error as { code?: string })?.code === '23505') {
+        throw conflict('این نشانی رایانامه قبلاً ثبت شده است.');
+      }
+      throw error;
+    }
+
+    await issueSession(created!, req, res);
+  }),
+);
+
+const loginSchema = z.object({ email: z.string().min(1), password: z.string().min(1) });
+
+authRouter.post(
+  '/login',
+  rateLimit({
+    name: 'login-ip',
+    limit: 30,
+    windowSeconds: 15 * 60,
+    message: 'تلاش‌های ورود از این دستگاه بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.',
+  }),
+  asyncRoute(async (req, res) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) throw badRequest('نشانی رایانامه و گذرواژه را وارد کنید.');
+
+    const email = normaliseEmail(parsed.data.email);
+    // One message for every failure below, so a wrong password cannot be told
+    // apart from an address that has no account.
+    const rejection = unauthorized('نشانی رایانامه یا گذرواژه درست نیست.');
+
+    if (!email) {
+      await burnPasswordTime(parsed.data.password);
+      throw rejection;
+    }
+
+    // A second limit keyed on the address, so one account cannot be ground
+    // through from many IPs.
+    const perEmail = await consume(`login-email:${email}`, env.loginMaxAttempts, 15 * 60);
+    if (!perEmail.allowed) {
+      throw tooManyRequests(
+        'تلاش‌های ناموفق زیادی برای این حساب ثبت شده است. چند دقیقه دیگر دوباره تلاش کنید.',
+        perEmail.retryAfterSeconds,
+      );
+    }
+
+    const row = await queryOne<UserRow & { password_hash: string | null; is_blocked: boolean }>(
+      `SELECT ${USER_COLUMNS}, password_hash FROM users WHERE lower(email) = $1`,
+      [email],
+    );
+
+    if (!row || !row.password_hash) {
+      await burnPasswordTime(parsed.data.password);
+      throw rejection;
+    }
+    if (!(await verifyPassword(parsed.data.password, row.password_hash))) throw rejection;
+    if (row.is_blocked) throw unauthorized('دسترسی این حساب کاربری مسدود شده است.');
+
+    await issueSession(row, req, res);
+  }),
+);
+
+// -------------------------------------------------- set / change password ---
+
+const setPasswordSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(1),
+  email: z.string().optional(),
+});
+
+/**
+ * Lets a signed-in visitor attach an address and password to an account they
+ * created with a phone number, or change an existing password.
+ */
+authRouter.post(
+  '/password',
+  requireAuth,
+  rateLimit({
+    name: 'set-password',
+    limit: 12,
+    windowSeconds: 60 * 60,
+    key: (req) => req.user?.id ?? 'anon',
+  }),
+  asyncRoute(async (req, res) => {
+    const parsed = setPasswordSchema.safeParse(req.body);
+    if (!parsed.success) throw badRequest('گذرواژه تازه را وارد کنید.');
+
+    const current = await queryOne<UserRow & { password_hash: string | null }>(
+      `SELECT ${USER_COLUMNS}, password_hash FROM users WHERE id = $1`,
+      [req.user!.id],
+    );
+    if (!current) throw unauthorized('حساب کاربری یافت نشد.');
+
+    // Changing an existing password requires proving you know it.
+    if (current.password_hash) {
+      if (!parsed.data.currentPassword) throw badRequest('گذرواژه فعلی را وارد کنید.');
+      if (!(await verifyPassword(parsed.data.currentPassword, current.password_hash))) {
+        throw unauthorized('گذرواژه فعلی درست نیست.');
+      }
+    }
+
+    let email = current.email ?? null;
+    if (parsed.data.email !== undefined) {
+      const candidate = normaliseEmail(parsed.data.email);
+      if (!candidate) throw badRequest('نشانی رایانامه معتبر نیست.');
+      if (candidate !== current.email) {
+        const clash = await queryOne<{ id: string }>(
+          `SELECT id FROM users WHERE lower(email) = $1 AND id <> $2`,
+          [candidate, current.id],
+        );
+        if (clash) throw conflict('این نشانی رایانامه برای حساب دیگری ثبت شده است.');
+      }
+      email = candidate;
+    }
+
+    if (!email) throw badRequest('برای تعیین گذرواژه، ابتدا نشانی رایانامه خود را وارد کنید.');
+
+    const strength = checkPasswordStrength(parsed.data.newPassword, email);
+    if (!strength.ok) throw badRequest(strength.message!);
+
+    const passwordHash = await hashPassword(parsed.data.newPassword);
+    const updated = await queryOne<UserRow>(
+      `UPDATE users SET email = $2, password_hash = $3, updated_at = now()
+        WHERE id = $1 RETURNING ${USER_COLUMNS}`,
+      [current.id, email, passwordHash],
+    );
+
+    // Every other session is dropped: a password change is how someone
+    // recovers an account they think is compromised.
+    await query(
+      `UPDATE sessions SET revoked_at = now()
+        WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL`,
+      [current.id, req.user!.sessionId],
+    );
+
+    res.json(mapUser(updated!));
+  }),
+);
+
+// ------------------------------------------------------- password reset -----
+
+authRouter.post(
+  '/password/forgot',
+  rateLimit({
+    name: 'forgot-ip',
+    limit: 10,
+    windowSeconds: 60 * 60,
+    message: 'درخواست‌های بازیابی از این دستگاه بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.',
+  }),
+  asyncRoute(async (req, res) => {
+    const email = normaliseEmail((req.body as { email?: unknown })?.email);
+
+    // Always the same answer, so this endpoint cannot be used to discover
+    // which addresses have accounts.
+    const acknowledge = () =>
+      res.json({
+        success: true,
+        message: 'اگر این نشانی در نوآفر ثبت شده باشد، پیوند بازیابی برای شما ارسال می‌شود.',
+      });
+
+    if (!email) {
+      acknowledge();
+      return;
+    }
+
+    const perEmail = await consume(`forgot-email:${email}`, 5, 60 * 60);
+    if (!perEmail.allowed) {
+      acknowledge();
+      return;
+    }
+
+    const user = await queryOne<{ id: string; email: string | null; is_blocked: boolean }>(
+      `SELECT id, email, is_blocked FROM users WHERE lower(email) = $1`,
+      [email],
+    );
+    if (!user || user.is_blocked) {
+      acknowledge();
+      return;
+    }
+
+    const token = generateResetToken();
+    await query(
+      `UPDATE password_resets SET consumed_at = now()
+        WHERE user_id = $1 AND consumed_at IS NULL`,
+      [user.id],
+    );
+    await query(
+      `INSERT INTO password_resets (user_id, token_hash, expires_at, request_ip)
+            VALUES ($1, $2, now() + make_interval(mins => $3), $4)`,
+      [user.id, hashResetToken(token), env.passwordResetTtlMinutes, clientIp(req)],
+    );
+
+    const origin = env.publicUrl || `${req.protocol}://${req.get('host') ?? ''}`;
+    const resetUrl = `${origin}/login?reset=${encodeURIComponent(token)}`;
+    const { text, html } = buildPasswordResetMail(resetUrl, env.passwordResetTtlMinutes);
+    await sendMail({ to: user.email!, subject: 'بازیابی گذرواژه نوآفر', text, html });
+
+    acknowledge();
+  }),
+);
+
+const resetSchema = z.object({ token: z.string().min(10), password: z.string().min(1) });
+
+authRouter.post(
+  '/password/reset',
+  rateLimit({
+    name: 'reset-ip',
+    limit: 20,
+    windowSeconds: 60 * 60,
+  }),
+  asyncRoute(async (req, res) => {
+    const parsed = resetSchema.safeParse(req.body);
+    if (!parsed.success) throw badRequest('پیوند بازیابی یا گذرواژه تازه معتبر نیست.');
+
+    const record = await queryOne<{ id: number; user_id: string }>(
+      `SELECT id, user_id FROM password_resets
+        WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()`,
+      [hashResetToken(parsed.data.token)],
+    );
+    if (!record) {
+      throw badRequest('پیوند بازیابی نامعتبر یا منقضی شده است. دوباره درخواست دهید.');
+    }
+
+    const user = await queryOne<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [
+      record.user_id,
+    ]);
+    if (!user) throw badRequest('حساب کاربری یافت نشد.');
+
+    const strength = checkPasswordStrength(parsed.data.password, user.email ?? undefined);
+    if (!strength.ok) throw badRequest(strength.message!);
+
+    const passwordHash = await hashPassword(parsed.data.password);
+    await transaction(async (client) => {
+      // Marking the token consumed inside the transaction makes it single-use
+      // even if the same link is opened twice at once.
+      const claimed = await client.query(
+        `UPDATE password_resets SET consumed_at = now()
+          WHERE id = $1 AND consumed_at IS NULL RETURNING id`,
+        [record.id],
+      );
+      if (claimed.rowCount === 0) throw badRequest('این پیوند قبلاً استفاده شده است.');
+
+      await client.query(
+        `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+        [record.user_id, passwordHash],
+      );
+      // Whoever held the old password is signed out everywhere.
+      await client.query(
+        `UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
+        [record.user_id],
+      );
+    });
+
+    const fresh = await queryOne<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [
+      record.user_id,
+    ]);
+    await issueSession(fresh!, req, res);
   }),
 );

@@ -91,6 +91,19 @@ export const env = {
   smsSender: optional('SMS_SENDER'),
   smsTemplate: optional('SMS_TEMPLATE'),
 
+  /** Minimum accepted password length is enforced in lib/password.ts. */
+  loginMaxAttempts: num('LOGIN_MAX_ATTEMPTS', 10),
+  passwordResetTtlMinutes: num('PASSWORD_RESET_TTL_MINUTES', 60),
+
+  smtpHost: optional('SMTP_HOST'),
+  smtpPort: num('SMTP_PORT', 587),
+  smtpSecure: optional('SMTP_SECURE') ? bool('SMTP_SECURE') : undefined,
+  smtpUser: optional('SMTP_USER'),
+  smtpPassword: optional('SMTP_PASSWORD'),
+  mailFrom: optional('MAIL_FROM'),
+  /** Absolute site URL used to build links inside emails. */
+  publicUrl: optional('PUBLIC_URL').replace(/\/$/, ''),
+
   uploadDir: optional('UPLOAD_DIR', 'uploads'),
   uploadMaxBytes: num('UPLOAD_MAX_BYTES', 8 * 1024 * 1024),
   publicDir: optional('PUBLIC_DIR', 'dist'),

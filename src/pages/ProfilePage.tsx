@@ -19,6 +19,7 @@ import {
   Shield,
   ShieldAlert,
   RotateCw,
+  Lock,
 } from 'lucide-react';
 import {
   Submission,
@@ -35,6 +36,7 @@ import {
   unbookmarkContent,
   updateProfile,
   uploadAvatar,
+  setPassword,
 } from '../services/endpoints';
 import { ApiError } from '../services/api';
 import { POINT_REASONS_FA } from '../config/points';
@@ -77,6 +79,13 @@ export const ProfilePage: React.FC = () => {
   const [interests, setInterests] = useState(user?.interests?.join('، ') || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
+  // Email + password credentials
+  const [securityEmail, setSecurityEmail] = useState(user?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
   // Resubmit modal state
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isResubmitOpen, setIsResubmitOpen] = useState(false);
@@ -99,6 +108,7 @@ export const ProfilePage: React.FC = () => {
     setCity(user.city || '');
     setInterests(user.interests?.join('، ') || '');
     setAvatarFile(user.avatarUrl || null);
+    setSecurityEmail(user.email || '');
   }, [user?.id]);
 
   // Load the dashboard data once per session, not on every profile edit.
@@ -158,6 +168,29 @@ export const ProfilePage: React.FC = () => {
       showToast('مطلب از نشان‌ها حذف شد.', 'info');
     } catch {
       showToast('حذف نشان ناموفق بود.', 'error');
+    }
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setIsSavingPassword(true);
+    try {
+      await setPassword({
+        email: securityEmail.trim(),
+        newPassword,
+        currentPassword: user?.hasPassword ? currentPassword : undefined,
+      });
+      await refreshProfile();
+      setCurrentPassword('');
+      setNewPassword('');
+      showToast('گذرواژه با موفقیت ثبت شد.', 'success');
+    } catch (error) {
+      setPasswordError(
+        error instanceof ApiError ? error.message : 'ثبت گذرواژه ناموفق بود.',
+      );
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -609,7 +642,8 @@ export const ProfilePage: React.FC = () => {
 
         {/* 5. Edit Profile Tab */}
         {activeTab === 'edit' && (
-          <div className="bg-white rounded-xl border border-ink-200 p-6 max-w-xl space-y-4 shadow-2xs">
+          <div className="space-y-6 max-w-xl">
+          <div className="bg-white rounded-xl border border-ink-200 p-6 space-y-4 shadow-2xs">
             <h3 className="text-base font-bold text-ink-900">
               ویرایش مشخصات حساب کاربری
             </h3>
@@ -686,6 +720,67 @@ export const ProfilePage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </div>
+
+          {/* Email + password: a second way into the account. */}
+          <div className="bg-white rounded-xl border border-ink-200 p-6 space-y-4 shadow-2xs">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-ink-900 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-sky-600" />
+                <span>{user.hasPassword ? 'تغییر گذرواژه' : 'ورود با رایانامه و گذرواژه'}</span>
+              </h3>
+              <p className="text-xs text-ink-500 leading-relaxed">
+                {user.hasPassword
+                  ? 'با تغییر گذرواژه، از سایر دستگاه‌ها خارج می‌شوید.'
+                  : 'با تعیین گذرواژه می‌توانید علاوه بر کد پیامکی، با رایانامه هم وارد شوید.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSavePassword} className="space-y-4">
+              <Input
+                label="نشانی رایانامه"
+                type="email"
+                dir="ltr"
+                value={securityEmail}
+                onChange={(e) => setSecurityEmail(e.target.value)}
+                placeholder="example@mail.com"
+                required
+              />
+
+              {user.hasPassword && (
+                <Input
+                  label="گذرواژه فعلی"
+                  type="password"
+                  dir="ltr"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              )}
+
+              <Input
+                label={user.hasPassword ? 'گذرواژه تازه' : 'گذرواژه'}
+                type="password"
+                dir="ltr"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                helperText="حداقل ۸ نویسه."
+                required
+              />
+
+              {passwordError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                  {passwordError}
+                </div>
+              )}
+
+              <Button type="submit" variant="secondary" isLoading={isSavingPassword}>
+                {user.hasPassword ? 'ثبت گذرواژه تازه' : 'فعال‌سازی ورود با رایانامه'}
+              </Button>
+            </form>
+          </div>
           </div>
         )}
       </div>

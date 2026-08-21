@@ -26,6 +26,42 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
 
+-- ---------------------------------------- users: email + password sign-in ---
+-- Written as separate idempotent statements so an existing deployment picks
+-- them up on its next boot without a manual migration.
+
+-- Email-only accounts have no phone number, so the column can no longer be
+-- mandatory. A UNIQUE constraint still permits many NULLs in PostgreSQL.
+ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email          text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash  text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false;
+
+-- Case-insensitive uniqueness: Ali@x.com and ali@x.com are the same account.
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key
+  ON users (lower(email)) WHERE email IS NOT NULL;
+
+-- Every account must remain reachable by at least one identifier.
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_identifier_present
+    CHECK (phone IS NOT NULL OR email IS NOT NULL);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- -------------------------------------------------------- password resets ---
+CREATE TABLE IF NOT EXISTS password_resets (
+  id          bigserial PRIMARY KEY,
+  user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash  text NOT NULL,
+  expires_at  timestamptz NOT NULL,
+  consumed_at timestamptz,
+  request_ip  text,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS password_resets_expires_idx ON password_resets (expires_at);
+
 -- ------------------------------------------------------------ otp codes ----
 CREATE TABLE IF NOT EXISTS otp_codes (
   id          bigserial PRIMARY KEY,

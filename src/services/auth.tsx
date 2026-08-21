@@ -3,7 +3,10 @@ import { User } from '../types';
 import {
   getMe,
   logout as apiLogout,
+  loginWithEmail as apiLoginWithEmail,
+  registerWithEmail as apiRegisterWithEmail,
   requestOtp as apiRequestOtp,
+  resetPassword as apiResetPassword,
   verifyOtp as apiVerifyOtp,
   type OtpRequestResult,
 } from './endpoints';
@@ -53,6 +56,13 @@ export interface AuthContextType extends AuthState {
   refreshProfile: () => Promise<void>;
   requestOtp: (phone: string) => Promise<OtpRequestResult>;
   verifyOtp: (phone: string, code: string) => Promise<{ user: User }>;
+  loginWithEmail: (email: string, password: string) => Promise<{ user: User }>;
+  registerWithEmail: (
+    email: string,
+    password: string,
+    displayName?: string,
+  ) => Promise<{ user: User }>;
+  resetPassword: (token: string, password: string) => Promise<{ user: User }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,6 +123,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { user: result.user };
   }, []);
 
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    const result = await apiLoginWithEmail(email, password);
+    dispatch({ type: 'LOGIN', payload: result.user });
+    return { user: result.user };
+  }, []);
+
+  const registerWithEmail = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      const result = await apiRegisterWithEmail(email, password, displayName);
+      dispatch({ type: 'LOGIN', payload: result.user });
+      return { user: result.user };
+    },
+    [],
+  );
+
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    const result = await apiResetPassword(token, password);
+    dispatch({ type: 'LOGIN', payload: result.user });
+    return { user: result.user };
+  }, []);
+
   const value = useMemo<AuthContextType>(
     () => ({
       ...state,
@@ -122,8 +153,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshProfile,
       requestOtp,
       verifyOtp,
+      loginWithEmail,
+      registerWithEmail,
+      resetPassword,
     }),
-    [state, login, handleLogout, updateUser, refreshProfile, requestOtp, verifyOtp],
+    [
+      state,
+      login,
+      handleLogout,
+      updateUser,
+      refreshProfile,
+      requestOtp,
+      verifyOtp,
+      loginWithEmail,
+      registerWithEmail,
+      resetPassword,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
