@@ -16,3 +16,4 @@ export * from './ProgressBar';
 export * from './DifficultyDots';
 export * from './Tabs';
 export * from './Accordion';
+export * from './RichTextEditor';

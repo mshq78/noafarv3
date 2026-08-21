@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lightbulb, Send, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
-import { Input, Textarea, Select, ChipInput, FileUpload, Button } from '../ui';
+import { Input, Textarea, Select, ChipInput, FileUpload, Button, RichTextEditor } from '../ui';
 import { JOURNEY_FIELDS } from '../../config/categories';
 import { submitIdea } from '../../services/endpoints';
 import { useAuth } from '../../hooks/useAuth';
@@ -165,15 +165,14 @@ export const IdeaSubmissionForm: React.FC = () => {
           showCharCount
         />
 
-        <Textarea
-          label="شرح کامل و جزئیات اجرایی ایده *"
-          placeholder="نحوه اجرا، ذینفعان کلیدی، پایداری مالی، نیازمندی‌ها و دلایل نوآورانه بودن را تشریح فرمایید..."
-          rows={5}
+        <RichTextEditor
+          label="شرح کامل و جزئیات اجرایی ایده (ویرایشگر پیشرفته + امکان درج تصویر و طرح)"
+          placeholder="نحوه اجرا، ذینفعان کلیدی، پایداری مالی، نیازمندی‌ها و دلایل نوآورانه بودن را تشریح فرمایید یا طرح‌های گرافیکی را درج کنید..."
           value={formData.body}
-          onChange={(e) => handleChange('body', e.target.value)}
+          onChange={(html) => handleChange('body', html)}
           error={errors.body}
-          showCharCount
-          minChars={30}
+          minHeight="240px"
+          required
         />
 
         <ChipInput

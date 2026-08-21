@@ -16,10 +16,10 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'با همفکری اهالی و معتمدان مسجد محل، یک ملک موقوفه غیرفعال شناسایی و با همراهی جوانان مرمت شد. دستگاه‌های پخت سنتی با وام قرض‌الحسنه تجمیعی تهیه گردید و آموزش‌های استانداردهای بهداشتی و بسته‌بندی با کمک دانشگاه علوم پزشکی برگزار شد.',
     challenges: 'مقاومت اولیه برخی کسبه محلی، پیچیدگی دریافت مجوزهای بهداشتی، و فقدان سرمایه در گردش در ۳ ماهه اول فعالیت.',
     outcome: '۱۸ زن سرپرست خانوار صاحب شغل ثابت شدند؛ تعاونی اکنون ماهانه سود خالص را بین اعضا توزیع می‌کند و مدل آن در دو محله دیگر نیز تکثیر شده است.',
-    heroImage: { id: 'img-e1', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e1', type: 'image', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80' },
     gallery: [
-      { id: 'g-e1', type: 'image', url: '/mock/journey-cover.svg', caption: 'کارگاه پخت نان' },
-      { id: 'g-e2', type: 'image', url: '/mock/canvas-preview.svg', caption: 'بسته‌بندی محصولات' },
+      { id: 'g-e1', type: 'image', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80', caption: 'کارگاه پخت نان' },
+      { id: 'g-e2', type: 'image', url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&auto=format&fit=crop&q=80', caption: 'بسته‌بندی محصولات' },
     ],
     attachments: [],
     field: JOURNEY_FIELDS[0], // اشتغال و معیشت
@@ -48,7 +48,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'تشکیل شورای آب متشکل از ریش‌سفیدان و معلمان روستا، تعیین سهم مساوی کار فیزیکی و مشارکت مالی بر اساس توان خانوارها و راه‌اندازی کارزار مردمی نذر آب برای خرید تجهیزات غواصی و لایروبی.',
     challenges: 'دمای بالای ۵۰ درجه در تابستان، کمبود سوخت ژنراتورها و اختلافات قدیمی بر سر حق‌آبه بین مزارع بالا‌دست و پایین‌دست.',
     outcome: 'احیای کامل ۲ رشته قنات تاریخی، بازگشت آب به ۱۲۰ هکتار زمین کشاورزی و مهاجرت معکوس ۸ خانواده به روستا.',
-    heroImage: { id: 'img-e2', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e2', type: 'image', url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[4], // محیط‌زیست
@@ -76,7 +76,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'طراحی کوله‌پشتی‌های مقاوم ضدآب، تجهیز ۵۰ معلم داوطلب عشایری به بسته‌های کتاب و آموزش تکنیک‌های قصه‌گویی تعاملی و بلندخوانی به معلمان.',
     challenges: 'سختی حمل در مسیرهای کوهستانی صعب‌العبور، استهلاک سریع کتاب‌ها در شرایط گرد و غبار و باد شدید.',
     outcome: 'پوشش بیش از ۶۰ مدرسه چادری، برگزاری هفتگی مسابقات داستان‌نویسی بومی و شکوفایی استعدادهای ادبی درخشان در میان دختران و پسران ایل.',
-    heroImage: { id: 'img-e3', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e3', type: 'image', url: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[3], // تعلیم و تربیت
@@ -104,7 +104,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'برگزاری کارگاه‌های بازطراحی الگوها با همکاری طراحان لباس جوان دانشگاهی، عکاسی حرفه‌ای از آثار و ایجاد درگاه عرضه مستقیم اینترنتی و غرفه‌های ادواری نمایشگاهی.',
     challenges: 'متقاعد کردن نسل قدیمی به اعمال تغییرات کوچک در کاربرد محصولات (مثل ساخت قاب موبایل و کیف لپ‌تاپ).',
     outcome: 'افزایش ۴ برابری درآمد خالص ۴۵ بانوی هنرمند، ثبت رسمی نشان تجاری محلی و احیای ۷ نقشه منسوخ‌شده تاریخی.',
-    heroImage: { id: 'img-e4', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e4', type: 'image', url: 'https://images.unsplash.com/photo-1606744888344-498238f0170a?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[9], // هنر و صنایع خلاق
@@ -130,7 +130,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'طراحی آیین‌نامه اختصاصی بازی جوانمردانه، مشارکت دادن نوجوانان در نقش داور و ناظر و تلفیق مسابقات با گعده‌های گفتگوی هفتگی.',
     challenges: 'خشونت اولیه در بازی‌ها و عدم اعتماد به داوران هم‌سن و سال.',
     outcome: 'کاهش ۶۰ درصدی آمارهای نزاع خیابانی در محله طبق گزارش شورای محلی و جذب ۷۰ نوجوان به کلاس‌های فنی‌وحرفه‌ای.',
-    heroImage: { id: 'img-e5', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e5', type: 'image', url: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[7], // تفریح و سرگرمی و نشاط اجتماعی
@@ -155,7 +155,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'جایگزینی سخنرانی‌های یک‌طرفه با حلقه‌های اشتراک‌گذاری دغدغه و آموزش مهارت‌های شنیدن بدون سرزنش.',
     challenges: 'شرم اولیه از بیان چالش‌های درون‌خانوادگی در محیط مسجد.',
     outcome: 'تشکیل ۱۲ حلقه پایدار والدگری در منطقه و انتشار کتابچه تجارب والدگری بومی.',
-    heroImage: { id: 'img-e6', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e6', type: 'image', url: 'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[2], // خانواده و سبک زندگی
@@ -180,7 +180,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'برگزاری جلسات علنی در مساجد هر محله، تدوین اولویت‌ها توسط ساکنان و رای‌گیری صندوقی شفاف.',
     challenges: 'مقاومت بخشی از بدنه اداری و اعضای شورا در واگذاری اختیار تصمیم‌گیری به مردم.',
     outcome: 'اجرای ۱۰۰ درصدی ۵ پروژه محلی منتخب مردم با نظارت داوطلبانه خود شهروندان و افزایش ۴۰ درصدی پرداخت عوارض شهری.',
-    heroImage: { id: 'img-e7', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e7', type: 'image', url: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[5], // حکمرانی محلی و سیاست‌گذاری
@@ -205,7 +205,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'برگزاری کارگاه‌های کاربردی غربالگری و گوش‌دادن همدلانه برای ۳۵ آرایشگر زنانه و مردانه و ۲۰ معلم محلی.',
     challenges: 'حفظ رازداری و ممانعت از ارائه‌دهندگان آموزش‌ندیده از تجویز توصیه‌های غیرتخصصی.',
     outcome: 'شناسایی و نجات بیش از ۱۲۰ فرد در آستانه بحران شدید و ارجاع امن به کلینیک‌های خیریه.',
-    heroImage: { id: 'img-e8', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e8', type: 'image', url: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[1], // سلامت و بهداشت
@@ -230,7 +230,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'مستندسازی ترانه‌ها و آیین‌ها از زبان مادربزرگ‌ها، تلفیق با بازارهای سنتی فروش محصولات خانگی.',
     challenges: 'مخالفت‌های اولیه نهادهای سنتی و نگرانی از ایجاد ناهنجاری رفتاری.',
     outcome: 'برگزاری ۳ دوره جشنواره استانی با حضور بیش از ۱۰ هزار گردشگر و درآمدزایی مستقیم برای ۸۰ خانوار.',
-    heroImage: { id: 'img-e9', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e9', type: 'image', url: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[8], // فرهنگ و آئین‌ها
@@ -255,7 +255,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'آموزش خبرنگاری موبایلی و پادکست‌سازی به ۶ نوجوان علاقه‌مند و انتشار گزارش‌های صوتی مصور در شبکه‌های اجتماعی.',
     challenges: 'تهدید به شکایت از سوی برخی مسئولان محلی در نخستین شماره‌های پادکست.',
     outcome: 'حل معضل ۲ ساله روشنایی پارک محله و ساماندهی جمع‌آوری پسماند پس از بازنشر گسترده گزارش‌ها.',
-    heroImage: { id: 'img-e10', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e10', type: 'image', url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[6], // رسانه و فضای دیجیتال
@@ -280,7 +280,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'نصب مخازن تفکیک، آموزش چهره‌به‌چهره به خانواده‌ها و ساخت مخزن تولید کمپوست خانگی.',
     challenges: 'کم‌توجهی برخی ساکنان در هفته‌های نخست و آلوده شدن پسماند تر با پلاستیک.',
     outcome: 'کاهش ۷۰ درصدی زباله ورودی به خودروهای شهرداری و استفاده از کمپوست برای گلکاری مجتمع.',
-    heroImage: { id: 'img-e11', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e11', type: 'image', url: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[4], // محیط‌زیست
@@ -305,7 +305,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'مرمت اصولی با مشارکت بخش خصوصی و دانشگاه، تجهیز به اینترنت پرسرعت پایدار و طراحی میزهای کاری.',
     challenges: 'مقررات سخت‌گیرانه سازمان میراث فرهنگی و هزینه‌های بالای تاسیسات حرارتی و برودتی.',
     outcome: 'استقرار ۴۰ فریلنسر و ۳ استارتاپ بومی، احیای کامل بافت پیرامونی حمام و رونق کافه‌های مجاور.',
-    heroImage: { id: 'img-e12', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e12', type: 'image', url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[9], // هنر و صنایع خلاق
@@ -330,7 +330,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'جذب ۱۰۰ دانشجوی دانشگاه شریف و تهران، تدوین برنامه‌های درسی متراکم آخر هفته و تهیه رایگان لوازم‌التحریر.',
     challenges: 'خستگی مفرط دانش‌آموزان پس از شیفت کاری و غیبت‌های مکرر به دلیل مشکلات خانوادگی.',
     outcome: 'قبولی ۱۲ نفر از دانش‌آموزان در دانشگاه‌های دولتی و ادامه تحصیل تمام شرکت‌کنندگان در دوره متوسطه.',
-    heroImage: { id: 'img-e13', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e13', type: 'image', url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[3], // تعلیم و تربیت
@@ -355,7 +355,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'شناسایی سالمندان با کمک شورایاران، ثبت‌نام جوانان معتمد و طراحی جدول تماس‌های روزانه تلفنی.',
     challenges: 'بی‌اعتمادی اولیه برخی خانواده‌ها به حضور داوطلبان غریبه در منزل سالمند.',
     outcome: 'پوشش ۶۵ سالمند تنها در محله و از بین رفتن کامل حس انزوا و افسردگی در آنان.',
-    heroImage: { id: 'img-e14', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e14', type: 'image', url: 'https://images.unsplash.com/photo-1516307365426-bea591f05011?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[2], // خانواده و سبک زندگی
@@ -380,7 +380,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'نصب میزهای مشبک توری استیل در ۱۰ نانوایی محله و توزیع رایگان سفره‌های پارچه‌ای دست‌دوز.',
     challenges: 'عجله مشتریان در ساعت شلوغی و تمایل به استفاده از کیسه‌های نایلونی رایگان.',
     outcome: 'صرفه‌جویی ماهانه ۲ تن آرد در سطح محله و استقبال شدید نانوایان از کاهش نارضایتی خریداران.',
-    heroImage: { id: 'img-e15', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e15', type: 'image', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[4], // محیط‌زیست
@@ -405,7 +405,7 @@ export const MOCK_EXPERIENCES: Experience[] = [
     path: 'راه‌اندازی دفترچه زمان محلی: هر یک ساعت خدمت به همسایه معادل یک ساعت دریافت خدمت از دیگری.',
     challenges: 'ارزش‌گذاری منصفانه خدمات مختلف و تضمین کیفیت کارهای انجام‌شده.',
     outcome: 'بیش از ۱۵۰۰ ساعت تبادل خدمت موفق در طول یک سال بدون نیاز به ریالی پرداخت نقدی.',
-    heroImage: { id: 'img-e16', type: 'image', url: '/mock/journey-cover.svg' },
+    heroImage: { id: 'img-e16', type: 'image', url: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     field: JOURNEY_FIELDS[0], // اشتغال و معیشت

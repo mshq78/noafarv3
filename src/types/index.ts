@@ -30,6 +30,10 @@ export interface User {
   id: string;
   displayName: string;
   phone: string;
+  nationalId?: string;
+  birthYear?: string;
+  city?: string;
+  interests?: string[];
   role: UserRole;
   avatarUrl?: string;
   bio?: string;
@@ -242,4 +246,16 @@ export interface SectionMeta {
   minHeightClass: string;
   accentColorHex: string;
   iconName?: string;
+}
+
+export interface SiteSettings {
+  logoUrl?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  aboutText?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: string;
+  footerDescription?: string;
+  footerCopyright?: string;
 }

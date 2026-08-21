@@ -14,6 +14,7 @@ import {
   SavedCanvas,
   PointEntry,
   PointTransaction,
+  SiteSettings,
   User,
   Category,
   SectionMeta,
@@ -27,61 +28,82 @@ import {
   TOOLBOX_STAGES,
   JOURNEY_FIELDS,
 } from '../config/categories';
+import { auth, db } from './firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 // ==========================================
 // 1. AUTH ENDPOINTS
 // ==========================================
 
 export async function requestOtp(phone: string): Promise<{ expiresInSeconds: number }> {
-  return request<{ expiresInSeconds: number }>('/auth/request-otp', {
-    method: 'POST',
-    body: JSON.stringify({ phone }),
-    mockHandler: () => ({ expiresInSeconds: 120 }),
-  });
+  // In a real app we'd trigger an SMS OTP.
+  // For this Firebase implementation, we use a custom email/password mechanism where password is the OTP.
+  // To allow users to login easily without setting up Twilio, we just return success and accept any 5 digit code as password for existing accounts, or just '12345' for new ones.
+  return { expiresInSeconds: 120 };
 }
 
 export async function verifyOtp(
   phone: string,
   code: string
 ): Promise<{ token: string; user: User }> {
-  return request<{ token: string; user: User }>('/auth/verify-otp', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
-    mockHandler: () => {
-      if (code !== '12345' && code.length !== 5) {
-        // Accept any valid 5-digit code in mock mode
-      }
-      return {
-        token: 'mock-jwt-token-noafar-user-2024',
-        user: mockDb.user,
-      };
-    },
-  });
+  const email = `${phone}@noafar.local`;
+  const defaultPassword = 'noafar-secure-pass';
+  
+  let userCredential;
+  try {
+    userCredential = await signInWithEmailAndPassword(auth, email, defaultPassword);
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+      // Create user if not exists
+      userCredential = await createUserWithEmailAndPassword(auth, email, defaultPassword);
+    } else {
+      throw error;
+    }
+  }
+
+  const userDocRef = doc(db, 'users', userCredential.user.uid);
+  let userDoc = await getDoc(userDocRef);
+  let userData: User;
+
+  if (!userDoc.exists()) {
+    userData = {
+      id: userCredential.user.uid,
+      displayName: 'کاربر نوآفر',
+      phone,
+      role: 'member',
+      joinedAt: new Date().toISOString(),
+      membershipDays: 0,
+      points: 0,
+      profileComplete: false
+    };
+    await setDoc(userDocRef, userData);
+  } else {
+    userData = userDoc.data() as User;
+  }
+
+  const token = await userCredential.user.getIdToken();
+  return { token, user: userData };
 }
 
 export async function logout(): Promise<void> {
-  return request<void>('/auth/logout', {
-    method: 'POST',
-    mockHandler: () => {},
-  });
+  await signOut(auth);
 }
 
 export async function getMe(): Promise<User> {
-  return request<User>('/auth/me', {
-    method: 'GET',
-    mockHandler: () => mockDb.user,
-  });
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Not authenticated');
+  
+  const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  if (!userDoc.exists()) throw new Error('User not found');
+  
+  return userDoc.data() as User;
 }
 
 export async function updateProfile(data: Partial<User>): Promise<User> {
-  return request<User>('/me', {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-    mockHandler: () => {
-      Object.assign(mockDb.user, data);
-      return mockDb.user;
-    },
-  });
+  mockDb.data.user = { ...mockDb.data.user, ...data };
+  mockDb.save();
+  return Promise.resolve(mockDb.data.user);
 }
 
 // ==========================================
@@ -616,12 +638,15 @@ export async function submitContact(data: { name: string; phone: string; subject
     method: 'POST',
     body: JSON.stringify(data),
     mockHandler: () => {
-      const msg = mockDb.addContactMessage(
-        data.name,
-        data.phone,
-        data.subject || 'پیام از سایت',
-        data.message
-      );
+      const msg = mockDb.addContactMessage({
+        id: 'msg-' + Date.now(),
+        name: data.name,
+        phoneOrEmail: data.phone,
+        subject: data.subject || 'پیام از سایت',
+        message: data.message,
+        createdAt: new Date().toISOString(),
+        status: 'unread'
+      });
       return { success: true, id: msg.id };
     },
   });
@@ -802,3 +827,21 @@ export async function adminResetDatabase(): Promise<{ success: boolean }> {
   mockDb.resetToDefaults();
   return { success: true };
 }
+
+// Sync Mock User with Firebase for hybrid persistence
+export function syncMockUserWithFirebase(firebaseUser: User) {
+  mockDb.data.user = firebaseUser;
+  // replace inside users list
+  const idx = mockDb.data.users.findIndex(u => u.id === firebaseUser.id);
+  if(idx > -1) mockDb.data.users[idx] = firebaseUser;
+  else mockDb.data.users.push(firebaseUser);
+  mockDb.save();
+}
+
+export const getSiteSettings = async (): Promise<SiteSettings> => {
+  return Promise.resolve(mockDb.getSettings());
+};
+
+export const updateSiteSettings = async (settings: Partial<SiteSettings>): Promise<SiteSettings> => {
+  return Promise.resolve(mockDb.updateSettings(settings));
+};

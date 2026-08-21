@@ -1,0 +1,149 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "fields": [
+        { "name": "displayName", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "role", "type": "string" },
+        { "name": "avatarUrl", "type": "string", "optional": true },
+        { "name": "bio", "type": "string", "optional": true },
+        { "name": "joinedAt", "type": "timestamp" },
+        { "name": "membershipDays", "type": "number" },
+        { "name": "points", "type": "number" },
+        { "name": "profileComplete", "type": "boolean" }
+      ],
+      "rules": {
+        "read": "request.auth != null && (request.auth.uid == id || isOperator())",
+        "create": "request.auth != null && request.auth.uid == id",
+        "update": "request.auth != null && (request.auth.uid == id || isOperator())",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "content",
+      "fields": [
+        { "name": "slug", "type": "string" },
+        { "name": "sectionSlug", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "summary", "type": "string" },
+        { "name": "body", "type": "string" },
+        { "name": "publishedAt", "type": "timestamp" },
+        { "name": "likeCount", "type": "number" },
+        { "name": "commentCount", "type": "number" },
+        { "name": "viewCount", "type": "number" }
+      ],
+      "rules": {
+        "read": "true",
+        "create": "isOperator()",
+        "update": "isOperator()",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "submissions",
+      "fields": [
+        { "name": "kind", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "status", "type": "string" },
+        { "name": "submitterId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && (request.auth.uid == resource.data.submitterId || isOperator())",
+        "create": "request.auth != null",
+        "update": "request.auth != null && (request.auth.uid == resource.data.submitterId || isOperator())",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "comments",
+      "fields": [
+        { "name": "contentId", "type": "string" },
+        { "name": "authorId", "type": "string" },
+        { "name": "body", "type": "string" },
+        { "name": "status", "type": "string" }
+      ],
+      "rules": {
+        "read": "resource.data.status == 'approved' || (request.auth != null && (request.auth.uid == resource.data.authorId || isOperator()))",
+        "create": "request.auth != null && request.auth.uid == request.resource.data.authorId",
+        "update": "isOperator()",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "contact_messages",
+      "fields": [
+        { "name": "status", "type": "string" }
+      ],
+      "rules": {
+        "read": "isOperator()",
+        "create": "true",
+        "update": "isOperator()",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "event_registrations",
+      "fields": [
+        { "name": "eventId", "type": "string" },
+        { "name": "userId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && (request.auth.uid == resource.data.userId || isOperator())",
+        "create": "request.auth != null && request.auth.uid == request.resource.data.userId",
+        "update": "isOperator()",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "saved_canvases",
+      "fields": [
+        { "name": "userId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && request.auth.uid == resource.data.userId",
+        "create": "request.auth != null && request.auth.uid == request.resource.data.userId",
+        "update": "request.auth != null && request.auth.uid == resource.data.userId",
+        "delete": "request.auth != null && request.auth.uid == resource.data.userId"
+      }
+    },
+    {
+      "name": "point_transactions",
+      "fields": [
+        { "name": "userId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && (request.auth.uid == resource.data.userId || isOperator())",
+        "create": "isOperator()",
+        "update": "isOperator()",
+        "delete": "isOperator()"
+      }
+    },
+    {
+      "name": "bookmarks",
+      "fields": [
+        { "name": "userId", "type": "string" },
+        { "name": "contentId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && request.auth.uid == resource.data.userId",
+        "create": "request.auth != null && request.auth.uid == request.resource.data.userId",
+        "update": "false",
+        "delete": "request.auth != null && request.auth.uid == resource.data.userId"
+      }
+    },
+    {
+      "name": "likes",
+      "fields": [
+        { "name": "userId", "type": "string" },
+        { "name": "contentId", "type": "string" }
+      ],
+      "rules": {
+        "read": "request.auth != null && request.auth.uid == resource.data.userId",
+        "create": "request.auth != null && request.auth.uid == request.resource.data.userId",
+        "update": "false",
+        "delete": "request.auth != null && request.auth.uid == resource.data.userId"
+      }
+    }
+  ]
+}

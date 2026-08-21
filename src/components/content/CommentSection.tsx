@@ -3,7 +3,7 @@ import { MessageSquare, Send, User, Clock } from 'lucide-react';
 import { Comment } from '../../types';
 import { getComments, postComment } from '../../services/endpoints';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Textarea } from '../ui';
+import { Button, RichTextEditor } from '../ui';
 import { LoginPromptModal } from '../modals/LoginPromptModal';
 import { useToast } from '../ui/Toast';
 import { formatTimeAgo } from '../../utils/date';
@@ -40,7 +40,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
       return;
     }
 
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || newComment.trim() === '<p><br></p>') return;
 
     setIsSubmitting(true);
     try {
@@ -68,17 +68,22 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
 
       {/* Post comment box */}
       <form onSubmit={handleSubmit} className="p-4 bg-ink-50 rounded-xl border border-ink-200 space-y-3">
-        <Textarea
-          placeholder={
-            isAuthenticated
-              ? 'نظر، پرسش یا تجربه خود را درباره این موضوع بنویسید...'
-              : 'برای ثبت دیدگاه ابتدا وارد حساب کاربری خود شوید...'
-          }
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          rows={3}
-          disabled={isSubmitting}
-        />
+        {isAuthenticated ? (
+          <RichTextEditor
+            placeholder="نظر، پرسش یا تجربه خود را درباره این موضوع بنویسید..."
+            value={newComment}
+            onChange={setNewComment}
+            minHeight="140px"
+            disabled={isSubmitting}
+          />
+        ) : (
+          <div 
+            onClick={() => setIsLoginModalOpen(true)}
+            className="w-full min-h-[140px] bg-white border border-ink-200 rounded-2xl flex items-center justify-center cursor-pointer hover:border-sky-300 transition-colors"
+          >
+            <span className="text-sm text-ink-400">برای ثبت دیدگاه ابتدا وارد حساب کاربری خود شوید...</span>
+          </div>
+        )}
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-ink-400">
             دیدگاه‌ها پس از بازبینی تیم نوآفر نمایش داده خواهند شد.
@@ -88,7 +93,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
             size="sm"
             variant="primary"
             isLoading={isSubmitting}
-            disabled={!newComment.trim()}
+            disabled={!newComment.trim() || newComment.trim() === '<p><br></p>'}
             rightIcon={<Send className="w-3.5 h-3.5" />}
           >
             ارسال دیدگاه
@@ -143,9 +148,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
                 )}
               </div>
 
-              <p className="text-sm text-ink-700 leading-relaxed ps-10">
-                {comment.body}
-              </p>
+              <div 
+                className="text-sm text-ink-700 leading-relaxed ps-10 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: comment.body }}
+              />
             </div>
           ))
         )}

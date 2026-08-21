@@ -5,10 +5,12 @@ import { Logo } from '../brand/Logo';
 import { TricolorRule } from '../brand/TricolorRule';
 import { SECTION_LIST } from '../../config/sections';
 import { useAuth } from '../../hooks/useAuth';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 export const Footer: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'operator');
+  const settings = useSiteSettings();
   return (
     <footer className="bg-ink-900 text-ink-300 text-xs border-t border-ink-800">
       {/* Top Tricolor Brand Rule */}
@@ -20,7 +22,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4">
             <Logo size="md" invert className="text-white" />
             <p className="text-xs text-ink-400 leading-relaxed">
-              نوآفر پلتفرم جامع آموزش، ابزارسازی، گردهمایی و ترویج نوآوری و کسب‌وکارهای اجتماعی در ایران است. ما بر این باوریم که تحول پایدار از دل جوامع محلی و با دستان کنشگران دغدغه‌مند آغاز می‌شود.
+              {settings.footerDescription}
             </p>
             <div className="flex items-center gap-3 pt-2 text-ink-400">
               <a
@@ -33,7 +35,7 @@ export const Footer: React.FC = () => {
                 <Send className="w-4 h-4" />
               </a>
               <a
-                href="mailto:info@noafar.com"
+                href="mailto:{settings.contactEmail}"
                 className="p-2 bg-ink-800 hover:bg-sky-600 hover:text-white rounded-lg transition-colors"
                 aria-label="ایمیل نوآفر"
               >
@@ -112,15 +114,15 @@ export const Footer: React.FC = () => {
             <div className="space-y-2.5 text-xs text-ink-400">
               <p className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <span>تهران، میدان انقلاب اسلامی، خیابان ۱۶ آذر، خانه خلاق و نوآوری نوآفر</span>
+                <span>{settings.contactAddress}</span>
               </p>
               <p className="flex items-center gap-2 font-sans">
                 <Phone className="w-4 h-4 text-amber-400 shrink-0" />
-                <span dir="ltr">۰۲۱ - ۶۶۴۰ ۱۲۳۴</span>
+                <span dir="ltr">{settings.contactPhone}</span>
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-pink-400 shrink-0" />
-                <span>info@noafar.com</span>
+                <span>{settings.contactEmail}</span>
               </p>
             </div>
           </div>
@@ -128,7 +130,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Copyright */}
         <div className="mt-12 pt-8 border-t border-ink-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-ink-500 text-[11px]">
-          <p>© تمامی حقوق برای پلتفرم نوآوری اجتماعی «نوآفر» محفوظ است.</p>
+          <p>{settings.footerCopyright}</p>
           <p className="flex items-center gap-1">
             <span>توسعه‌یافته با</span>
             <Heart className="w-3.5 h-3.5 text-pink-500 fill-pink-500" />

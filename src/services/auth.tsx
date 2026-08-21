@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
 import { getAuthToken, setAuthToken, clearAuthToken } from './api';
-import { requestOtp as apiRequestOtp, verifyOtp as apiVerifyOtp, getMe } from './endpoints';
-import { MOCK_CURRENT_USER } from '../mocks';
+import { requestOtp as apiRequestOtp, verifyOtp as apiVerifyOtp, getMe, syncMockUserWithFirebase } from './endpoints';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface AuthState {
   user: User | null;
@@ -75,30 +77,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check localStorage on mount
     const savedToken = getAuthToken();
     const savedUserJson = localStorage.getItem('noafar:auth:user');
-
-    if (savedToken && savedUserJson) {
-      try {
-        const user = JSON.parse(savedUserJson) as User;
-        dispatch({ type: 'LOGIN', payload: { user, token: savedToken } });
-      } catch {
+    
+    // Listen to Firebase Auth state
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch custom user profile from Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          syncMockUserWithFirebase(userData);
+          dispatch({ type: 'LOGIN', payload: { user: userData, token: await firebaseUser.getIdToken() } });
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      } else {
+        // Clear auth state if firebase says logged out
         clearAuthToken();
-        dispatch({ type: 'SET_LOADING', payload: false });
+        localStorage.removeItem('noafar:auth:user');
+        dispatch({ type: 'LOGOUT' });
       }
-    } else {
-      // Pre-initialize mock user for immediate rich testing
-      setAuthToken('mock-jwt-token-noafar-user-2024');
-      localStorage.setItem('noafar:auth:user', JSON.stringify(MOCK_CURRENT_USER));
-      dispatch({ type: 'LOGIN', payload: { user: MOCK_CURRENT_USER, token: 'mock-jwt-token-noafar-user-2024' } });
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = (token: string, user: User) => {
     setAuthToken(token);
+    syncMockUserWithFirebase(user);
     localStorage.setItem('noafar:auth:user', JSON.stringify(user));
     dispatch({ type: 'LOGIN', payload: { user, token } });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     clearAuthToken();
     dispatch({ type: 'LOGOUT' });
   };

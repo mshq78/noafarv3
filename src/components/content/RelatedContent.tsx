@@ -21,7 +21,7 @@ export const RelatedContent: React.FC<RelatedContentProps> = ({
         <h3 className="text-lg font-bold text-ink-900">{title}</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
         {items.map((item) => (
           <ContentCard key={item.id} item={item} />
         ))}

@@ -319,9 +319,10 @@ export const ContentDetailPage: React.FC = () => {
         {/* Detailed Body Narrative (Markdown / Paragraphs) */}
         {content.body && (
           <div className="prose prose-ink max-w-none text-ink-800 text-sm sm:text-base leading-loose space-y-4 pt-4">
-            <div className="whitespace-pre-line leading-relaxed">
-              {content.body}
-            </div>
+            <div 
+              className="leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: content.body }}
+            />
           </div>
         )}
 

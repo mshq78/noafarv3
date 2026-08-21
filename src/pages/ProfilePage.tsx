@@ -37,7 +37,7 @@ import {
 } from '../services/endpoints';
 import { POINT_REASONS_FA } from '../config/points';
 import { useAuth } from '../hooks/useAuth';
-import { Button, Input, Textarea, Tabs, Chip, EmptyState } from '../components/ui';
+import { Button, Input, RichTextEditor, Tabs, Chip, EmptyState, FileUpload } from '../components/ui';
 import { ResubmitModal } from '../components/profile/ResubmitModal';
 import { useToast } from '../components/ui/Toast';
 import { formatPersianDate, formatTimeAgo } from '../utils/date';
@@ -60,6 +60,11 @@ export const ProfilePage: React.FC = () => {
   // Edit profile state
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [avatarFile, setAvatarFile] = useState<File | string | null>(user?.avatarUrl || null);
+  const [nationalId, setNationalId] = useState(user?.nationalId || '');
+  const [birthYear, setBirthYear] = useState(user?.birthYear || '');
+  const [city, setCity] = useState(user?.city || '');
+  const [interests, setInterests] = useState(user?.interests?.join('، ') || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   // Resubmit modal state
@@ -75,6 +80,11 @@ export const ProfilePage: React.FC = () => {
     if (user) {
       setDisplayName(user.displayName);
       setBio(user.bio || '');
+      setNationalId(user.nationalId || '');
+      setBirthYear(user.birthYear || '');
+      setCity(user.city || '');
+      setInterests(user.interests?.join('، ') || '');
+      setAvatarFile(user.avatarUrl || null);
     }
 
     setIsLoading(true);
@@ -125,7 +135,28 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
-      await updateProfile({ displayName, bio });
+      let finalAvatarUrl = typeof avatarFile === 'string' ? avatarFile : undefined;
+      
+      if (avatarFile instanceof File) {
+        finalAvatarUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(avatarFile);
+        });
+      } else if (avatarFile === null) {
+        finalAvatarUrl = ''; // Clear avatar
+      }
+
+      await updateProfile({ 
+        displayName, 
+        bio, 
+        avatarUrl: finalAvatarUrl,
+        nationalId,
+        birthYear,
+        city,
+        interests: interests.split('،').map(i => i.trim()).filter(Boolean)
+      });
       if (refreshProfile) await refreshProfile();
       showToast('اطلاعات حساب کاربری با موفقیت به‌روزرسانی شد.', 'success');
     } catch {
@@ -390,7 +421,7 @@ export const ProfilePage: React.FC = () => {
                 }
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                 {canvases.map((can) => (
                   <div
                     key={can.id}
@@ -447,7 +478,7 @@ export const ProfilePage: React.FC = () => {
                 description="با کلیک روی آیکون نشان در هر محتوا، آن را برای مطالعه بعدی در اینجا ذخیره کنید."
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                 {bookmarks.map((bm) => (
                   <div
                     key={bm.id}
@@ -521,6 +552,13 @@ export const ProfilePage: React.FC = () => {
             </h3>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
+              <FileUpload
+                label="تصویر پروفایل (آواتار)"
+                accept="image/*"
+                value={avatarFile}
+                onChange={setAvatarFile}
+                helperText="حداکثر حجم پیشنهادی: ۲ مگابایت (فرمت‌های JPG, PNG)"
+              />
               <Input
                 label="نام و نام خانوادگی"
                 value={displayName}
@@ -533,14 +571,47 @@ export const ProfilePage: React.FC = () => {
                 disabled
                 helperText="شماره موبایل هویت اصلی شماست و قابل تغییر نیست."
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="کد ملی (اختیاری)"
+                  value={nationalId}
+                  onChange={(e) => setNationalId(e.target.value)}
+                  dir="ltr"
+                  helperText="جهت صدور گواهینامه‌های پایان‌دوره"
+                />
+                <Input
+                  label="سال تولد"
+                  value={birthYear}
+                  onChange={(e) => setBirthYear(e.target.value)}
+                  dir="ltr"
+                  placeholder="مثال: 1375"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="استان / شهر سکونت"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="مثال: تهران"
+                />
+                <Input
+                  label="علاقه‌مندی‌ها (با کاما یا ویرگول جدا کنید)"
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="محیط زیست، آموزش، نوآوری"
+                />
+              </div>
 
-              <Textarea
-                label="درباره من / بیوگرافی کوتاه"
-                rows={3}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="حوزه‌های مورد علاقه در نوآوری اجتماعی..."
-              />
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-ink-800">درباره من / بیوگرافی کوتاه</label>
+                <RichTextEditor
+                  value={bio}
+                  onChange={setBio}
+                  placeholder="حوزه‌های مورد علاقه در نوآوری اجتماعی..."
+                  minHeight="140px"
+                />
+              </div>
 
               <div className="pt-2">
                 <Button

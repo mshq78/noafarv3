@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
-import { Button, Input, Textarea } from '../components/ui';
+import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Sparkles, Building2 } from 'lucide-react';
+import { Button, Input, Textarea, RichTextEditor } from '../components/ui';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { DotPattern } from '../components/brand/DotPattern';
 import { submitContact } from '../services/endpoints';
@@ -179,13 +179,13 @@ export const ContactPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-ink-800">متن پیام</label>
-                    <Textarea
-                      required
-                      rows={5}
+                    <label className="text-xs font-bold text-ink-800">متن پیام و جزئیات (ویرایشگر پیشرفته با قابلیت درج تصویر/سند)</label>
+                    <RichTextEditor
                       value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      onChange={setMessage}
                       placeholder="متن پیام، جزئیات درخواست یا ایده همکاری خود را بنویسید..."
+                      minHeight="180px"
+                      required
                     />
                   </div>
 

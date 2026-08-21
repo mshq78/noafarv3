@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, File, X, Check } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { formatFileSize } from '../../utils/format';
 
@@ -48,7 +48,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         <div className="flex items-center justify-between p-3.5 bg-ink-50 border border-ink-200 rounded-lg">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="p-2 bg-sky-50 text-sky-600 rounded-md shrink-0">
-              <File className="w-5 h-5" />
+              <FileIcon className="w-5 h-5" />
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium text-ink-900 truncate">

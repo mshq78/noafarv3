@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Footprints, Send, RotateCcw, MapPin, TrendingUp } from 'lucide-react';
-import { Input, Textarea, Select, ChipInput, FileUpload, Button } from '../ui';
+import { Input, Textarea, Select, ChipInput, FileUpload, Button, RichTextEditor } from '../ui';
 import { JOURNEY_FIELDS } from '../../config/categories';
 import { submitExperience } from '../../services/endpoints';
 import { useAuth } from '../../hooks/useAuth';
@@ -198,15 +198,14 @@ export const ExperienceSubmissionForm: React.FC = () => {
           showCharCount
         />
 
-        <Textarea
-          label="شرح کامل تجربه، درس‌آموخته‌ها و شکست‌ها *"
-          placeholder="چگونه آغاز کردید؟ چه موانعی سر راه بود؟ چه تصمیماتی باعث پیشرفت شد و اگر به عقب برگردید چه تغییری در مسیر می‌دهید؟"
-          rows={6}
+        <RichTextEditor
+          label="شرح کامل تجربه، درس‌آموخته‌ها و شکست‌ها (ویرایشگر پیشرفته + آپلود تصویر)"
+          placeholder="چگونه آغاز کردید؟ چه موانعی سر راه بود؟ چه تصمیماتی باعث پیشرفت شد؟ می‌توانید تصاویر میدانی را نیز مستقیماً داخل متن جایگذاری کنید..."
           value={formData.body}
-          onChange={(e) => handleChange('body', e.target.value)}
+          onChange={(html) => handleChange('body', html)}
           error={errors.body}
-          showCharCount
-          minChars={40}
+          minHeight="260px"
+          required
         />
 
         <ChipInput

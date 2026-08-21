@@ -25,7 +25,7 @@ export const MOCK_EVENTS: Event[] = [
       <p><strong>زمان:</strong> پنج‌شنبه و جمعه ۱۰ و ۱۱ اسفند ۱۴۰۲ - ساعت ۹ تا ۱۸</p>
       <p><strong>مکان:</strong> تهران، میدان انقلاب، خانه خلاق و نوآوری نوآفر</p>
     `,
-    heroImage: { id: 'img-ev1', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev1', type: 'image', url: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2024-03-01T09:00:00Z',
@@ -55,7 +55,7 @@ export const MOCK_EVENTS: Event[] = [
       <h2>سرفصل‌های وبینار آنلاین</h2>
       <p>چگونه بدون وابستگی به نهادهای دولتی، سرمایه اولیه اجرای طرح‌های عام‌المنفعه را با مشارکت صدها شهروند تامین کنیم.</p>
     `,
-    heroImage: { id: 'img-ev2', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev2', type: 'image', url: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2024-03-05T17:00:00Z',
@@ -79,7 +79,7 @@ export const MOCK_EVENTS: Event[] = [
     title: 'دورهمی نوآوران بوم‌گردی و توانمندسازی جوامع محلی شمال کشور',
     summary: 'نشست انتقال تجربه فعالان اقامتگاه‌های بوم‌گردی پیرامون حفظ فرهنگ بومی و توزیع عادلانه درآمد.',
     body: `<p>گفتگوی تخصصی در مورد چالش‌های توسعه گردشگری پایدار بدون تخریب بافت فرهنگی روستاها.</p>`,
-    heroImage: { id: 'img-ev3', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev3', type: 'image', url: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2024-03-12T10:00:00Z',
@@ -103,7 +103,7 @@ export const MOCK_EVENTS: Event[] = [
     title: 'بوت‌کمپ مجازی فرموله‌سازی شاخص‌های SROI و سنجش اثرات طرح‌های تربیتی',
     summary: 'کارگاه عملی تدوین شاخص‌های ارزیابی کیفی و کمی برای کانون‌های فرهنگی مساجد و مدارس.',
     body: `<p>تمرین عملی محاسبه بازگشت اجتماعی سرمایه در پروژه‌های فرهنگی و تربیتی.</p>`,
-    heroImage: { id: 'img-ev4', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev4', type: 'image', url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2024-03-18T16:00:00Z',
@@ -142,9 +142,9 @@ export const MOCK_EVENTS: Event[] = [
       
       <blockquote>«این گردهمایی نشان داد که سرمایه اصلی نوآوری در ایران، پیوند میان جوانان دغدغه‌مند و خرد محلی پیشکسوتان است.»</blockquote>
     `,
-    heroImage: { id: 'img-ev5', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev5', type: 'image', url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80' },
     gallery: [
-      { id: 'g-ev1', type: 'image', url: '/mock/event-cover.svg', caption: 'عکس دسته جمعی شرکت‌کنندگان' },
+      { id: 'g-ev1', type: 'image', url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80', caption: 'عکس دسته جمعی شرکت‌کنندگان' },
     ],
     attachments: [
       {
@@ -179,7 +179,7 @@ export const MOCK_EVENTS: Event[] = [
       <h2>خلاصه مباحث مطرح‌شده در وبینار</h2>
       <p>بیش از ۴۵۰ معلم و مربی تربیتی در این وبینار با اصول ۸ گانه اکشن‌پلن بازیسازی آشنا شدند. ویدیوی کامل این رویداد در بخش آکادمی نوآفر بارگذاری شده است.</p>
     `,
-    heroImage: { id: 'img-ev6', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev6', type: 'image', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2024-01-18T16:00:00Z',
@@ -206,7 +206,7 @@ export const MOCK_EVENTS: Event[] = [
       <h2>دستاوردها و بازخوردهای دوره</h2>
       <p>شرکت‌کنندگان در طول ۴ روز به صورت شبیه‌سازی‌شده با پیچیده‌ترین بحران‌های درون‌سازمانی و چالش‌های تعارض منافع مواجه شدند و راهکارهای گفتگومحور را تمرین کردند.</p>
     `,
-    heroImage: { id: 'img-ev7', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev7', type: 'image', url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2023-09-10T09:00:00Z',
@@ -233,7 +233,7 @@ export const MOCK_EVENTS: Event[] = [
       <h2>بیانیه پایانی نشست هم‌اندیشی آب</h2>
       <p>در این نشست ۲ روزه تاکید شد که بحران آب پیش از آنکه یک معضل مهندسی باشد، یک بحران اعتماد، عدالت در تخصیص و حکمرانی مشارکتی است.</p>
     `,
-    heroImage: { id: 'img-ev8', type: 'image', url: '/mock/event-cover.svg' },
+    heroImage: { id: 'img-ev8', type: 'image', url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80' },
     gallery: [],
     attachments: [],
     startsAt: '2023-11-25T09:30:00Z',

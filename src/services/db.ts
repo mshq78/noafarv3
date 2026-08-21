@@ -1,3 +1,4 @@
+import { SiteSettings } from "../types";
 import {
   SectionSlug,
   ContentBase,
@@ -34,6 +35,7 @@ import {
 const DB_STORAGE_KEY = 'noafar_live_db_v2';
 
 interface DatabaseSchema {
+  settings: SiteSettings;
   courses: Course[];
   tools: Tool[];
   books: Book[];
@@ -191,11 +193,21 @@ function getInitialDatabase(): DatabaseSchema {
     users: initialOtherUsers,
     user: initialUser,
     pointEntries: [...MOCK_POINT_ENTRIES],
+    settings: {
+      heroTitle: "مدرسه کنشگری نوآفر",
+      heroSubtitle: "بستری برای یادگیری، تجربه و خلق ارزش‌های اجتماعی",
+      aboutText: "نوآفر، پلتفرمی تخصصی برای توانمندسازی کنشگران اجتماعی است.",
+      contactEmail: "info@noafar.ir",
+      contactPhone: "۰۲۱-۱۲۳۴۵۶۷۸",
+      contactAddress: "تهران، میدان انقلاب، پلاک ۱",
+      footerDescription: "اولین پلتفرم جامع آموزش و توانمندسازی کنشگران اجتماعی",
+      footerCopyright: "تمام حقوق برای پلتفرم نوآفر محفوظ است.",
+    },
   };
 }
 
 class PersistentLiveDatabase {
-  private data: DatabaseSchema;
+  public data: DatabaseSchema;
 
   constructor() {
     this.data = this.load();
@@ -219,7 +231,7 @@ class PersistentLiveDatabase {
     return fresh;
   }
 
-  private save(dataToSave?: DatabaseSchema): void {
+  public save(dataToSave?: DatabaseSchema): void {
     const toSave = dataToSave || this.data;
     try {
       localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(toSave));
@@ -669,31 +681,7 @@ class PersistentLiveDatabase {
     this.save();
     return sub;
   }
-
-  resubmitSubmission(submissionId: string, data: any): Submission | null {
-    const sub = this.data.submissions.find((s) => s.id === submissionId);
-    if (!sub) return null;
-    Object.assign(sub, data);
-    sub.status = 'pending';
-    sub.submittedAt = new Date().toISOString();
-    this.save();
-    return sub;
-  }
-
-  // ----------------------------------------------------
-  // CONTACT MESSAGES
-  // ----------------------------------------------------
-
-  addContactMessage(name: string, phoneOrEmail: string, subject: string, message: string): ContactMessage {
-    const msg: ContactMessage = {
-      id: `msg-${Date.now()}`,
-      name,
-      phoneOrEmail,
-      subject,
-      message,
-      createdAt: new Date().toISOString(),
-      status: 'unread',
-    };
+  addContactMessage(msg: import('../types').ContactMessage): import('../types').ContactMessage {
     this.data.contactMessages.unshift(msg);
     this.save();
     return msg;
@@ -905,6 +893,25 @@ class PersistentLiveDatabase {
     this.data = getInitialDatabase();
     this.save();
   }
-}
 
+  // SETTINGS
+  getSettings(): SiteSettings {
+    return this.data.settings || {
+      heroTitle: "مدرسه کنشگری نوآفر",
+      heroSubtitle: "بستری برای یادگیری، تجربه و خلق ارزش‌های اجتماعی",
+      aboutText: "نوآفر، پلتفرمی تخصصی برای توانمندسازی کنشگران اجتماعی است.",
+      contactEmail: "info@noafar.ir",
+      contactPhone: "۰۲۱-۱۲۳۴۵۶۷۸",
+      contactAddress: "تهران، میدان انقلاب، پلاک ۱",
+      footerDescription: "اولین پلتفرم جامع آموزش و توانمندسازی کنشگران اجتماعی",
+      footerCopyright: "تمام حقوق برای پلتفرم نوآفر محفوظ است.",
+    };
+  }
+  updateSettings(newSettings: Partial<SiteSettings>): SiteSettings {
+    this.data.settings = { ...this.getSettings(), ...newSettings };
+    this.save();
+    return this.data.settings;
+  }
+}
 export const liveDb = new PersistentLiveDatabase();
+

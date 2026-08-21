@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { NoafarMark } from './NoafarMark';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -26,6 +27,25 @@ export const Logo: React.FC<LogoProps> = ({
     md: 'h-8',
     lg: 'h-11',
   };
+
+  const settings = useSiteSettings();
+
+  if (settings?.logoUrl) {
+    return (
+      <Link
+        to="/"
+        id="brand-logo-link"
+        className={`inline-flex items-center text-ink-900 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-sky-600 rounded-md ${className}`}
+        aria-label="بازگشت به صفحه اصلی"
+      >
+        <img
+          src={settings.logoUrl}
+          alt="لوگوی سایت"
+          className={`${textHeights[size]} w-auto object-contain select-none`}
+        />
+      </Link>
+    );
+  }
 
   return (
     <Link

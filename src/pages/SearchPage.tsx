@@ -117,7 +117,7 @@ export const SearchPage: React.FC = () => {
             <div className="text-xs text-ink-500 font-sans">
               یافتن <strong className="text-ink-900">{toFaDigits(results.length)}</strong> نتیجه برای «{query}»
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
               {results.map((item) => (
                 <ContentCard key={item.id} item={item} />
               ))}

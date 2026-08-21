@@ -95,23 +95,28 @@ export const BlogDetailPage: React.FC = () => {
 
         {/* Body Text */}
         <div className="prose prose-ink max-w-none text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
-          <div className="whitespace-pre-line leading-relaxed">
-            {post.body}
-          </div>
+          <div 
+            className="leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: post.body }}
+          />
         </div>
 
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-ink-100">
             <span className="text-xs text-ink-400">برچسب‌ها:</span>
-            {post.tags.map((t) => (
-              <span
-                key={t}
-                className="text-xs bg-ink-100 text-ink-700 px-2.5 py-1 rounded-md"
-              >
-                #{t}
-              </span>
-            ))}
+            {post.tags.map((t) => {
+              const tagText = typeof t === 'string' ? t : t.nameFa;
+              const tagKey = typeof t === 'string' ? t : t.id || t.nameFa;
+              return (
+                <span
+                  key={tagKey}
+                  className="text-xs bg-ink-100 text-ink-700 px-2.5 py-1 rounded-md"
+                >
+                  #{tagText}
+                </span>
+              );
+            })}
           </div>
         )}
 
