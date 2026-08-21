@@ -58,9 +58,19 @@
   --color-amber-950: #451a03;
 }
 
+html {
+  /*
+   * Safety net against horizontal overflow on phones. `clip` rather than
+   * `hidden`: `hidden` would turn the root into a scroll container and break
+   * `position: sticky` on the header.
+   */
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-dana);
   direction: rtl;
+  overflow-x: clip;
 }
 
 /* Custom sleek scrollbar */
