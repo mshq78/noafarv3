@@ -4,7 +4,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
-import { env } from './env.js';
+import { env, configProblems } from './env.js';
 import { pool } from './db.js';
 import { ensureReady } from './migrate.js';
 import { attachUser } from './lib/auth.js';
@@ -131,25 +131,97 @@ app.use('/api', (req, res, next) => {
   });
 });
 
+// -------------------------------------------------- database diagnostics ---
+/**
+ * Turns a driver-level connection failure into the sentence that names the
+ * setting at fault. Anything unrecognised is left alone so it still reaches
+ * the generic error handler (and the logs) rather than being mislabelled.
+ */
+function describeDatabaseFailure(error: unknown): string | null {
+  const code = String((error as { code?: string })?.code ?? '');
+  const message = String((error as { message?: string })?.message ?? '');
+
+  if (['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET', 'EPIPE'].includes(code)) {
+    return 'اتصال به پایگاه‌داده برقرار نشد. مقدار DATABASE_URL را بررسی کنید.';
+  }
+  if (code === '28P01' || code === '28000') {
+    return 'نام کاربری یا رمز پایگاه‌داده در DATABASE_URL نادرست است.';
+  }
+  if (code === '3D000') {
+    return 'پایگاه‌دادهٔ نام‌برده در DATABASE_URL وجود ندارد.';
+  }
+  if (/self[- ]signed|certificate|\bssl\b|\bsasl\b/i.test(message)) {
+    return 'اتصال امن به پایگاه‌داده برقرار نشد. برای Neon باید DATABASE_SSL=true باشد و رشتهٔ اتصال sslmode=require داشته باشد.';
+  }
+  return null;
+}
+
+// ------------------------------------------------------ health check -------
+/**
+ * Declared before every other `/api` handler so it still answers when the
+ * service is misconfigured — that is exactly when someone needs to read it.
+ */
+app.get('/api/health', (_req, res) => {
+  if (configProblems.length) {
+    res.status(503).json({
+      ok: false,
+      env: env.nodeEnv,
+      code: 'config_error',
+      message: 'پیکربندی سرویس ناقص است.',
+      problems: configProblems,
+    });
+    return;
+  }
+  pool
+    .query('SELECT 1')
+    .then(() => res.json({ ok: true, env: env.nodeEnv }))
+    .catch((error: unknown) => {
+      res.status(503).json({
+        ok: false,
+        env: env.nodeEnv,
+        code: 'database_unavailable',
+        message: describeDatabaseFailure(error) ?? 'اتصال به پایگاه‌داده برقرار نیست.',
+      });
+    });
+});
+
+// ------------------------------------------------- configuration guard -----
+/**
+ * A missing environment variable used to throw at module load, which on a
+ * serverless host is an opaque "function crashed" 500. Refusing requests with
+ * the names of the variables that are missing turns a blind alley into a
+ * one-line fix. Only names are reported, never values.
+ */
+app.use('/api', (_req, res, next) => {
+  if (!configProblems.length) return next();
+  res.status(503).json({
+    message: `سرویس هنوز پیکربندی نشده است. ${configProblems.join(' ')}`,
+    code: 'config_error',
+    problems: configProblems,
+  });
+});
+
 /**
  * The schema is applied on the first request of each process. A long-running
  * server has already done it at boot; a serverless instance does it here, on
  * its cold start, guarded so only one instance applies it.
  */
-app.use('/api', (_req, _res, next) => {
-  ensureReady().then(() => next()).catch(next);
+app.use('/api', (_req, res, next) => {
+  ensureReady().then(() => next()).catch((error: unknown) => {
+    const detail = describeDatabaseFailure(error);
+    if (!detail) {
+      next(error);
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.error('[noafar] آماده‌سازی پایگاه‌داده ناموفق بود:', error);
+    res.status(503).json({ message: detail, code: 'database_unavailable' });
+  });
 });
 
 app.use('/api', attachUser);
 
 // ------------------------------------------------------------- routes ------
-app.get('/api/health', (_req, res) => {
-  pool
-    .query('SELECT 1')
-    .then(() => res.json({ ok: true, env: env.nodeEnv }))
-    .catch(() => res.status(503).json({ ok: false, message: 'اتصال به پایگاه‌داده برقرار نیست.' }));
-});
-
 app.use('/api/auth', authRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/submissions', submissionsRouter);

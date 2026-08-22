@@ -3,12 +3,19 @@ import crypto from 'node:crypto';
 
 loadDotenv();
 
+/**
+ * Configuration problems are collected rather than thrown. A throw here
+ * happens at module load, which on a serverless host surfaces as an opaque
+ * "function crashed" 500 with no hint as to the cause; collecting them lets
+ * the app answer with the actual missing variable names instead.
+ */
+export const configProblems: string[] = [];
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value || !value.trim()) {
-    throw new Error(
-      `[noafar] متغیر محیطی «${name}» تنظیم نشده است. برای اجرای سرور این مقدار الزامی است.`,
-    );
+    configProblems.push(`متغیر محیطی «${name}» تنظیم نشده است.`);
+    return '';
   }
   return value.trim();
 }
@@ -58,17 +65,20 @@ function resolveSessionSecret(): string {
   const fromEnv = optional('SESSION_SECRET');
   if (fromEnv) {
     if (fromEnv.length < 32) {
-      throw new Error('[noafar] SESSION_SECRET باید حداقل ۳۲ کاراکتر باشد.');
+      configProblems.push('SESSION_SECRET باید حداقل ۳۲ کاراکتر باشد.');
     }
     return fromEnv;
   }
   if (IS_PRODUCTION) {
-    throw new Error(
-      '[noafar] SESSION_SECRET در محیط production الزامی است. یک رشته تصادفی ۶۴ کاراکتری تولید کنید.',
+    configProblems.push(
+      'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
     );
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
   }
-  // eslint-disable-next-line no-console
-  console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
+  // A placeholder keeps the module loadable; requests are refused while any
+  // configuration problem stands, so this value is never actually relied on.
   return crypto.randomBytes(48).toString('hex');
 }
 
@@ -132,3 +142,10 @@ export const env = {
 };
 
 export type Env = typeof env;
+
+if (configProblems.length) {
+  // eslint-disable-next-line no-console
+  console.error(
+    '[noafar] پیکربندی ناقص است:\n' + configProblems.map((item) => `  • ${item}`).join('\n'),
+  );
+}
