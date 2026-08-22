@@ -6,7 +6,7 @@
  * start command trivial (`node dist-server/index.js`).
  */
 import { build } from 'esbuild';
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -18,6 +18,9 @@ await mkdir(outdir, { recursive: true });
 await build({
   entryPoints: {
     index: path.join(root, 'server/src/index.ts'),
+    // Exported separately so a serverless entry point can import the app
+    // without the listening server's side effects.
+    app: path.join(root, 'server/src/app.ts'),
     seed: path.join(root, 'server/src/seed.ts'),
   },
   outdir,
@@ -39,8 +42,5 @@ await build({
     ].join('\n'),
   },
 });
-
-// schema.sql is read from disk at boot, so it ships next to the bundle.
-await cp(path.join(root, 'server/src/schema.sql'), path.join(outdir, 'schema.sql'));
 
 console.log('[noafar] سرور در dist-server/ ساخته شد.');

@@ -5,13 +5,50 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { env } from '../env.js';
 import { requireAuth, requireOperator } from '../lib/auth.js';
-import { asyncRoute, badRequest } from '../lib/http.js';
+import { HttpError, asyncRoute, badRequest } from '../lib/http.js';
 import { rateLimit } from '../lib/rateLimit.js';
 
 export const uploadsRouter = Router();
 
 export const UPLOAD_ROOT = path.resolve(process.cwd(), env.uploadDir);
-fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
+
+/**
+ * Creating the directory must never throw at import time: on a serverless host
+ * the working directory is read-only, and a throw here would take down the
+ * whole function rather than just the upload routes. Individual uploads still
+ * fail loudly if the directory really is unusable.
+ */
+function ensureDir(dir: string): boolean {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[noafar][uploads] ساخت پوشه «${dir}» ممکن نشد؛ بارگذاری فایل غیرفعال است. ` +
+        `${error instanceof Error ? error.message : ''}`,
+    );
+    return false;
+  }
+}
+
+const uploadsWritable = ensureDir(UPLOAD_ROOT);
+
+/**
+ * A writable directory is not the same as a durable one. On a serverless host
+ * `/tmp` accepts writes and then disappears, so an upload would appear to
+ * succeed and the file would be gone by the next request. Refusing is the
+ * honest answer until real object storage is configured.
+ */
+const uploadsUsable = uploadsWritable && env.uploadsPersistent;
+
+if (uploadsWritable && !env.uploadsPersistent) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[noafar][uploads] فضای ذخیره‌سازی پایدار نیست؛ بارگذاری فایل غیرفعال شد. ' +
+      'برای فعال‌سازی، UPLOAD_DIR را روی یک volume دائمی تنظیم و UPLOADS_PERSISTENT=true کنید.',
+  );
+}
 
 /**
  * Extension is derived from the MIME type we accept, never from the client's
@@ -42,7 +79,7 @@ const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
 function makeStorage(subdir: string) {
   const dir = path.join(UPLOAD_ROOT, subdir);
-  fs.mkdirSync(dir, { recursive: true });
+  ensureDir(dir);
   return multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, dir),
     filename: (_req, file, cb) => {
@@ -66,6 +103,19 @@ function makeUploader(subdir: string, allowedTypes: Record<string, string>, maxB
     },
   });
 }
+
+/** Rejects every upload with an explanation when there is nowhere to store one. */
+uploadsRouter.use((_req, _res, next) => {
+  if (uploadsUsable) return next();
+  next(
+    new HttpError(
+      503,
+      'بارگذاری فایل روی این میزبان در دسترس نیست؛ فضای ذخیره‌سازی پایدار تنظیم نشده است. ' +
+        'فعلاً می‌توانید نشانی اینترنتی تصویر را مستقیم وارد کنید.',
+      'uploads_unavailable',
+    ),
+  );
+});
 
 const avatarUpload = makeUploader('avatars', IMAGE_TYPES, AVATAR_MAX_BYTES);
 // Members may attach an image to their own idea/experience submission.

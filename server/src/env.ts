@@ -42,6 +42,15 @@ export const NODE_ENV = optional('NODE_ENV', 'development');
 export const IS_PRODUCTION = NODE_ENV === 'production';
 
 /**
+ * True on a function-per-request host (Vercel, Lambda). Each instance holds
+ * its own pool, so a normal pool size would multiply into hundreds of
+ * connections and exhaust the database's limit.
+ */
+export const IS_SERVERLESS = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY,
+);
+
+/**
  * The session secret must be explicit in production. In development we derive a
  * stable-per-process random value so nobody accidentally ships a default secret.
  */
@@ -71,7 +80,7 @@ export const env = {
 
   databaseUrl: IS_PRODUCTION ? required('DATABASE_URL') : optional('DATABASE_URL'),
   databaseSsl: bool('DATABASE_SSL', false),
-  databasePoolMax: num('DATABASE_POOL_MAX', 10),
+  databasePoolMax: num('DATABASE_POOL_MAX', IS_SERVERLESS ? 1 : 10),
 
   sessionSecret: resolveSessionSecret(),
   sessionCookieName: optional('SESSION_COOKIE_NAME', 'noafar_session'),
@@ -106,13 +115,19 @@ export const env = {
   /** Absolute site URL used to build links inside emails. */
   publicUrl: optional('PUBLIC_URL').replace(/\/$/, ''),
 
-  uploadDir: optional('UPLOAD_DIR', 'uploads'),
+  uploadDir: optional('UPLOAD_DIR', IS_SERVERLESS ? '/tmp/noafar-uploads' : 'uploads'),
+  /**
+   * Set to true only where UPLOAD_DIR really survives a redeploy (a mounted
+   * volume). On a serverless host the filesystem is wiped between
+   * invocations, so uploads are refused rather than silently lost.
+   */
+  uploadsPersistent: bool('UPLOADS_PERSISTENT', !IS_SERVERLESS),
   uploadMaxBytes: num('UPLOAD_MAX_BYTES', 8 * 1024 * 1024),
   publicDir: optional('PUBLIC_DIR', 'dist'),
 
   /** Extra origins allowed to call the API (the SPA is served same-origin by default). */
   corsOrigins: list('CORS_ORIGINS'),
-  trustProxy: bool('TRUST_PROXY', IS_PRODUCTION),
+  trustProxy: bool('TRUST_PROXY', IS_PRODUCTION || IS_SERVERLESS),
   seedOnBoot: bool('SEED_ON_BOOT', false),
 };
 
