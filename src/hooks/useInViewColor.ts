@@ -27,7 +27,7 @@ export function useInViewColor<T extends HTMLElement = HTMLDivElement>() {
     observer.observe(element);
 
     return () => {
-      observer.unobserve(element);
+      observer.disconnect();
     };
   }, []);
 

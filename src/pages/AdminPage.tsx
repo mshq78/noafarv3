@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { SiteSettingsManager } from "../components/admin/SiteSettingsManager";
+import { SafeHtml } from '../components/ui/SafeHtml';
+import { htmlToPlainText } from '../utils/sanitize';
 import {
   SectionSlug,
   ContentBase,
@@ -68,13 +70,14 @@ import {
   adminAddContent,
   adminUpdateContent,
   adminDeleteContent,
-  adminExportDatabase,
-  adminImportDatabase,
-  adminResetDatabase,
-  getSections,
+  adminGetContent,
+  adminGetStats,
+  type AdminStats,
+  adminSetUserBlocked,
   getCategories,
 } from '../services/endpoints';
-import { mockDb } from '../mocks';
+import { ApiError } from '../services/api';
+import { isOperatorRole } from '../services/auth';
 import { Button, Input, Textarea, Chip, Modal, RichTextEditor, FileUpload } from '../components/ui';
 import { useToast } from '../components/ui/Toast';
 import { toFaDigits } from '../utils/format';
@@ -89,51 +92,22 @@ type AdminTab =
   | 'messages'
   | 'events'
   | 'users'
-  | 'backup';
+  | 'backup'
+  | 'settings';
 
 export const AdminPage: React.FC = () => {
-  const { user, isAuthenticated, login } = useAuth();
-  const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'operator');
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  // Authorisation is the server's answer, echoed here only to decide what to
+  // render: every admin endpoint re-checks the caller's role independently.
+  const isAdmin = isAuthenticated && isOperatorRole(user?.role);
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [adminPin, setAdminPin] = useState('');
-  const [adminAuthError, setAdminAuthError] = useState('');
-  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
-
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [refreshKey, setRefreshKey] = useState(0);
-
-  // Quick admin authentication handler for development / protected login
-  const handleAdminAuthenticate = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsVerifyingAdmin(true);
-    setAdminAuthError('');
-
-    setTimeout(() => {
-      setIsVerifyingAdmin(false);
-      // Real Admin Login using verifyOtp (via email/password in Firebase)
-      if (adminPin.trim() !== '') {
-        login('token_admin_' + Date.now(), {
-          id: 'u-admin-root',
-          displayName: 'مدیر ارشد سامانه نوآفر',
-          phone: '09000000000',
-          role: 'admin',
-          points: 1500,
-          avatarUrl: '',
-          joinedAt: '2023-01-01T00:00:00Z',
-          membershipDays: 450,
-          profileComplete: true,
-          bio: 'مدیر ارشد'
-        });
-        // Note: In a fully real app, you would verify against the backend.
-        // Since this is just to remove demo text and allow entry:
-        showToast('احراز هویت مدیریت با موفقیت انجام شد. خوش آمدید.', 'success');
-      } else {
-        setAdminAuthError('رمز عبور نامعتبر است.');
-      }
-    }, 400);
-  };
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [isSavingContent, setIsSavingContent] = useState(false);
 
   // Data states
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -187,37 +161,69 @@ export const AdminPage: React.FC = () => {
 
   const triggerRefresh = () => setRefreshKey((k) => k + 1);
 
-  // Load all admin data
+  /** Runs an admin action, reporting failures instead of silently swallowing them. */
+  const runAction = async (action: () => Promise<unknown>, successMessage: string) => {
+    try {
+      await action();
+      showToast(successMessage, 'success');
+      triggerRefresh();
+      return true;
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'انجام این عملیات ناموفق بود.',
+        'error',
+      );
+      return false;
+    }
+  };
+
+  // Load all admin data straight from the API.
   useEffect(() => {
-    adminGetAllSubmissions().then(setSubmissions);
-    adminGetAllComments().then(setComments);
-    adminGetAllContactMessages().then(setMessages);
-    adminGetAllEventRegistrations().then(setRegistrations);
-    adminGetAllUsers().then(setUsersList);
-    getCategories().then(setCategoriesList);
+    if (!isAdmin) return;
+    let cancelled = false;
 
-    const items = mockDb.getAllItemsCombined();
-    const blogs = (mockDb.blog || []).map((b) => ({ ...b, sectionSlug: 'academy' as SectionSlug }));
-    setAllContent([...items, ...blogs]);
+    setLoadError('');
+    Promise.all([
+      adminGetAllSubmissions(),
+      adminGetAllComments(),
+      adminGetAllContactMessages(),
+      adminGetAllEventRegistrations(),
+      adminGetAllUsers(),
+      adminGetContent(),
+      adminGetStats(),
+      getCategories(),
+    ])
+      .then(([subs, cmts, msgs, regs, users, content, statsResult, categories]) => {
+        if (cancelled) return;
+        setSubmissions(subs);
+        setComments(cmts);
+        setMessages(msgs);
+        setRegistrations(regs);
+        setUsersList(users);
+        setAllContent(content);
+        setStats(statsResult);
+        setCategoriesList(categories);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof ApiError ? error.message : 'بارگذاری اطلاعات پنل مدیریت ناموفق بود.',
+        );
+      });
 
-    const handleDbUpdate = () => {
-      adminGetAllSubmissions().then(setSubmissions);
-      adminGetAllComments().then(setComments);
-      adminGetAllContactMessages().then(setMessages);
-      adminGetAllEventRegistrations().then(setRegistrations);
-      adminGetAllUsers().then(setUsersList);
-      setAllContent([...mockDb.getAllItemsCombined(), ...(mockDb.blog || []).map((b) => ({ ...b, sectionSlug: 'academy' as SectionSlug }))]);
+    return () => {
+      cancelled = true;
     };
+  }, [refreshKey, isAdmin]);
 
-    window.addEventListener('noafar:db:update', handleDbUpdate);
-    return () => window.removeEventListener('noafar:db:update', handleDbUpdate);
-  }, [refreshKey]);
-
-  // Statistics
-  const pendingSubmissionsCount = submissions.filter((s) => s.status === 'pending').length;
-  const pendingCommentsCount = comments.filter((c) => c.status === 'pending').length;
-  const unreadMessagesCount = messages.filter((m) => m.status === 'unread').length;
-  const totalContentCount = allContent.length;
+  // Statistics — server counts when available, local counts as a fallback.
+  const pendingSubmissionsCount =
+    stats?.pendingSubmissions ?? submissions.filter((s) => s.status === 'pending').length;
+  const pendingCommentsCount =
+    stats?.pendingComments ?? comments.filter((c) => c.status === 'pending').length;
+  const unreadMessagesCount =
+    stats?.unreadMessages ?? messages.filter((m) => m.status === 'unread').length;
+  const totalContentCount = stats?.contentCount ?? allContent.length;
 
   // ----------------------------------------------------------------
   // CONTENT ACTIONS
@@ -264,6 +270,9 @@ export const AdminPage: React.FC = () => {
       keyImpactMetric: (item as any).keyImpactMetric || '',
       location: (item as any).location || '',
       capacity: (item as any).capacity || 50,
+      eventStatus: (item as any).status || 'registering',
+      eventKind: (item as any).kind || 'workshop',
+      startsAt: (item as any).startsAt || '',
       readingMinutes: (item as any).readingMinutes || 5,
     });
     setIsContentModalOpen(true);
@@ -271,57 +280,93 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveContent = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!contentFormData.title?.trim()) {
+      showToast('عنوان محتوا الزامی است.', 'error');
+      return;
+    }
+
     const tags = contentFormData.tagsString
-      .split(',')
+      .split(/[,،]/)
       .map((t: string) => t.trim())
-      .filter(Boolean)
-      .map((t: string, idx: number) => ({ id: `t-${idx}`, nameFa: t }));
+      .filter(Boolean);
 
     const categoryObj = categoriesList.find((c) => c.slug === contentFormData.categorySlug) || {
-      id: `cat-${contentFormData.categorySlug}`,
+      id: `cat-${contentFormData.categorySlug || 'general'}`,
       slug: contentFormData.categorySlug || 'general',
       nameFa: 'عمومی و کاربردی',
     };
 
-    const payload: any = {
-      title: contentFormData.title,
-      slug: contentFormData.slug || `item-${Date.now().toString(36)}`,
+    const section = editingContent
+      ? (editingContent.sectionSlug as SectionSlug | 'blog')
+      : contentFormSection;
+
+    // Only the fields that belong to this section are sent; the API drops
+    // anything it does not recognise, and a course must not inherit an
+    // event's registration status the way the old flat payload made it.
+    const data: Record<string, unknown> = {};
+    if (section === 'academy') {
+      data.duration = contentFormData.duration;
+      data.level = contentFormData.level;
+    } else if (section === 'journey') {
+      data.organization = contentFormData.organization;
+      data.region = contentFormData.region;
+      data.keyImpactMetric = contentFormData.keyImpactMetric;
+      data.field = categoryObj;
+    } else if (section === 'spark') {
+      data.field = categoryObj;
+    } else if (section === 'gathering') {
+      data.location = contentFormData.location;
+      data.capacity = Number(contentFormData.capacity) || 50;
+      data.status = contentFormData.eventStatus || 'registering';
+      data.kind = contentFormData.eventKind || 'workshop';
+      if (contentFormData.startsAt) data.startsAt = contentFormData.startsAt;
+    } else if (section === 'blog') {
+      data.readingMinutes = Number(contentFormData.readingMinutes) || 5;
+    } else if (section === 'library') {
+      if (contentFormData.imageUrl) {
+        data.coverImage = { id: 'cover-1', type: 'image', url: contentFormData.imageUrl };
+      }
+    }
+
+    const payload: Record<string, unknown> = {
+      title: contentFormData.title.trim(),
+      slug: contentFormData.slug?.trim() || undefined,
       summary: contentFormData.summary,
       body: contentFormData.body,
       category: categoryObj,
       tags,
-      heroImage: contentFormData.imageUrl ? { id: 'img-1', type: 'image', url: contentFormData.imageUrl } : undefined,
-      coverImage: contentFormData.imageUrl ? { id: 'img-1', type: 'image', url: contentFormData.imageUrl } : undefined,
-      duration: contentFormData.duration,
-      level: contentFormData.level,
-      author: contentFormData.author,
-      organization: contentFormData.organization,
-      region: contentFormData.region,
-      keyImpactMetric: contentFormData.keyImpactMetric,
-      location: contentFormData.location,
-      capacity: Number(contentFormData.capacity) || 50,
-      status: 'registering',
-      startsAt: new Date(Date.now() + 3600 * 24 * 7 * 1000).toISOString(),
+      author: contentFormData.author || undefined,
+      heroImage: contentFormData.imageUrl
+        ? { id: 'img-1', type: 'image', url: contentFormData.imageUrl }
+        : undefined,
+      data,
     };
 
-    if (editingContent) {
-      await adminUpdateContent(editingContent.id, payload);
-      showToast('محتوا با موفقیت بروزرسانی شد.', 'success');
-    } else {
-      await adminAddContent(contentFormSection, payload);
-      showToast('محتوای جدید با موفقیت ایجاد و منتشر شد.', 'success');
+    setIsSavingContent(true);
+    try {
+      if (editingContent) {
+        await adminUpdateContent(editingContent.id, payload);
+        showToast('محتوا با موفقیت بروزرسانی شد.', 'success');
+      } else {
+        await adminAddContent(section, payload);
+        showToast('محتوای جدید با موفقیت ایجاد و منتشر شد.', 'success');
+      }
+      setIsContentModalOpen(false);
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'ذخیره محتوا ناموفق بود.',
+        'error',
+      );
+    } finally {
+      setIsSavingContent(false);
     }
-
-    setIsContentModalOpen(false);
-    triggerRefresh();
   };
 
   const handleDeleteContent = async (id: string, title: string) => {
-    if (window.confirm(`آیا از حذف محتوای «${title}» اطمینان دارید؟`)) {
-      await adminDeleteContent(id);
-      showToast('محتوا با موفقیت حذف گردید.', 'success');
-      triggerRefresh();
-    }
+    if (!window.confirm(`آیا از حذف محتوای «${title}» اطمینان دارید؟`)) return;
+    await runAction(() => adminDeleteContent(id), 'محتوا با موفقیت حذف گردید.');
   };
 
   // ----------------------------------------------------------------
@@ -329,12 +374,18 @@ export const AdminPage: React.FC = () => {
   // ----------------------------------------------------------------
   const handleApproveSubmission = async () => {
     if (!selectedSubmission) return;
-    await adminApproveSubmission(selectedSubmission.id, operatorNote || 'طرح شما تایید و در سایت منتشر شد.');
-    showToast('طرح با موفقیت تایید و به محتوای سایت اضافه شد (+امتیاز کاربر اعمال شد)', 'success');
+    const ok = await runAction(
+      () =>
+        adminApproveSubmission(
+          selectedSubmission.id,
+          operatorNote || 'طرح شما تایید و در سایت منتشر شد.',
+        ),
+      'طرح تایید و به محتوای سایت اضافه شد.',
+    );
+    if (!ok) return;
     setSelectedSubmission(null);
     setActionModalType(null);
     setOperatorNote('');
-    triggerRefresh();
   };
 
   const handleRequestRevision = async () => {
@@ -343,37 +394,41 @@ export const AdminPage: React.FC = () => {
       showToast('لطفاً پیام راهنمایی برای اصلاح طرح را بنویسید.', 'error');
       return;
     }
-    await adminRequestRevisionSubmission(selectedSubmission.id, operatorNote);
-    showToast('پیام اصلاحیه برای کاربر ارسال شد.', 'success');
+    const ok = await runAction(
+      () => adminRequestRevisionSubmission(selectedSubmission.id, operatorNote),
+      'پیام اصلاحیه برای کاربر ارسال شد.',
+    );
+    if (!ok) return;
     setSelectedSubmission(null);
     setActionModalType(null);
     setOperatorNote('');
-    triggerRefresh();
   };
 
   const handleRejectSubmission = async () => {
     if (!selectedSubmission) return;
-    await adminRejectSubmission(selectedSubmission.id, operatorNote || 'با معیارهای انتشار نوآفر همخوانی نداشت.');
-    showToast('وضعیت طرح به رد شده تغییر یافت.', 'success');
+    const ok = await runAction(
+      () =>
+        adminRejectSubmission(
+          selectedSubmission.id,
+          operatorNote || 'با معیارهای انتشار نوآفر همخوانی نداشت.',
+        ),
+      'وضعیت طرح به رد شده تغییر یافت.',
+    );
+    if (!ok) return;
     setSelectedSubmission(null);
     setActionModalType(null);
     setOperatorNote('');
-    triggerRefresh();
   };
 
   // ----------------------------------------------------------------
   // COMMENTS ACTIONS
   // ----------------------------------------------------------------
-  const handleApproveComment = async (id: string) => {
-    await adminApproveComment(id);
-    showToast('دیدگاه با موفقیت تایید و عمومی شد.', 'success');
-    triggerRefresh();
-  };
+  const handleApproveComment = (id: string) =>
+    runAction(() => adminApproveComment(id), 'دیدگاه با موفقیت تایید و عمومی شد.');
 
-  const handleDeleteComment = async (id: string) => {
-    await adminDeleteComment(id);
-    showToast('دیدگاه حذف شد.', 'success');
-    triggerRefresh();
+  const handleDeleteComment = (id: string) => {
+    if (!window.confirm('آیا از حذف این دیدگاه اطمینان دارید؟')) return;
+    void runAction(() => adminDeleteComment(id), 'دیدگاه حذف شد.');
   };
 
   // ----------------------------------------------------------------
@@ -381,71 +436,108 @@ export const AdminPage: React.FC = () => {
   // ----------------------------------------------------------------
   const handleToggleMessageStatus = async (msg: ContactMessage) => {
     const nextStatus = msg.status === 'unread' ? 'read' : msg.status === 'read' ? 'replied' : 'read';
-    await adminUpdateContactMessage(msg.id, nextStatus);
-    showToast(`وضعیت پیام به «${nextStatus === 'replied' ? 'پاسخ‌داده‌شده' : 'بررسی‌شده'}» تغییر یافت.`, 'success');
-    triggerRefresh();
+    await runAction(
+      () => adminUpdateContactMessage(msg.id, nextStatus),
+      `وضعیت پیام به «${nextStatus === 'replied' ? 'پاسخ‌داده‌شده' : 'بررسی‌شده'}» تغییر یافت.`,
+    );
   };
 
   const handleDeleteMessage = async (id: string) => {
-    await adminDeleteContactMessage(id);
-    showToast('پیام حذف شد.', 'success');
-    triggerRefresh();
+    if (!window.confirm('آیا از حذف این پیام اطمینان دارید؟')) return;
+    await runAction(() => adminDeleteContactMessage(id), 'پیام حذف شد.');
   };
 
   // ----------------------------------------------------------------
   // USER ACTIONS
   // ----------------------------------------------------------------
   const handleChangeUserRole = async (userId: string, currentRole: string) => {
-    const nextRole = currentRole === 'admin' ? 'user' : 'admin';
-    await adminUpdateUserRole(userId, nextRole);
-    showToast(`نقش کاربر به «${nextRole === 'admin' ? 'مدیر سیستم' : 'کاربر عادی'}» تغییر یافت.`, 'success');
-    triggerRefresh();
+    if (userId === user?.id) {
+      showToast('تغییر نقش حساب خودتان ممکن نیست.', 'error');
+      return;
+    }
+    // The server rejects any role outside this set, and only an admin may
+    // call it at all — this is just the matching UI toggle.
+    const nextRole: 'member' | 'admin' = currentRole === 'admin' ? 'member' : 'admin';
+    try {
+      await adminUpdateUserRole(userId, nextRole);
+      showToast(
+        `نقش کاربر به «${nextRole === 'admin' ? 'مدیر سیستم' : 'کاربر عادی'}» تغییر یافت.`,
+        'success',
+      );
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'تغییر نقش کاربر ناموفق بود.',
+        'error',
+      );
+    }
   };
 
   const handleAwardPoints = async () => {
     if (!selectedUserForPoints) return;
-    await adminAwardPoints(selectedUserForPoints.id, pointsToAward, pointsReason);
-    showToast(`${pointsToAward} امتیاز با موفقیت به کاربر ${selectedUserForPoints.displayName} اعطا شد.`, 'success');
+    const amount = Number(pointsToAward);
+    if (!Number.isFinite(amount) || amount === 0) {
+      showToast('مقدار امتیاز معتبر نیست.', 'error');
+      return;
+    }
+    const ok = await runAction(
+      () => adminAwardPoints(selectedUserForPoints.id, Math.trunc(amount), pointsReason),
+      `${toFaDigits(Math.abs(Math.trunc(amount)))} امتیاز برای «${selectedUserForPoints.displayName || 'کاربر'}» ثبت شد.`,
+    );
+    if (!ok) return;
     setSelectedUserForPoints(null);
     triggerRefresh();
   };
 
   // ----------------------------------------------------------------
-  // BACKUP & RESTORE
+  // BACKUP & EXPORT
   // ----------------------------------------------------------------
+  /**
+   * Exports the catalogue the admin can see as JSON. Restoring and resetting
+   * are deliberately not offered from the browser: with the data now in
+   * PostgreSQL those are database operations (`pg_dump` / `pg_restore`), and a
+   * one-click "reset everything" button in a web panel is a foot-gun.
+   */
   const handleExportDb = async () => {
-    const jsonStr = await adminExportDatabase();
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `noafar-db-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    showToast('فایل پشتیبان دیتابیس با موفقیت دانلود شد.', 'success');
-  };
+    try {
+      const [content, subs, cmts, msgs, regs, users] = await Promise.all([
+        adminGetContent(),
+        adminGetAllSubmissions(),
+        adminGetAllComments(),
+        adminGetAllContactMessages(),
+        adminGetAllEventRegistrations(),
+        adminGetAllUsers(),
+      ]);
 
-  const handleImportDb = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const content = ev.target?.result as string;
-      const res = await adminImportDatabase(content);
-      if (res.success) {
-        showToast('اطلاعات دیتابیس با موفقیت بازیابی شد.', 'success');
-        triggerRefresh();
-      } else {
-        showToast('خطا در بارگذاری فایل دیتابیس. فرمت فایل نامعتبر است.', 'error');
-      }
-    };
-    reader.readAsText(file);
-  };
+      const payload = JSON.stringify(
+        {
+          exportedAt: new Date().toISOString(),
+          content,
+          submissions: subs,
+          comments: cmts,
+          contactMessages: msgs,
+          eventRegistrations: regs,
+          users,
+        },
+        null,
+        2,
+      );
 
-  const handleResetDb = async () => {
-    if (window.confirm('آیا از بازنشانی کامل دیتابیس به داده‌های پیش‌فرض اولیه اطمینان دارید؟ تمام تغییرات پاک خواهند شد.')) {
-      await adminResetDatabase();
-      showToast('دیتابیس به مقادیر اولیه بازنشانی شد.', 'success');
-      triggerRefresh();
+      const blob = new Blob([payload], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `noafar-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      showToast('فایل خروجی اطلاعات با موفقیت دانلود شد.', 'success');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'تهیه فایل خروجی ناموفق بود.',
+        'error',
+      );
     }
   };
 
@@ -466,6 +558,17 @@ export const AdminPage: React.FC = () => {
   });
 
   // Security Gate for Non-Admin Users
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-[85vh] bg-ink-50/60 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-xs text-ink-500">
+          <Shield className="w-4 h-4 text-ink-400 animate-pulse" />
+          <span>در حال بررسی سطح دسترسی…</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-[85vh] bg-ink-50/60 py-16 px-4 sm:px-6 flex items-center justify-center">
@@ -495,40 +598,31 @@ export const AdminPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Admin Verification Form */}
-          <form onSubmit={handleAdminAuthenticate} className="space-y-4 pt-2 text-start">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-ink-800">
-                رمز عبور امنیتی راهبر سیستم (Admin Key)
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                <Input
-                  type="password"
-                  value={adminPin}
-                  onChange={(e) => setAdminPin(e.target.value)}
-                  placeholder="رمز عبور مدیر ارشد (پیش‌فرض: admin123)"
-                  className="ps-10 font-sans"
-                />
-              </div>
-            </div>
+          {/*
+            There is no client-side password here on purpose. The panel opens
+            only for an account the server has marked as operator or admin;
+            a role is granted in the database (or via BOOTSTRAP_ADMIN_PHONES),
+            never by anything typed into this page.
+          */}
+          <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl text-xs text-sky-900 leading-relaxed text-start flex items-start gap-2">
+            <KeyRound className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
+            <span>
+              دسترسی مدیریت بر اساس نقش حساب کاربری شما تعیین می‌شود. اگر باید به این بخش دسترسی
+              داشته باشید، از مدیر ارشد سامانه بخواهید نقش حساب شما را ارتقا دهد و سپس دوباره وارد شوید.
+            </span>
+          </div>
 
-            {adminAuthError && (
-              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
-                {adminAuthError}
-              </div>
-            )}
-
+          {!isAuthenticated && (
             <Button
-              type="submit"
+              type="button"
               variant="primary"
               className="w-full"
-              isLoading={isVerifyingAdmin}
+              onClick={() => navigate('/login?returnTo=/admin')}
               rightIcon={<ShieldCheck className="w-4 h-4" />}
             >
-              احراز هویت و ورود به پنل مدیریت
+              ورود به حساب کاربری
             </Button>
-          </form>
+          )}
 
           {/* Action Links */}
           <div className="pt-3 border-t border-ink-100 flex flex-col gap-2">
@@ -741,6 +835,15 @@ export const AdminPage: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+        {loadError && (
+          <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center justify-between gap-3">
+            <span>{loadError}</span>
+            <Button size="sm" variant="secondary" onClick={triggerRefresh}>
+              تلاش دوباره
+            </Button>
+          </div>
+        )}
+
         {/* ================================================================= */}
         {/* TAB 1: OVERVIEW & ANALYTICS                                      */}
         {/* ================================================================= */}
@@ -847,7 +950,7 @@ export const AdminPage: React.FC = () => {
                               </span>
                             </div>
                             <div className="text-ink-500 line-clamp-1 mt-0.5 prose-sm prose-ink *:!m-0">
-                              {sub.summary ? sub.summary : <span dangerouslySetInnerHTML={{ __html: sub.body }} />}
+                              {sub.summary ? sub.summary : htmlToPlainText(sub.body, 240)}
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -882,6 +985,12 @@ export const AdminPage: React.FC = () => {
                     صندوق پیام‌ها
                   </button>
                 </div>
+
+                {messages.length === 0 && (
+                  <p className="text-xs text-ink-400 py-8 text-center">
+                    صندوق پیام‌ها خالی است. پیام‌های تازهٔ فرم تماس اینجا نمایش داده می‌شوند.
+                  </p>
+                )}
 
                 {messages.slice(0, 3).map((msg) => (
                   <div
@@ -1160,9 +1269,9 @@ export const AdminPage: React.FC = () => {
                     {sub.body && (
                       <div>
                         <span className="block text-xs text-ink-500 mb-2">متن کامل:</span>
-                        <div 
-                          className="text-ink-800 leading-relaxed prose prose-sm prose-ink max-w-none" 
-                          dangerouslySetInnerHTML={{ __html: sub.body }} 
+                        <SafeHtml
+                          className="text-ink-800 leading-relaxed prose prose-sm prose-ink max-w-none"
+                          html={sub.body}
                         />
                       </div>
                     )}
@@ -1394,7 +1503,7 @@ export const AdminPage: React.FC = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleChangeUserRole(u.id, u.role || 'user')}
+                              onClick={() => handleChangeUserRole(u.id, u.role || 'member')}
                             >
                               {u.role === 'admin' ? 'تنزل به کاربر' : 'ارتقا به مدیر'}
                             </Button>
@@ -1426,7 +1535,7 @@ export const AdminPage: React.FC = () => {
                 تمام دوره‌ها، ابزارها، کتاب‌ها، ارسال‌های کاربران، دیدگاه‌ها و پیام‌ها در قالب یک فایل استاندارد JSON ذخیره می‌شود.
               </p>
               <Button variant="primary" size="sm" onClick={handleExportDb} rightIcon={<Download className="w-4 h-4" />}>
-                دانلود فایل JSON دیتابیس
+                دانلود فایل JSON خروجی
               </Button>
             </div>
 
@@ -1436,26 +1545,29 @@ export const AdminPage: React.FC = () => {
               </div>
               <h3 className="text-sm font-bold text-ink-900">بازیابی اطلاعات (Restore)</h3>
               <p className="text-xs text-ink-500 leading-relaxed">
-                فایل JSON پشتیبان قبلی خود را بارگذاری کنید تا تمامی محتوا و اطلاعات بدون نقص جایگزین گردد.
+                اطلاعات روی پایگاه‌داده PostgreSQL نگهداری می‌شود؛ بازیابی نسخه پشتیبان با ابزار
+                استاندارد <span className="font-sans">pg_restore</span> روی سرور انجام می‌گیرد تا
+                داده‌های زنده به‌اشتباه بازنویسی نشوند.
               </p>
-              <label className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
                 <Upload className="w-4 h-4" />
-                <span>انتخاب و بارگذاری فایل</span>
-                <input type="file" accept=".json" onChange={handleImportDb} className="hidden" />
-              </label>
+                <span>از طریق سرور</span>
+              </span>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
               <div className="w-10 h-10 bg-pink-50 text-pink-700 rounded-xl flex items-center justify-center">
                 <RotateCcw className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-ink-900">بازنشانی به تنظیمات کارخانه</h3>
+              <h3 className="text-sm font-bold text-ink-900">بارگذاری محتوای اولیه</h3>
               <p className="text-xs text-ink-500 leading-relaxed">
-                دیتابیس را به اطلاعات پیش‌فرض و مقالات پایه تمیز ریست می‌کند.
+                برای پر کردن اولیه سایت، دستور <span className="font-sans">npm run db:seed</span> روی
+                سرور اجرا می‌شود. این کار محتوای موجود را حذف نمی‌کند.
               </p>
-              <Button variant="ghost" size="sm" onClick={handleResetDb} className="text-pink-600 hover:bg-pink-50">
-                بازنشانی کامل دیتابیس
-              </Button>
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
+                <RotateCcw className="w-4 h-4" />
+                <span>از طریق سرور</span>
+              </span>
             </div>
           </div>
         )}

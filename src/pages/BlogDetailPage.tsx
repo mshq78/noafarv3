@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, ArrowRight } from 'lucide-react';
 import { BlogPost } from '../types';
+import { SafeHtml } from '../components/ui/SafeHtml';
+import { SmartImage } from '../components/ui/SmartImage';
 import { getBlogPostDetail } from '../services/endpoints';
 import { CommentSection } from '../components/content/CommentSection';
 import { ContentActions } from '../components/content/ContentActions';
@@ -85,20 +87,18 @@ export const BlogDetailPage: React.FC = () => {
         {/* Hero Image */}
         {post.heroImage?.url && (
           <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
-            <img
+            <SmartImage
               src={post.heroImage.url}
               alt={post.title}
               className="w-full h-full object-cover"
+              fallbackSrc="/mock/blog-cover.svg"
             />
           </div>
         )}
 
         {/* Body Text */}
         <div className="prose prose-ink max-w-none text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
-          <div 
-            className="leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: post.body }}
-          />
+          <SafeHtml className="leading-relaxed" html={post.body} />
         </div>
 
         {/* Tags */}

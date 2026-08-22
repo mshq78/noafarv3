@@ -15,13 +15,18 @@ const PERSIAN_MONTHS = [
  * Format ISO date to Persian human readable date (e.g. '۱۲ اردیبهشت ۱۴۰۳')
  */
 export function formatPersianDate(dateString: string, _format?: string): string {
+  if (!dateString) return '';
   try {
-    // @ts-ignore
-    const d = dayjs(dateString).calendar('jalali');
+    const parsed = dayjs(dateString);
+    // dayjs does not throw on a bad input, it returns an invalid instance —
+    // formatting one produced literal "NaN undefined NaN" on screen.
+    if (!parsed.isValid()) return toFaDigits(dateString);
+    // @ts-ignore — jalaliday augments dayjs at runtime.
+    const d = parsed.calendar('jalali');
     const day = toFaDigits(d.date());
-    const month = PERSIAN_MONTHS[d.month()];
+    const month = PERSIAN_MONTHS[d.month()] ?? '';
     const year = toFaDigits(d.year());
-    return `${day} ${month} ${year}`;
+    return `${day} ${month} ${year}`.trim();
   } catch {
     return toFaDigits(dateString);
   }
@@ -31,12 +36,15 @@ export function formatPersianDate(dateString: string, _format?: string): string 
  * Format ISO date to Persian relative or short date
  */
 export function formatPersianShortDate(dateString: string): string {
+  if (!dateString) return '';
   try {
-    // @ts-ignore
-    const d = dayjs(dateString).calendar('jalali');
+    const parsed = dayjs(dateString);
+    if (!parsed.isValid()) return toFaDigits(dateString);
+    // @ts-ignore — jalaliday augments dayjs at runtime.
+    const d = parsed.calendar('jalali');
     const day = toFaDigits(d.date());
-    const month = PERSIAN_MONTHS[d.month()];
-    return `${day} ${month}`;
+    const month = PERSIAN_MONTHS[d.month()] ?? '';
+    return `${day} ${month}`.trim();
   } catch {
     return toFaDigits(dateString);
   }
@@ -46,8 +54,13 @@ export function formatPersianShortDate(dateString: string): string {
  * Format relative time ago in Persian (e.g. '۳ روز پیش', '۲ ساعت پیش')
  */
 export function formatTimeAgo(dateString: string): string {
+  if (!dateString) return '';
   try {
-    const diffMs = Date.now() - new Date(dateString).getTime();
+    const timestamp = new Date(dateString).getTime();
+    if (Number.isNaN(timestamp)) return toFaDigits(dateString);
+    const diffMs = Date.now() - timestamp;
+    // A clock skew (or a future-dated item) must not render "-3 روز پیش".
+    if (diffMs < 0) return 'لحظاتی پیش';
     const diffSec = Math.floor(diffMs / 1000);
     if (diffSec < 60) return 'لحظاتی پیش';
     const diffMin = Math.floor(diffSec / 60);

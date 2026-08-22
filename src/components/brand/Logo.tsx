@@ -8,6 +8,8 @@ interface LogoProps {
   markAccent?: string;
   className?: string;
   showText?: boolean;
+  /** Renders the wordmark light, for use on a dark background (the footer). */
+  invert?: boolean;
 }
 
 export const Logo: React.FC<LogoProps> = ({
@@ -15,6 +17,7 @@ export const Logo: React.FC<LogoProps> = ({
   markAccent = '#FFCC6D',
   className = '',
   showText = true,
+  invert = false,
 }) => {
   const markSizes = {
     sm: 28,
@@ -41,7 +44,9 @@ export const Logo: React.FC<LogoProps> = ({
         <img
           src={settings.logoUrl}
           alt="لوگوی سایت"
-          className={`${textHeights[size]} w-auto object-contain select-none`}
+          className={`${textHeights[size]} w-auto object-contain select-none${
+            invert ? ' brightness-0 invert' : ''
+          }`}
         />
       </Link>
     );
@@ -59,7 +64,9 @@ export const Logo: React.FC<LogoProps> = ({
         <img
           src="/brand/noafar-logotype.svg"
           alt="لوگوتایپ نوآفر"
-          className={`${textHeights[size]} w-auto select-none`}
+          className={`${textHeights[size]} w-auto select-none${
+            invert ? ' brightness-0 invert' : ''
+          }`}
         />
       )}
     </Link>

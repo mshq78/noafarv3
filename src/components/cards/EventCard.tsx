@@ -5,6 +5,7 @@ import { Event } from '../../types';
 import { Chip } from '../ui';
 import { formatPersianDate } from '../../utils/date';
 import { cn } from '../../utils/cn';
+import { SmartImage } from '../ui/SmartImage';
 
 interface EventCardProps {
   event: Event;
@@ -28,7 +29,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         to={`/gathering/${event.slug}`}
         className="relative aspect-[16/9] bg-ink-100 overflow-hidden block"
       >
-        <img
+        <SmartImage
           src={event.heroImage?.url || '/mock/event-cover.svg'}
           alt={event.title}
           className={cn(
@@ -36,6 +37,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
             isPast ? 'grayscale-30 group-hover:grayscale-0' : 'group-hover:scale-103'
           )}
           loading="lazy"
+          fallbackSrc="/mock/event-cover.svg"
         />
 
         {/* Status chip */}

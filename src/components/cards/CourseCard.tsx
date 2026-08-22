@@ -4,6 +4,7 @@ import { Clock, BookOpen, User } from 'lucide-react';
 import { Course } from '../../types';
 import { DifficultyDots, ProgressBar, Chip } from '../ui';
 import { formatMinutes, toFaDigits } from '../../utils/format';
+import { SmartImage } from '../ui/SmartImage';
 
 interface CourseCardProps {
   course: Course;
@@ -19,11 +20,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
         to={`/academy/${course.slug}`}
         className="relative aspect-video bg-ink-100 overflow-hidden block"
       >
-        <img
+        <SmartImage
           src={course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"
+          fallbackSrc="/mock/course-thumb.svg"
         />
         <div className="absolute top-2.5 start-2.5">
           {course.category && (

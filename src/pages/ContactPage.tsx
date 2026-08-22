@@ -5,30 +5,58 @@ import { TricolorRule } from '../components/brand/TricolorRule';
 import { DotPattern } from '../components/brand/DotPattern';
 import { submitContact } from '../services/endpoints';
 import { useToast } from '../components/ui/Toast';
+import { useSiteSettings } from '../hooks/useSiteSettings';
+import { ApiError } from '../services/api';
 
 export const ContactPage: React.FC = () => {
   const { showToast } = useToast();
+  const settings = useSiteSettings();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [subject, setSubject] = useState('همکاری در تولید محتوا');
   const [message, setMessage] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validated before the request so the visitor sees the problem inline.
+    const trimmedContact = contact.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedContact);
+    const digits = trimmedContact
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+      .replace(/\D/g, '');
+    if (name.trim().length < 2) {
+      setError('نام و نام خانوادگی را وارد کنید.');
+      return;
+    }
+    if (!isEmail && !/^09\d{9}$/.test(digits)) {
+      setError('یک شماره موبایل معتبر (۰۹...) یا نشانی رایانامه وارد کنید.');
+      return;
+    }
+    if (message.replace(/<[^>]*>/g, '').trim().length < 10) {
+      setError('متن پیام باید حداقل ۱۰ نویسه باشد.');
+      return;
+    }
+
+    setError('');
     setIsLoading(true);
     try {
       await submitContact({
-        name,
-        phone: email,
+        name: name.trim(),
+        phone: isEmail ? trimmedContact : digits,
         subject,
         message,
       });
       setIsSubmitted(true);
       showToast('پیام شما با موفقیت در دبیرخانه ثبت شد.', 'success');
-    } catch {
-      showToast('خطا در ارسال پیام. لطفاً دوباره امتحان کنید.', 'error');
+    } catch (err) {
+      const messageText =
+        err instanceof ApiError ? err.message : 'خطا در ارسال پیام. لطفاً دوباره امتحان کنید.';
+      setError(messageText);
+      showToast(messageText, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -40,11 +68,7 @@ export const ContactPage: React.FC = () => {
         {/* Header */}
         <div className="relative bg-white rounded-2xl p-6 sm:p-10 border border-ink-200 shadow-2xs overflow-hidden">
           <DotPattern
-            width={160}
-            height={160}
-            rows={5}
-            cols={5}
-            dotColor="#0077b6"
+            color="#0077b6"
             className="opacity-25 end-0 top-0"
           />
 
@@ -76,7 +100,7 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <strong className="block text-ink-900 mb-0.5">نشانی دبیرخانه:</strong>
-                    <span>تهران، میدان انقلاب اسلامی، خیابان ۱۶ آذر، خانه خلاق و نوآوری نوآفر</span>
+                    <span>{settings.contactAddress}</span>
                   </div>
                 </div>
 
@@ -86,7 +110,7 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <strong className="block text-ink-900 mb-0.5">تلفن پشتیبانی:</strong>
-                    <span dir="ltr" className="font-sans">۰۲۱ - ۶۶۴۰ ۱۲۳۴</span>
+                    <span dir="ltr" className="font-sans">{settings.contactPhone}</span>
                   </div>
                 </div>
 
@@ -96,7 +120,12 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <strong className="block text-ink-900 mb-0.5">رایانامه رسمی:</strong>
-                    <span className="font-sans">info@noafar.com</span>
+                    <a
+                      href={`mailto:${settings.contactEmail ?? ''}`}
+                      className="font-sans hover:text-sky-700 transition-colors"
+                    >
+                      {settings.contactEmail}
+                    </a>
                   </div>
                 </div>
               </div>
@@ -131,6 +160,7 @@ export const ContactPage: React.FC = () => {
                     onClick={() => {
                       setIsSubmitted(false);
                       setMessage('');
+                      setError('');
                     }}
                   >
                     ارسال پیام دیگر
@@ -155,8 +185,8 @@ export const ContactPage: React.FC = () => {
                       <label className="text-xs font-bold text-ink-800">رایانامه یا شماره تماس</label>
                       <Input
                         required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={contact}
+                        onChange={(e) => setContact(e.target.value)}
                         placeholder="example@mail.com یا ۰۹۱۲..."
                         dir="ltr"
                       />
@@ -188,6 +218,12 @@ export const ContactPage: React.FC = () => {
                       required
                     />
                   </div>
+
+                  {error && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                      {error}
+                    </div>
+                  )}
 
                   <Button
                     type="submit"

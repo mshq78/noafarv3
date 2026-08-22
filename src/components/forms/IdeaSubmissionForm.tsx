@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Lightbulb, Send, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Input, Textarea, Select, ChipInput, FileUpload, Button, RichTextEditor } from '../ui';
 import { JOURNEY_FIELDS } from '../../config/categories';
-import { submitIdea } from '../../services/endpoints';
+import { submitIdea, uploadSubmissionImage } from '../../services/endpoints';
+import { ApiError } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../ui/Toast';
 import { useDraft } from '../../hooks/useDraft';
@@ -82,19 +83,30 @@ export const IdeaSubmissionForm: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      // The attached file used to be collected and then dropped on submit.
+      let heroImageUrl: string | undefined;
+      if (file) {
+        heroImageUrl = (await uploadSubmissionImage(file)).url;
+      }
+
       await submitIdea({
         title: formData.title,
         fieldSlug: formData.fieldSlug,
+        fieldNameFa: JOURNEY_FIELDS.find((f) => f.slug === formData.fieldSlug)?.nameFa,
         summary: formData.summary,
         body: formData.body,
         tags: formData.tags,
+        heroImageUrl,
       });
 
       clearDraft();
       showToast('ایده شما با موفقیت ثبت شد و ۵۰ امتیاز نوآفری دریافت کردید!', 'success');
       navigate('/profile');
-    } catch {
-      showToast('خطا در ثبت ایده. لطفاً دوباره امتحان کنید.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ثبت ایده. لطفاً دوباره امتحان کنید.',
+        'error',
+      );
     } finally {
       setIsSubmitting(false);
     }

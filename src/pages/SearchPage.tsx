@@ -7,6 +7,7 @@ import { SECTION_LIST } from '../config/sections';
 import { ContentCard } from '../components/cards';
 import { Tabs, Skeleton, EmptyState } from '../components/ui';
 import { toFaDigits } from '../utils/format';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,17 +19,25 @@ export const SearchPage: React.FC = () => {
   const [results, setResults] = useState<ContentBase[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // One request once typing settles, instead of one per keystroke.
+  const debouncedQuery = useDebouncedValue(query, 350);
+
   useEffect(() => {
     let isMounted = true;
-    if (!query.trim()) {
+    const trimmed = debouncedQuery.trim();
+    if (!trimmed) {
       setResults([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    searchAll(query, activeTab === 'all' ? undefined : (activeTab as SectionSlug))
+    searchAll(trimmed, activeTab === 'all' ? undefined : (activeTab as SectionSlug))
       .then((data) => {
         if (isMounted) setResults(data);
+      })
+      .catch(() => {
+        if (isMounted) setResults([]);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -37,18 +46,23 @@ export const SearchPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [query, activeTab]);
+  }, [debouncedQuery, activeTab]);
+
+  // The address bar follows the debounced value so typing does not push a
+  // history entry per character.
+  useEffect(() => {
+    setSearchParams(
+      debouncedQuery ? { q: debouncedQuery, section: activeTab } : {},
+      { replace: true },
+    );
+  }, [debouncedQuery, activeTab, setSearchParams]);
 
   const handleQueryChange = (val: string) => {
     setQuery(val);
-    setSearchParams(val ? { q: val, section: activeTab } : {});
   };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    if (query) {
-      setSearchParams({ q: query, section: tabId });
-    }
   };
 
   const tabs = [

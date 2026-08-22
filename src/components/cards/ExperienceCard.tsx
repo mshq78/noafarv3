@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Users, TrendingUp } from 'lucide-react';
 import { Experience } from '../../types';
 import { Chip } from '../ui';
+import { SmartImage } from '../ui/SmartImage';
 
 interface ExperienceCardProps {
   experience: Experience;
@@ -16,11 +17,12 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({ experience }) =>
         to={`/journey/${experience.slug}`}
         className="relative aspect-video bg-ink-100 overflow-hidden block"
       >
-        <img
+        <SmartImage
           src={experience.heroImage?.url || '/mock/journey-cover.svg'}
           alt={experience.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"
+          fallbackSrc="/mock/journey-cover.svg"
         />
         <div className="absolute top-2.5 start-2.5 flex items-center gap-1.5 flex-wrap">
           {experience.region && (

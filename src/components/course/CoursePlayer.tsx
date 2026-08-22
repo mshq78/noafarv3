@@ -23,7 +23,13 @@ import {
 } from 'lucide-react';
 import { Course, CourseLesson } from '../../types';
 import { ProgressBar, Button, Chip } from '../ui';
-import { updateCourseProgress, updateCourseVideo, addCourseLesson } from '../../services/endpoints';
+import {
+  updateCourseProgress,
+  updateCourseVideo,
+  addCourseLesson,
+  uploadMedia,
+} from '../../services/endpoints';
+import { ApiError } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../ui/Toast';
 import { formatMinutes, toFaDigits } from '../../utils/format';
@@ -33,7 +39,12 @@ interface CoursePlayerProps {
   course: Course;
 }
 
-export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
+export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCourse }) => {
+  // Local copy so operator edits (new video, new lesson) render immediately
+  // instead of mutating the prop object in place.
+  const [course, setCourse] = useState<Course>(initialCourse);
+  useEffect(() => setCourse(initialCourse), [initialCourse]);
+
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'operator');
   const { showToast } = useToast();
@@ -44,7 +55,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
   // Lesson & Progress State
   const [activeLessonIndex, setActiveLessonIndex] = useState(0);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
-  const [progressPercent, setProgressPercent] = useState(course.myProgressPercent || 0);
+  const [progressPercent, setProgressPercent] = useState(initialCourse.myProgressPercent || 0);
 
   // Video Playback State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -61,7 +72,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
   const [videoInputUrl, setVideoInputUrl] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
-  const [tempVideoBlobUrl, setTempVideoBlobUrl] = useState('');
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
 
   // Add Lesson Form State
   const [newLessonTitle, setNewLessonTitle] = useState('');
@@ -81,35 +92,39 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
       ];
 
   const currentLesson = lessons[activeLessonIndex] || lessons[0];
-  const activeVideoUrl = currentLesson.videoUrl || course.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+  // No placeholder clip: an empty source renders the "not uploaded yet" state
+  // instead of silently playing an unrelated demo video.
+  const activeVideoUrl = currentLesson.videoUrl || course.videoUrl || '';
+  const hasVideo = activeVideoUrl.length > 0;
 
   const isEmbed =
-    activeVideoUrl.includes('aparat.com') ||
-    activeVideoUrl.includes('youtube.com') ||
-    activeVideoUrl.includes('youtu.be') ||
-    activeVideoUrl.includes('vimeo.com');
+    hasVideo &&
+    /^https:\/\/([a-z0-9-]+\.)*(aparat\.com|youtube\.com|youtu\.be|vimeo\.com)\//i.test(
+      activeVideoUrl,
+    );
 
   // Format seconds to mm:ss
   const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs < 0) return '۰۰:۰۰';
+    if (!Number.isFinite(secs) || secs < 0) return '۰۰:۰۰';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
-    const mStr = m < 10 ? `۰${m}` : toFaDigits(m);
-    const sStr = s < 10 ? `۰${s}` : toFaDigits(s);
-    return `${mStr}:${sStr}`;
+    return `${toFaDigits(String(m).padStart(2, '0'))}:${toFaDigits(String(s).padStart(2, '0'))}`;
   };
 
-  // Video Event Handlers
+  // The play state is driven by the element's own events, so pausing with the
+  // keyboard or the OS media keys keeps the button in the right state.
   const handlePlayPause = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
   };
+
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
 
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
@@ -164,40 +179,63 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
-      setIsFullscreen(false);
-    }
+    if (!document.fullscreenElement) containerRef.current.requestFullscreen().catch(() => {});
+    else document.exitFullscreen().catch(() => {});
   };
 
   // Lesson Selection
   const handleLessonSelect = (index: number) => {
     setActiveLessonIndex(index);
-    setIsPlaying(true);
     setCurrentTime(0);
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
+    if (videoRef.current) videoRef.current.currentTime = 0;
   };
+
+  // Switching lessons swaps the <video> source; start it once it is ready.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo) return;
+    video.load();
+    setCurrentTime(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVideoUrl]);
 
   // Mark Lesson as Completed
   const handleMarkCompleted = async (lessonId = currentLesson.id) => {
-    const newCompleted = completedLessonIds.includes(lessonId)
-      ? completedLessonIds
-      : [...completedLessonIds, lessonId];
-    
+    if (!isAuthenticated) {
+      showToast('برای ثبت پیشرفت دوره ابتدا وارد حساب کاربری خود شوید.', 'info');
+      return;
+    }
+
+    const alreadyDone = completedLessonIds.includes(lessonId);
+    const newCompleted = alreadyDone ? completedLessonIds : [...completedLessonIds, lessonId];
+    const lessonTitle = lessons.find((lesson) => lesson.id === lessonId)?.title ?? currentLesson.title;
+
     setCompletedLessonIds(newCompleted);
 
-    const totalLessons = lessons.length;
-    const newPercent = Math.min(100, Math.round((newCompleted.length / totalLessons) * 100));
+    const newPercent = Math.min(100, Math.round((newCompleted.length / lessons.length) * 100));
     setProgressPercent(newPercent);
 
-    await updateCourseProgress(course.id, newPercent);
-    showToast(`درس «${currentLesson.title}» تکمیل شد! (+۴۰ امتیاز نوآفری)`, 'success');
+    try {
+      await updateCourseProgress(
+        course.id,
+        newPercent,
+        Math.round(videoRef.current?.currentTime ?? 0),
+        newCompleted,
+      );
+      // Points land once, on finishing the whole course — the award the API
+      // actually grants, rather than a per-lesson figure that never existed.
+      showToast(
+        newPercent >= 100
+          ? `دوره «${course.title}» تکمیل شد! (+۴۰ امتیاز نوآفری)`
+          : `درس «${lessonTitle}» تکمیل شد.`,
+        'success',
+      );
+    } catch {
+      setCompletedLessonIds(completedLessonIds);
+      setProgressPercent(progressPercent);
+      showToast('ثبت پیشرفت دوره ناموفق بود. لطفاً دوباره تلاش کنید.', 'error');
+      return;
+    }
 
     // Auto advance to next lesson if available
     if (activeLessonIndex < lessons.length - 1) {
@@ -205,37 +243,54 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
     }
   };
 
-  // Handle Local Video File Upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * Uploads the chosen file to the server. The old flow only made an in-memory
+   * blob: URL, which meant the "saved" video vanished on the next page load
+   * and was never visible to anyone else.
+   */
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileBlobUrl = URL.createObjectURL(file);
-    setTempVideoBlobUrl(fileBlobUrl);
     setUploadedFileName(file.name);
-    setVideoInputUrl(fileBlobUrl);
+    setIsUploadingVideo(true);
+    try {
+      const asset = await uploadMedia(file);
+      setVideoInputUrl(asset.url);
+      showToast('فایل ویدیو بارگذاری شد. برای ثبت روی «ذخیره» بزنید.', 'success');
+    } catch (error) {
+      setUploadedFileName('');
+      showToast(
+        error instanceof ApiError ? error.message : 'بارگذاری فایل ویدیو ناموفق بود.',
+        'error',
+      );
+    } finally {
+      setIsUploadingVideo(false);
+      // Allow re-selecting the same file after a failure.
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // Save Uploaded Video to Course/Lesson
   const handleSaveVideo = async () => {
-    const targetUrl = videoInputUrl.trim() || tempVideoBlobUrl;
+    const targetUrl = videoInputUrl.trim();
     if (!targetUrl) {
       showToast('لطفاً یک فایل ویدیویی انتخاب کنید یا آدرس آن را وارد نمایید.', 'error');
       return;
     }
 
     try {
-      await updateCourseVideo(course.id, targetUrl, activeLessonIndex);
-      currentLesson.videoUrl = targetUrl;
+      const updated = await updateCourseVideo(course.id, targetUrl, activeLessonIndex, course);
+      setCourse(updated);
       showToast('ویدیو با موفقیت بارگذاری و برای این درس ثبت گردید!', 'success');
       setIsUploadModalOpen(false);
-      setIsPlaying(true);
-      if (videoRef.current) {
-        videoRef.current.src = targetUrl;
-        videoRef.current.play().catch(() => {});
-      }
-    } catch {
-      showToast('خطا در ذخیره‌سازی ویدیو.', 'error');
+      setVideoInputUrl('');
+      setUploadedFileName('');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ذخیره‌سازی ویدیو.',
+        'error',
+      );
     }
   };
 
@@ -248,19 +303,23 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
     }
 
     try {
-      await addCourseLesson(course.id, {
+      const updated = await addCourseLesson(course.id, course, {
         title: newLessonTitle.trim(),
         durationMinutes: Number(newLessonMinutes) || 15,
         videoUrl: newLessonVideoUrl.trim() || course.videoUrl,
       });
+      setCourse(updated);
 
       showToast(`سرفصل جدید «${newLessonTitle}» به دوره اضافه شد.`, 'success');
       setIsAddLessonOpen(false);
       setNewLessonTitle('');
       setNewLessonMinutes(15);
       setNewLessonVideoUrl('');
-    } catch {
-      showToast('خطا در ثبت سرفصل جدید.', 'error');
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'خطا در ثبت سرفصل جدید.',
+        'error',
+      );
     }
   };
 
@@ -311,7 +370,25 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
       >
         {/* Left/Main Column: Real Video Screen (2 cols) */}
         <div className="lg:col-span-2 flex flex-col justify-between aspect-video bg-black relative group overflow-hidden select-none">
-          {isEmbed ? (
+          {!hasVideo ? (
+            /* No lesson video attached yet */
+            <div
+              className="w-full h-full relative flex flex-col items-center justify-center gap-3 bg-cover bg-center"
+              style={{
+                backgroundImage: `linear-gradient(rgba(2,6,23,0.82), rgba(2,6,23,0.92)), url(${
+                  course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'
+                })`,
+              }}
+            >
+              <FileVideo className="w-10 h-10 text-sky-400" />
+              <p className="text-sm font-bold text-white">ویدیوی این درس هنوز بارگذاری نشده است</p>
+              <p className="text-[11px] text-ink-300">
+                {isAdmin
+                  ? 'از دکمه «آپلود / تعویض ویدیوی درس» فایل یا لینک ویدیو را ثبت کنید.'
+                  : 'به‌زودی در دسترس قرار می‌گیرد.'}
+              </p>
+            </div>
+          ) : isEmbed ? (
             /* Embed Player (Aparat / YouTube / Vimeo) */
             <div className="w-full h-full relative">
               <iframe
@@ -319,6 +396,8 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
                 title={currentLesson.title}
                 className="w-full h-full border-0 absolute inset-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
                 allowFullScreen
               />
             </div>
@@ -331,10 +410,16 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
                 poster={course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
-                onEnded={() => handleMarkCompleted(currentLesson.id)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  void handleMarkCompleted(currentLesson.id);
+                }}
                 onClick={handlePlayPause}
                 className="w-full h-full object-contain cursor-pointer"
                 playsInline
+                preload="metadata"
               />
 
               {/* Big Center Play/Pause Button on Hover / Paused */}
@@ -378,7 +463,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
           </div>
 
           {/* Bottom Player Controls Overlay (for HTML5 Video) */}
-          {!isEmbed && (
+          {hasVideo && !isEmbed && (
             <div className="absolute bottom-0 inset-x-0 z-20 p-4 bg-gradient-to-t from-black/95 via-black/60 to-transparent space-y-2.5 opacity-90 group-hover:opacity-100 transition-opacity">
               {/* Scrub / Progress Bar */}
               <div
@@ -615,8 +700,15 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
                   روش ۱: انتخاب فایل ویدیویی از رایانه (MP4 / WebM / MKV)
                 </label>
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-ink-600 hover:border-sky-500 rounded-xl p-6 text-center cursor-pointer bg-ink-800/40 hover:bg-ink-800 transition-colors"
+                  onClick={() => {
+                    if (!isUploadingVideo) fileInputRef.current?.click();
+                  }}
+                  className={cn(
+                    'border-2 border-dashed border-ink-600 rounded-xl p-6 text-center bg-ink-800/40 transition-colors',
+                    isUploadingVideo
+                      ? 'opacity-60 cursor-wait'
+                      : 'hover:border-sky-500 hover:bg-ink-800 cursor-pointer',
+                  )}
                 >
                   <input
                     ref={fileInputRef}
@@ -627,10 +719,12 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course }) => {
                   />
                   <FileVideo className="w-10 h-10 text-sky-400 mx-auto mb-2" />
                   <p className="text-xs font-bold text-white mb-1">
-                    {uploadedFileName || 'کلیک کنید یا فایل ویدیویی را اینجا بکشید و رها کنید'}
+                    {isUploadingVideo
+                      ? 'در حال بارگذاری فایل…'
+                      : uploadedFileName || 'کلیک کنید یا فایل ویدیویی را اینجا بکشید و رها کنید'}
                   </p>
                   <p className="text-[11px] text-ink-400">
-                    پشتیبانی از فایل‌های MP4, WebM تا سقف ۱۰۰ مگابایت
+                    پشتیبانی از فایل‌های MP4 و WebM در حد سقف تعیین‌شده سرور
                   </p>
                 </div>
               </div>

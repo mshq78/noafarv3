@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 import { likeContent, unlikeContent, bookmarkContent, unbookmarkContent } from '../services/endpoints';
 import { ContentBase } from '../types';
@@ -7,6 +7,12 @@ export function useInteractions(initialContent: ContentBase) {
   const { isAuthenticated } = useAuth();
   const [content, setContent] = useState<ContentBase>(initialContent);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // The optimistic copy is re-seeded when the page loads a different item, so
+  // like/bookmark state never sticks to the previously rendered content.
+  useEffect(() => {
+    setContent(initialContent);
+  }, [initialContent.id, initialContent.isLikedByMe, initialContent.isBookmarkedByMe]);
   const [isLiking, setIsLiking] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
 

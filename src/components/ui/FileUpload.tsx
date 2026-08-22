@@ -16,6 +16,7 @@ interface FileUploadProps {
 export const FileUpload: React.FC<FileUploadProps> = ({
   label,
   accept = 'image/*,.pdf,.doc,.docx',
+  maxSizeBytes = 10 * 1024 * 1024,
   value,
   onChange,
   error,
@@ -23,8 +24,16 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [sizeError, setSizeError] = useState('');
 
+  // The size limit was previously accepted as a prop but never enforced, so an
+  // oversized file failed only later, at upload time.
   const handleFile = (file: File) => {
+    if (maxSizeBytes && file.size > maxSizeBytes) {
+      setSizeError(`حجم فایل بیشتر از حد مجاز (${formatFileSize(maxSizeBytes)}) است.`);
+      return;
+    }
+    setSizeError('');
     onChange(file);
   };
 
@@ -86,7 +95,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             'border-2 border-dashed border-ink-200 rounded-lg p-6 text-center cursor-pointer transition-all',
             'hover:border-sky-600 hover:bg-sky-50/50 flex flex-col items-center justify-center gap-2',
             isDragging ? 'border-sky-600 bg-sky-50' : 'bg-white',
-            error ? 'border-pink-600' : ''
+            error || sizeError ? 'border-pink-600' : ''
           )}
         >
           <input
@@ -112,7 +121,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       )}
 
-      {error && <p className="text-xs text-pink-600 font-medium">{error}</p>}
+      {(error || sizeError) && (
+        <p className="text-xs text-pink-600 font-medium">{error || sizeError}</p>
+      )}
     </div>
   );
 };

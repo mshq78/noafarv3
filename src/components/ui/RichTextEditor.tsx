@@ -35,6 +35,8 @@ import {
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
 import { toFaDigits } from '../../utils/format';
+import { SafeHtml } from './SafeHtml';
+import { uploadMedia } from '../../services/endpoints';
 
 export interface RichTextEditorProps {
   label?: string;
@@ -110,20 +112,48 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [linkUrlInput, setLinkUrlInput] = useState('');
   const [linkTextInput, setLinkTextInput] = useState('');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [activeTabInImageModal, setActiveTabInImageModal] = useState<'upload' | 'url' | 'stock'>('upload');
 
   // Internal state tracking
   const [internalHtml, setInternalHtml] = useState(value || '');
+  /**
+   * The last HTML this component wrote out. The editable surface is an
+   * uncontrolled DOM node: React must never re-render its children, or the
+   * browser rebuilds the node on every keystroke and the caret snaps back to
+   * the start — which typed text out in reverse.
+   */
+  const lastEmittedHtml = useRef(value || '');
 
-  // Keep internalHtml in sync when value changes externally (unless user is actively typing)
+  // Seed the editor once, on mount.
   useEffect(() => {
-    if (value !== internalHtml) {
-      setInternalHtml(value || '');
-      if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
-        editorRef.current.innerHTML = value || '';
-      }
+    if (editorRef.current) editorRef.current.innerHTML = value || '';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Adopt an external change to `value` (a draft restored, a form reset), but
+   * never echo back the HTML this editor just emitted.
+   */
+  useEffect(() => {
+    const incoming = value || '';
+    if (incoming === lastEmittedHtml.current) return;
+    lastEmittedHtml.current = incoming;
+    setInternalHtml(incoming);
+    if (editorRef.current && editorRef.current.innerHTML !== incoming) {
+      editorRef.current.innerHTML = incoming;
     }
   }, [value]);
+
+  // Returning to the visual tab re-mounts the editable node, so repaint it.
+  useEffect(() => {
+    if (viewMode !== 'visual' || !editorRef.current) return;
+    if (editorRef.current.innerHTML !== internalHtml) {
+      editorRef.current.innerHTML = internalHtml;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   // Execute standard document command
   const execCommand = useCallback((command: string, arg?: string) => {
@@ -137,33 +167,87 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const handleEditorInput = () => {
     if (!editorRef.current) return;
     const html = editorRef.current.innerHTML;
+    lastEmittedHtml.current = html;
     setInternalHtml(html);
     onChange(html);
   };
 
-  // Convert uploaded image file to embedded data URL and insert into document
-  const handleFileUpload = (file: File) => {
+  /**
+   * Uploads the image and inserts the returned URL. Data URLs are only used as
+   * a fallback for small files (a visitor writing a comment has no upload
+   * rights), so a picture never bloats the stored document by megabytes.
+   */
+  const INLINE_IMAGE_LIMIT = 400 * 1024;
+
+  const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('لطفاً یک فایل تصویری معتبر انتخاب کنید.');
+      setUploadError('لطفاً یک فایل تصویری معتبر انتخاب کنید.');
+      return;
+    }
+
+    setUploadError('');
+    setIsUploadingImage(true);
+    try {
+      const asset = await uploadMedia(file);
+      insertImageToEditor(asset.url, file.name);
+      setIsImageModalOpen(false);
+      return;
+    } catch {
+      // Falls through to the inline fallback below.
+    } finally {
+      setIsUploadingImage(false);
+    }
+
+    if (file.size > INLINE_IMAGE_LIMIT) {
+      setUploadError('حجم تصویر بیش از حد مجاز است. لطفاً تصویر کوچک‌تری انتخاب کنید.');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      insertImageToEditor(dataUrl, file.name);
+      insertImageToEditor(String(e.target?.result ?? ''), file.name);
       setIsImageModalOpen(false);
     };
+    reader.onerror = () => setUploadError('خواندن فایل تصویر ناموفق بود.');
     reader.readAsDataURL(file);
+  };
+
+  /** Escapes text before it is spliced into an HTML string. */
+  const escapeHtml = (input: string): string =>
+    input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  /** Only http(s), site-relative and inline image URLs may be inserted. */
+  const safeUrl = (input: string, allowData = false): string => {
+    const value = input.trim();
+    if (!value) return '';
+    if (value.startsWith('/') && !value.startsWith('//')) return value;
+    if (allowData && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(value)) return value;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : '';
+    } catch {
+      return '';
+    }
   };
 
   // Direct insert HTML for images
   const insertImageToEditor = (src: string, altText?: string) => {
+    const url = safeUrl(src, true);
+    if (!url) {
+      setUploadError('نشانی تصویر معتبر نیست.');
+      return;
+    }
+
     editorRef.current?.focus();
-    const caption = altText || imageCaptionInput || 'تصویر محتوا';
+    const caption = escapeHtml(altText || imageCaptionInput || 'تصویر محتوا');
     const imageHtml = `
       <figure class="my-4 text-center select-none inline-block max-w-full">
-        <img src="${src}" alt="${caption}" class="rounded-xl shadow-md max-h-[380px] w-auto mx-auto object-cover border border-slate-200" />
+        <img src="${escapeHtml(url)}" alt="${caption}" class="rounded-xl shadow-md max-h-[380px] w-auto mx-auto object-cover border border-slate-200" />
         ${caption ? `<figcaption class="text-xs text-slate-500 mt-1.5 font-medium">${caption}</figcaption>` : ''}
       </figure>
       <p><br></p>
@@ -172,19 +256,26 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     handleEditorInput();
     setImageUrlInput('');
     setImageCaptionInput('');
+    setUploadError('');
   };
 
   // Insert Link
   const handleInsertLink = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!linkUrlInput) return;
+    const url = safeUrl(linkUrlInput);
+    if (!url) {
+      setUploadError('نشانی پیوند باید با http:// یا https:// شروع شود.');
+      return;
+    }
+
     editorRef.current?.focus();
-    const text = linkTextInput.trim() || linkUrlInput;
-    const linkHtml = `<a href="${linkUrlInput}" target="_blank" rel="noopener noreferrer" class="text-sky-600 font-bold underline hover:text-sky-800">${text}</a>`;
+    const text = escapeHtml(linkTextInput.trim() || url);
+    const linkHtml = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer nofollow" class="text-sky-600 font-bold underline hover:text-sky-800">${text}</a>`;
     document.execCommand('insertHTML', false, linkHtml);
     handleEditorInput();
     setLinkUrlInput('');
     setLinkTextInput('');
+    setUploadError('');
     setIsLinkModalOpen(false);
   };
 
@@ -206,7 +297,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (disabled || !allowImageUpload) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      void handleFileUpload(e.dataTransfer.files[0]);
     }
   };
 
@@ -221,7 +312,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const file = items[i].getAsFile();
         if (file) {
           e.preventDefault();
-          handleFileUpload(file);
+          void handleFileUpload(file);
           break;
         }
       }
@@ -546,8 +637,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               ref={editorRef}
               contentEditable={!disabled}
               onInput={handleEditorInput}
+              onBlur={handleEditorInput}
               onPaste={handlePaste}
-              dangerouslySetInnerHTML={{ __html: internalHtml }}
+              // Content is written imperatively (see the effects above) so React
+              // never re-renders this node while the user is typing in it.
+              suppressContentEditableWarning
               className="outline-none min-h-[160px] text-ink-900 text-sm leading-relaxed prose prose-sm max-w-none focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-300 empty:before:pointer-events-none"
               data-placeholder={placeholder}
               dir="auto"
@@ -559,6 +653,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <textarea
               value={internalHtml}
               onChange={(e) => {
+                lastEmittedHtml.current = e.target.value;
                 setInternalHtml(e.target.value);
                 onChange(e.target.value);
               }}
@@ -574,12 +669,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               <div className="text-[11px] font-bold text-ink-400 mb-2 border-b border-ink-100 pb-1">
                 پیش‌نمایش رندر شده در سایت:
               </div>
-              <div
-                className="prose prose-sm max-w-none text-ink-900 text-sm leading-relaxed"
-                dangerouslySetInnerHTML={{
-                  __html: internalHtml || '<p class="text-ink-400 italic">متنی برای نمایش وجود ندارد.</p>',
-                }}
-              />
+              {internalHtml ? (
+                <SafeHtml
+                  className="prose prose-sm max-w-none text-ink-900 text-sm leading-relaxed"
+                  html={internalHtml}
+                />
+              ) : (
+                <p className="text-ink-400 italic text-sm">متنی برای نمایش وجود ندارد.</p>
+              )}
             </div>
           )}
         </div>
@@ -669,22 +766,37 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
-                      handleFileUpload(e.target.files[0]);
+                      void handleFileUpload(e.target.files[0]);
                     }
                   }}
                 />
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-sky-300 hover:border-sky-500 bg-sky-50/40 hover:bg-sky-50 p-8 rounded-2xl text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3"
+                  onClick={() => {
+                    if (!isUploadingImage) fileInputRef.current?.click();
+                  }}
+                  className={cn(
+                    'border-2 border-dashed border-sky-300 bg-sky-50/40 p-8 rounded-2xl text-center transition-all flex flex-col items-center justify-center gap-3',
+                    isUploadingImage
+                      ? 'opacity-60 cursor-wait'
+                      : 'hover:border-sky-500 hover:bg-sky-50 cursor-pointer',
+                  )}
                 >
                   <div className="w-14 h-14 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center shadow-xs">
                     <Upload className="w-7 h-7" />
                   </div>
                   <div>
-                    <span className="text-sm font-bold text-ink-900 block">کلیک کنید یا فایل تصویر را اینجا بکشید</span>
-                    <span className="text-xs text-ink-400 mt-1 block">فرمت‌های JPG، PNG، WEBP یا SVG (بدون محدودیت حجمی)</span>
+                    <span className="text-sm font-bold text-ink-900 block">
+                      {isUploadingImage ? 'در حال بارگذاری تصویر…' : 'کلیک کنید یا فایل تصویر را اینجا بکشید'}
+                    </span>
+                    <span className="text-xs text-ink-400 mt-1 block">فرمت‌های JPG، PNG، WEBP و GIF</span>
                   </div>
                 </div>
+
+                {uploadError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                    {uploadError}
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-ink-800">توضیح یا زیرنویس تصویر (اختیاری):</label>
@@ -709,9 +821,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     dir="ltr"
                     value={imageUrlInput}
                     onChange={(e) => setImageUrlInput(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
+                    placeholder="https://example.com/image.jpg"
                     className="w-full h-9 px-3 border border-ink-200 rounded-xl text-xs text-ink-900 focus:outline-none focus:border-sky-600 font-sans"
                   />
+                  {uploadError && (
+                    <p className="text-[11px] text-rose-600 pt-1">{uploadError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-1">

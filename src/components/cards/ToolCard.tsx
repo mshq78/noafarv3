@@ -4,6 +4,7 @@ import { Clock, Layout, FileText, BookOpen, ArrowLeft } from 'lucide-react';
 import { Tool, ToolFormat } from '../../types';
 import { DifficultyDots, Chip } from '../ui';
 import { formatMinutes } from '../../utils/format';
+import { SmartImage } from '../ui/SmartImage';
 
 interface ToolCardProps {
   tool: Tool;
@@ -43,10 +44,11 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
 
         {/* Preview image */}
         <div className="flex items-center justify-center py-2">
-          <img
+          <SmartImage
             src={tool.previewSvgUrl || '/mock/canvas-preview.svg'}
             alt={tool.title}
             className="h-20 w-auto object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200"
+            fallbackSrc="/mock/canvas-preview.svg"
           />
         </div>
 

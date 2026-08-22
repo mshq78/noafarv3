@@ -4,6 +4,7 @@ import { Book as BookIcon, FileText, Headphones, Video, User } from 'lucide-reac
 import { Book, LibraryKind } from '../../types';
 import { Chip } from '../ui';
 import { toFaDigits } from '../../utils/format';
+import { SmartImage } from '../ui/SmartImage';
 
 interface BookCardProps {
   book: Book;
@@ -28,11 +29,12 @@ export const BookCard: React.FC<BookCardProps> = ({ book }) => {
         to={`/library/${book.slug}`}
         className="relative aspect-[3/4] bg-ink-100 overflow-hidden block flex items-center justify-center"
       >
-        <img
+        <SmartImage
           src={book.coverImage?.url || book.heroImage?.url || '/mock/book-cover.svg'}
           alt={book.title}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
           loading="lazy"
+          fallbackSrc="/mock/book-cover.svg"
         />
         <div className="absolute top-2.5 start-2.5">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur-xs text-ink-800 shadow-2xs">

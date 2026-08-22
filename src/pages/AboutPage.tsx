@@ -14,18 +14,18 @@ import { DotPattern } from '../components/brand/DotPattern';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { Button } from '../components/ui';
 import { SECTION_LIST } from '../config/sections';
+import { SafeHtml } from '../components/ui/SafeHtml';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export const AboutPage: React.FC = () => {
+  const settings = useSiteSettings();
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-ink-50/50 py-16 sm:py-24 border-b border-ink-200">
         <DotPattern
-          width={220}
-          height={220}
-          rows={6}
-          cols={6}
-          dotColor="#0077b6"
+          color="#0077b6"
           className="opacity-20 end-4 top-4"
         />
 
@@ -39,11 +39,13 @@ export const AboutPage: React.FC = () => {
             درباره پلتفرم «نوآفر»
           </h1>
 
-          <p className="text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto">
-            نوآفر یک اکوسیستم باز و مشارکتی برای یادگیری روش‌های نوین حل مسائل اجتماعی، ابزارهای طراحی کسب‌وکار اجتماعی و شبکه‌سازی میان کنشگران، محققان و سازمان‌های مردم‌نهاد است.
-          </p>
+          {/* Editable from the admin panel (تنظیمات سامانه → متن درباره نوآفر). */}
+          <SafeHtml
+            className="text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto"
+            html={settings.aboutText}
+          />
 
-          <TricolorRule height={4} className="max-w-xs mx-auto" />
+          <TricolorRule className="max-w-xs mx-auto" />
         </div>
       </section>
 
@@ -146,14 +148,15 @@ export const AboutPage: React.FC = () => {
           <p className="text-xs text-ink-500 max-w-md mx-auto">
             تجربه یا ایده خود را ثبت کنید و به جریان تحول اجتماعی کشور بپیوندید.
           </p>
-          <div className="flex justify-center gap-3">
+          {/* Side by side once there is room; stacked on a narrow phone. */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
             <Link to="/spark/submit">
-              <Button variant="primary" size="md">
+              <Button variant="primary" size="md" className="w-full sm:w-auto">
                 ثبت ایده نوآوری اجتماعی
               </Button>
             </Link>
             <Link to="/contact">
-              <Button variant="secondary" size="md">
+              <Button variant="secondary" size="md" className="w-full sm:w-auto">
                 ارتباط با دبیرخانه
               </Button>
             </Link>
