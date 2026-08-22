@@ -77,8 +77,10 @@ export const env = {
   sessionCookieName: optional('SESSION_COOKIE_NAME', 'noafar_session'),
   sessionTtlDays: num('SESSION_TTL_DAYS', 30),
 
-  /** Phones that are promoted to `admin` the first time they sign in. */
+  /** Phones that are promoted to `admin` when they sign in. */
   bootstrapAdminPhones: list('BOOTSTRAP_ADMIN_PHONES'),
+  /** Email addresses that are promoted to `admin` when they register or sign in. */
+  bootstrapAdminEmails: list('BOOTSTRAP_ADMIN_EMAILS').map((entry) => entry.toLowerCase()),
 
   otpTtlSeconds: num('OTP_TTL_SECONDS', 120),
   otpMaxAttempts: num('OTP_MAX_ATTEMPTS', 5),

@@ -377,13 +377,16 @@ authRouter.post(
     const passwordHash = await hashPassword(parsed.data.password);
     const displayName = sanitizePlainText(parsed.data.displayName ?? '', 120);
 
+    // Bootstrap admins are configured out-of-band, never chosen by the client.
+    const role = env.bootstrapAdminEmails.includes(email) ? 'admin' : 'member';
+
     let created: UserRow | null;
     try {
       created = await queryOne<UserRow>(
         `INSERT INTO users (email, password_hash, display_name, role)
-              VALUES ($1, $2, $3, 'member')
+              VALUES ($1, $2, $3, $4)
            RETURNING ${USER_COLUMNS}`,
-        [email, passwordHash, displayName],
+        [email, passwordHash, displayName, role],
       );
     } catch (error) {
       // The unique index is the real guard against two simultaneous sign-ups.
@@ -443,7 +446,18 @@ authRouter.post(
     if (!(await verifyPassword(parsed.data.password, row.password_hash))) throw rejection;
     if (row.is_blocked) throw unauthorized('دسترسی این حساب کاربری مسدود شده است.');
 
-    await issueSession(row, req, res);
+    // An address added to the bootstrap list after signing up is promoted here.
+    let user: UserRow = row;
+    if (env.bootstrapAdminEmails.includes(email) && row.role !== 'admin') {
+      user =
+        (await queryOne<UserRow>(
+          `UPDATE users SET role = 'admin', updated_at = now()
+            WHERE id = $1 RETURNING ${USER_COLUMNS}`,
+          [row.id],
+        )) ?? row;
+    }
+
+    await issueSession(user, req, res);
   }),
 );
 
