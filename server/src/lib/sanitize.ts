@@ -1,6 +1,17 @@
 import sanitizeHtmlLib from 'sanitize-html';
 
 /**
+ * NOTE: `htmlparser2` is pinned to ^10 by the `overrides` block in
+ * package.json. `sanitize-html` is CommonJS but declares a dependency on
+ * `htmlparser2` ^12, which is ESM-only — so `require()`-ing it throws
+ * ERR_REQUIRE_ESM on any runtime that cannot require an ES module. Bundlers
+ * hide this (esbuild inlines both), which is why it only ever surfaced on the
+ * serverless host. Version 10 ships both formats and produces byte-identical
+ * sanitiser output. Do not drop the override without re-testing under a
+ * loader that lacks require(esm).
+ */
+
+/**
  * Allow-list for rich text produced by the in-app editor. Anything not listed
  * here (script/style/iframe/event handlers/javascript: URLs) is stripped, so
  * stored content can never execute in another visitor's browser.
