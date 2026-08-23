@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"import psycopg, sys; dsn='postgresql://neondb_owner:npg_wM4emv5CPdsD@ep-morning-voice-axdswc6v-pooler\\.c-4\\.us-east-2\\.aws\\.neon\\.tech/neondb\\?sslmode=require&channel_binding=require';\ntry:\n    with psycopg\\.connect\\(dsn, connect_timeout=20\\) as conn:\n        with conn\\.cursor\\(\\) as cur:\n            cur\\.execute\\('SELECT version\\(\\);'\\)\n            print\\('CONNECTED'\\)\n            print\\(cur\\.fetchone\\(\\)\\[0\\]\\[:200\\]\\)\nexcept Exception as e:\n    print\\('ERROR'\\)\n    print\\(type\\(e\\)\\.__name__ \\+ ': ' \\+ str\\(e\\)\\)\n    sys\\.exit\\(1\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
