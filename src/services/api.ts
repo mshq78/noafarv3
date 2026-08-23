@@ -112,10 +112,17 @@ export async function request<T>(endpoint: string, options: ApiRequestOptions = 
   if (!response.ok) {
     const payloadObject = (data ?? {}) as { message?: string; code?: string };
     if (response.status === 401 && redirectOnUnauthorized) redirectToLogin();
+    // A non-JSON error body means the request never reached the API: the host
+    // answered with the SPA shell or its own error page. Saying that outright
+    // beats a bare status code, which reads like an application bug.
+    const apiMissing = !contentType.includes('application/json');
     throw new ApiError(
-      payloadObject.message || `خطای سرور: ${response.status}`,
+      payloadObject.message ||
+        (apiMissing
+          ? `سرویس API در دسترس نیست (کد ${response.status}). به‌نظر می‌رسد بخش سرور روی این میزبان مستقر نشده است.`
+          : `خطای سرور: ${response.status}`),
       response.status,
-      payloadObject.code || 'error',
+      payloadObject.code || (apiMissing ? 'api_unavailable' : 'error'),
       data,
     );
   }

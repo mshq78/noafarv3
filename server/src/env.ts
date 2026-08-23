@@ -3,12 +3,19 @@ import crypto from 'node:crypto';
 
 loadDotenv();
 
+/**
+ * Configuration problems are collected rather than thrown. A throw here
+ * happens at module load, which on a serverless host surfaces as an opaque
+ * "function crashed" 500 with no hint as to the cause; collecting them lets
+ * the app answer with the actual missing variable names instead.
+ */
+export const configProblems: string[] = [];
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value || !value.trim()) {
-    throw new Error(
-      `[noafar] متغیر محیطی «${name}» تنظیم نشده است. برای اجرای سرور این مقدار الزامی است.`,
-    );
+    configProblems.push(`متغیر محیطی «${name}» تنظیم نشده است.`);
+    return '';
   }
   return value.trim();
 }
@@ -42,6 +49,15 @@ export const NODE_ENV = optional('NODE_ENV', 'development');
 export const IS_PRODUCTION = NODE_ENV === 'production';
 
 /**
+ * True on a function-per-request host (Vercel, Lambda). Each instance holds
+ * its own pool, so a normal pool size would multiply into hundreds of
+ * connections and exhaust the database's limit.
+ */
+export const IS_SERVERLESS = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY,
+);
+
+/**
  * The session secret must be explicit in production. In development we derive a
  * stable-per-process random value so nobody accidentally ships a default secret.
  */
@@ -49,17 +65,20 @@ function resolveSessionSecret(): string {
   const fromEnv = optional('SESSION_SECRET');
   if (fromEnv) {
     if (fromEnv.length < 32) {
-      throw new Error('[noafar] SESSION_SECRET باید حداقل ۳۲ کاراکتر باشد.');
+      configProblems.push('SESSION_SECRET باید حداقل ۳۲ کاراکتر باشد.');
     }
     return fromEnv;
   }
   if (IS_PRODUCTION) {
-    throw new Error(
-      '[noafar] SESSION_SECRET در محیط production الزامی است. یک رشته تصادفی ۶۴ کاراکتری تولید کنید.',
+    configProblems.push(
+      'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
     );
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
   }
-  // eslint-disable-next-line no-console
-  console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
+  // A placeholder keeps the module loadable; requests are refused while any
+  // configuration problem stands, so this value is never actually relied on.
   return crypto.randomBytes(48).toString('hex');
 }
 
@@ -71,7 +90,7 @@ export const env = {
 
   databaseUrl: IS_PRODUCTION ? required('DATABASE_URL') : optional('DATABASE_URL'),
   databaseSsl: bool('DATABASE_SSL', false),
-  databasePoolMax: num('DATABASE_POOL_MAX', 10),
+  databasePoolMax: num('DATABASE_POOL_MAX', IS_SERVERLESS ? 1 : 10),
 
   sessionSecret: resolveSessionSecret(),
   sessionCookieName: optional('SESSION_COOKIE_NAME', 'noafar_session'),
@@ -106,14 +125,27 @@ export const env = {
   /** Absolute site URL used to build links inside emails. */
   publicUrl: optional('PUBLIC_URL').replace(/\/$/, ''),
 
-  uploadDir: optional('UPLOAD_DIR', 'uploads'),
+  uploadDir: optional('UPLOAD_DIR', IS_SERVERLESS ? '/tmp/noafar-uploads' : 'uploads'),
+  /**
+   * Set to true only where UPLOAD_DIR really survives a redeploy (a mounted
+   * volume). On a serverless host the filesystem is wiped between
+   * invocations, so uploads are refused rather than silently lost.
+   */
+  uploadsPersistent: bool('UPLOADS_PERSISTENT', !IS_SERVERLESS),
   uploadMaxBytes: num('UPLOAD_MAX_BYTES', 8 * 1024 * 1024),
   publicDir: optional('PUBLIC_DIR', 'dist'),
 
   /** Extra origins allowed to call the API (the SPA is served same-origin by default). */
   corsOrigins: list('CORS_ORIGINS'),
-  trustProxy: bool('TRUST_PROXY', IS_PRODUCTION),
+  trustProxy: bool('TRUST_PROXY', IS_PRODUCTION || IS_SERVERLESS),
   seedOnBoot: bool('SEED_ON_BOOT', false),
 };
 
 export type Env = typeof env;
+
+if (configProblems.length) {
+  // eslint-disable-next-line no-console
+  console.error(
+    '[noafar] پیکربندی ناقص است:\n' + configProblems.map((item) => `  • ${item}`).join('\n'),
+  );
+}

@@ -1,3 +1,10 @@
+/**
+ * The database schema, as a string rather than a `.sql` file read at
+ * runtime: on a serverless host the source tree is not on disk next to the
+ * bundle, so reading it would fail. Every statement is idempotent, so this
+ * is safe to apply on every boot and every deploy.
+ */
+export const SCHEMA_SQL = String.raw`
 -- ===========================================================================
 -- NOAFAR — PostgreSQL schema
 -- Idempotent: safe to run on every boot.
@@ -269,3 +276,4 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   window_ends timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS rate_limits_window_idx ON rate_limits (window_ends);
+`;
