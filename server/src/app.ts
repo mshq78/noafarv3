@@ -4,7 +4,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
-import { env, configProblems } from './env.js';
+import { env, configProblems, configWarnings, databaseUrlKeysPresent } from './env.js';
 import { pool } from './db.js';
 import { ensureReady } from './migrate.js';
 import { attachUser } from './lib/auth.js';
@@ -162,10 +162,25 @@ function describeDatabaseFailure(error: unknown): string | null {
  * service is misconfigured — that is exactly when someone needs to read it.
  */
 app.get('/api/health', (_req, res) => {
+  /**
+   * Names only — never values. Which variable a connection string arrived
+   * under is the difference between "no database attached" and "attached
+   * under a name this service did not read", and that is exactly what an
+   * operator staring at a 503 needs to know.
+   */
+  const diagnostics = {
+    env: env.nodeEnv,
+    serverless: Boolean(process.env.VERCEL),
+    databaseUrlFrom: databaseUrlKeysPresent[0] ?? null,
+    databaseUrlKeysPresent,
+    databaseSsl: env.databaseSsl,
+    ...(configWarnings.length ? { warnings: configWarnings } : {}),
+  };
+
   if (configProblems.length) {
     res.status(503).json({
       ok: false,
-      env: env.nodeEnv,
+      ...diagnostics,
       code: 'config_error',
       message: 'پیکربندی سرویس ناقص است.',
       problems: configProblems,
@@ -174,11 +189,11 @@ app.get('/api/health', (_req, res) => {
   }
   pool
     .query('SELECT 1')
-    .then(() => res.json({ ok: true, env: env.nodeEnv }))
+    .then(() => res.json({ ok: true, ...diagnostics }))
     .catch((error: unknown) => {
       res.status(503).json({
         ok: false,
-        env: env.nodeEnv,
+        ...diagnostics,
         code: 'database_unavailable',
         message: describeDatabaseFailure(error) ?? 'اتصال به پایگاه‌داده برقرار نیست.',
       });

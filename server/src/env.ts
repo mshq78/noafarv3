@@ -11,14 +11,12 @@ loadDotenv();
  */
 export const configProblems: string[] = [];
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value || !value.trim()) {
-    configProblems.push(`متغیر محیطی «${name}» تنظیم نشده است.`);
-    return '';
-  }
-  return value.trim();
-}
+/**
+ * Non-fatal notes about the configuration. Unlike a problem these do not
+ * refuse requests; they are reported by `/api/health` so an operator can see
+ * which fallback the service fell back to.
+ */
+export const configWarnings: string[] = [];
 
 function optional(name: string, fallback = ''): string {
   const value = process.env[name];
@@ -58,10 +56,97 @@ export const IS_SERVERLESS = Boolean(
 );
 
 /**
+ * Every variable name a Postgres connection string is accepted under. Vercel's
+ * database integrations (Neon among them) name the variable they inject after
+ * the product rather than after the app, so a service that only reads
+ * `DATABASE_URL` looks unconfigured on a host that has a database attached.
+ * The first name that carries a value wins; `DATABASE_URL` stays the one to
+ * set by hand.
+ */
+export const DATABASE_URL_KEYS = [
+  'DATABASE_URL',
+  'POSTGRES_URL',
+  'DATABASE_URL_UNPOOLED',
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_PRISMA_URL',
+  'NEON_DATABASE_URL',
+] as const;
+
+/** The names above that are actually present. Reported by `/api/health`. */
+export const databaseUrlKeysPresent: string[] = [];
+
+function resolveDatabaseUrl(): string {
+  let resolved = '';
+  for (const key of DATABASE_URL_KEYS) {
+    const value = process.env[key];
+    if (!value || !value.trim()) continue;
+    databaseUrlKeysPresent.push(key);
+    if (!resolved) resolved = value.trim();
+  }
+
+  if (resolved) {
+    if (databaseUrlKeysPresent[0] !== 'DATABASE_URL') {
+      configWarnings.push(
+        `DATABASE_URL تنظیم نشده؛ رشتهٔ اتصال از «${databaseUrlKeysPresent[0]}» خوانده شد.`,
+      );
+    }
+    return resolved;
+  }
+
+  if (IS_PRODUCTION) {
+    configProblems.push(
+      'متغیر محیطی «DATABASE_URL» تنظیم نشده است. ' +
+        `(نام‌های پذیرفته‌شده: ${DATABASE_URL_KEYS.join('، ')})`,
+    );
+  }
+  return '';
+}
+
+/**
+ * Managed Postgres (Neon, Supabase, RDS…) refuses a plaintext connection, and
+ * `pg` does not turn TLS on by itself. Rather than make every deployment
+ * remember `DATABASE_SSL=true`, default it from the connection string: on for
+ * anything remote, off for a local database and for an explicit
+ * `sslmode=disable`. An explicit `DATABASE_SSL` always wins.
+ */
+function resolveDatabaseSsl(databaseUrl: string): boolean {
+  if (optional('DATABASE_SSL')) return bool('DATABASE_SSL');
+  if (!databaseUrl) return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(databaseUrl);
+  } catch {
+    return false;
+  }
+
+  const sslMode = parsed.searchParams.get('sslmode');
+  if (sslMode === 'disable') return false;
+
+  const host = parsed.hostname.toLowerCase();
+  const isLocal =
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal');
+  return !isLocal;
+}
+
+/**
  * The session secret must be explicit in production. In development we derive a
  * stable-per-process random value so nobody accidentally ships a default secret.
+ *
+ * When it is missing on a host that does have a database, the secret is derived
+ * from the connection string instead of refusing every request: the string
+ * already carries a high-entropy password, and the derivation is deterministic,
+ * so every instance and every redeploy agree on the same key and sessions keep
+ * working. It is a fallback, not the recommendation — rotating the database
+ * password signs everyone out — so it is reported as a warning by
+ * `/api/health` until a real SESSION_SECRET is set.
  */
-function resolveSessionSecret(): string {
+function resolveSessionSecret(databaseUrl: string): string {
   const fromEnv = optional('SESSION_SECRET');
   if (fromEnv) {
     if (fromEnv.length < 32) {
@@ -69,18 +154,33 @@ function resolveSessionSecret(): string {
     }
     return fromEnv;
   }
-  if (IS_PRODUCTION) {
-    configProblems.push(
-      'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
-    );
-  } else {
+
+  if (!IS_PRODUCTION) {
     // eslint-disable-next-line no-console
     console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
+    return crypto.randomBytes(48).toString('hex');
   }
+
+  if (databaseUrl) {
+    configWarnings.push(
+      'SESSION_SECRET تنظیم نشده است؛ کلید نشست فعلاً از رشتهٔ اتصال پایگاه‌داده ساخته می‌شود. ' +
+        'یک رشتهٔ تصادفی ۶۴ کاراکتری در متغیرهای محیطی قرار دهید تا تغییر رمز پایگاه‌داده کاربران را از حساب خارج نکند.',
+    );
+    return crypto
+      .createHmac('sha256', databaseUrl)
+      .update('noafar/session-secret/v1')
+      .digest('hex');
+  }
+
+  configProblems.push(
+    'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
+  );
   // A placeholder keeps the module loadable; requests are refused while any
   // configuration problem stands, so this value is never actually relied on.
   return crypto.randomBytes(48).toString('hex');
 }
+
+const DATABASE_URL = resolveDatabaseUrl();
 
 export const env = {
   nodeEnv: NODE_ENV,
@@ -88,11 +188,11 @@ export const env = {
   port: num('PORT', 4000),
   host: optional('HOST', '0.0.0.0'),
 
-  databaseUrl: IS_PRODUCTION ? required('DATABASE_URL') : optional('DATABASE_URL'),
-  databaseSsl: bool('DATABASE_SSL', false),
+  databaseUrl: DATABASE_URL,
+  databaseSsl: resolveDatabaseSsl(DATABASE_URL),
   databasePoolMax: num('DATABASE_POOL_MAX', IS_SERVERLESS ? 1 : 10),
 
-  sessionSecret: resolveSessionSecret(),
+  sessionSecret: resolveSessionSecret(DATABASE_URL),
   sessionCookieName: optional('SESSION_COOKIE_NAME', 'noafar_session'),
   sessionTtlDays: num('SESSION_TTL_DAYS', 30),
 

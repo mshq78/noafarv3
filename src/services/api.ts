@@ -65,6 +65,30 @@ function redirectToLogin(): void {
   window.location.href = `/login?returnTo=${encodeURIComponent(currentPath)}`;
 }
 
+/**
+ * Explains a non-JSON error response — one produced by something in front of
+ * the API rather than by the API itself. Each status points at a different
+ * misconfiguration, so each gets the sentence that names the actual fix.
+ */
+function describeMissingApi(status: number): string {
+  if (status === 404) {
+    return (
+      `سرویس API در دسترس نیست (کد ${status}). ` +
+      'بخش سرور روی این میزبان مستقر نشده است؛ اگر به‌تازگی استقرار انجام شده، یک‌بار صفحه را با Ctrl+Shift+R تازه کنید.'
+    );
+  }
+  if (status === 401 || status === 403) {
+    return (
+      `دسترسی به سرویس API بسته است (کد ${status}). ` +
+      'این استقرار پشت لایهٔ محافظت میزبان (مثلاً Vercel Authentication) قرار دارد؛ باید برای دامنهٔ عمومی غیرفعال شود.'
+    );
+  }
+  if (status >= 500) {
+    return `سرویس API پاسخ نداد (کد ${status}). میزبان صفحهٔ خطای خودش را برگرداند؛ گزارش‌های سرور را بررسی کنید.`;
+  }
+  return `سرویس API در دسترس نیست (کد ${status}).`;
+}
+
 export async function request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const { params, body, redirectOnUnauthorized = true, ...init } = options;
   const method = (init.method ?? 'GET').toUpperCase();
@@ -111,16 +135,17 @@ export async function request<T>(endpoint: string, options: ApiRequestOptions = 
 
   if (!response.ok) {
     const payloadObject = (data ?? {}) as { message?: string; code?: string };
-    if (response.status === 401 && redirectOnUnauthorized) redirectToLogin();
     // A non-JSON error body means the request never reached the API: the host
-    // answered with the SPA shell or its own error page. Saying that outright
-    // beats a bare status code, which reads like an application bug.
+    // answered with the SPA shell, a login wall, or its own error page. Saying
+    // outright which of those happened beats a bare status code, which reads
+    // like an application bug.
     const apiMissing = !contentType.includes('application/json');
+    // Only the API's own 401 means "your session expired"; a 401 from the host
+    // in front of it is a locked deployment, and bouncing to /login would just
+    // loop through the same wall.
+    if (response.status === 401 && redirectOnUnauthorized && !apiMissing) redirectToLogin();
     throw new ApiError(
-      payloadObject.message ||
-        (apiMissing
-          ? `سرویس API در دسترس نیست (کد ${response.status}). به‌نظر می‌رسد بخش سرور روی این میزبان مستقر نشده است.`
-          : `خطای سرور: ${response.status}`),
+      payloadObject.message || (apiMissing ? describeMissingApi(response.status) : `خطای سرور: ${response.status}`),
       response.status,
       payloadObject.code || (apiMissing ? 'api_unavailable' : 'error'),
       data,
