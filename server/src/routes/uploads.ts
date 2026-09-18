@@ -137,6 +137,14 @@ uploadsRouter.get('/config', (_req, res) => {
     candidateTokenVars: BLOB_ENABLED
       ? undefined
       : Object.keys(process.env).filter((n) => n.endsWith('_READ_WRITE_TOKEN')),
+    // Which build is answering. A variable added after this deployment was
+    // created is not in it, and the commit is how you tell.
+    deployment: process.env.VERCEL_DEPLOYMENT_ID
+      ? {
+          commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || undefined,
+          target: process.env.VERCEL_ENV || undefined,
+        }
+      : undefined,
     maxBytes: {
       avatar: AVATAR_MAX_BYTES,
       submission: SUBMISSION_MAX_BYTES,

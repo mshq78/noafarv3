@@ -209,6 +209,26 @@ function describeConnection(): Record<string, unknown> {
   }
 }
 
+
+/**
+ * Identifies the running build. Environment variables are baked in when a
+ * deployment is created, so a variable added afterwards is absent until the
+ * next one — and the only way to tell from outside was to compare timestamps
+ * in the dashboard. This answers it in the same request that reports the
+ * problem.
+ */
+function describeDeployment(): Record<string, unknown> | undefined {
+  const id = process.env.VERCEL_DEPLOYMENT_ID;
+  if (!id) return undefined;
+  return {
+    id,
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || undefined,
+    branch: process.env.VERCEL_GIT_COMMIT_REF || undefined,
+    target: process.env.VERCEL_ENV || undefined,
+    region: process.env.VERCEL_REGION || undefined,
+  };
+}
+
 // ------------------------------------------------------ health check -------
 /**
  * Declared before every other `/api` handler so it still answers when the
@@ -231,6 +251,7 @@ app.get('/api/health', (_req, res) => {
       res.json({
         ok: true,
         env: env.nodeEnv,
+        deployment: describeDeployment(),
         connection: describeConnection(),
       }),
     )
@@ -241,6 +262,7 @@ app.get('/api/health', (_req, res) => {
         code: 'database_unavailable',
         message: describeDatabaseFailure(error) ?? 'اتصال به پایگاه‌داده برقرار نیست.',
         pgCode: String((error as { code?: string })?.code ?? '') || undefined,
+        deployment: describeDeployment(),
         connection: describeConnection(),
       });
     });
