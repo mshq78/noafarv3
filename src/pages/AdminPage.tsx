@@ -473,6 +473,30 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleToggleUserBlocked = async (userId: string, isBlocked: boolean) => {
+    if (userId === user?.id) {
+      showToast('مسدود کردن حساب خودتان ممکن نیست.', 'error');
+      return;
+    }
+    const next = !isBlocked;
+    if (
+      next &&
+      !window.confirm('با مسدود کردن این حساب، همهٔ نشست‌های فعال آن بسته می‌شود. ادامه می‌دهید؟')
+    ) {
+      return;
+    }
+    try {
+      await adminSetUserBlocked(userId, next);
+      showToast(next ? 'حساب کاربر مسدود شد.' : 'مسدودیت حساب کاربر برداشته شد.', 'success');
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'تغییر وضعیت حساب کاربر ناموفق بود.',
+        'error',
+      );
+    }
+  };
+
   const handleAwardPoints = async () => {
     if (!selectedUserForPoints) return;
     const amount = Number(pointsToAward);
@@ -1463,6 +1487,7 @@ export const AdminPage: React.FC = () => {
                       <th className="py-3 px-4 text-start">کاربر</th>
                       <th className="py-3 px-4 text-start">تلفن</th>
                       <th className="py-3 px-4 text-start">نقش</th>
+                      <th className="py-3 px-4 text-start">وضعیت</th>
                       <th className="py-3 px-4 text-start">امتیاز نوآفری</th>
                       <th className="py-3 px-4 text-center">عملیات</th>
                     </tr>
@@ -1483,6 +1508,16 @@ export const AdminPage: React.FC = () => {
                             )}
                           >
                             {u.role === 'admin' ? 'مدیر سیستم (Admin)' : 'کاربر عادی'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded font-bold text-[10px]',
+                              u.isBlocked ? 'bg-pink-100 text-pink-700' : 'bg-sky-50 text-sky-700'
+                            )}
+                          >
+                            {u.isBlocked ? 'مسدود' : 'فعال'}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-sans font-bold text-amber-700">
@@ -1506,6 +1541,14 @@ export const AdminPage: React.FC = () => {
                               onClick={() => handleChangeUserRole(u.id, u.role || 'member')}
                             >
                               {u.role === 'admin' ? 'تنزل به کاربر' : 'ارتقا به مدیر'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleUserBlocked(u.id, Boolean(u.isBlocked))}
+                              className={u.isBlocked ? 'text-sky-700' : 'text-pink-700'}
+                            >
+                              {u.isBlocked ? 'رفع مسدودیت' : 'مسدود کردن'}
                             </Button>
                           </div>
                         </td>

@@ -7,7 +7,7 @@ import { clientIp, rateLimit } from '../lib/rateLimit.js';
 import { mapContent, mapRegistration, type ContentRow } from '../lib/mappers.js';
 import { CONTENT_COLUMNS, NO_VIEWER_COLUMNS, isSection, viewerColumns } from '../lib/content.js';
 import { sanitizeMultilineText, sanitizePlainText } from '../lib/sanitize.js';
-import { awardPoints } from '../lib/points.js';
+import { POINT_VALUES, awardPoints } from '../lib/points.js';
 import crypto from 'node:crypto';
 
 export const miscRouter = Router();
@@ -224,9 +224,9 @@ miscRouter.post(
     if (registration.created) {
       await awardPoints({
         userId: req.user!.id,
-        reason: 'share',
+        reason: 'event_register',
         reasonFa: `ثبت‌نام در رویداد «${registration.title}»`,
-        points: 30,
+        points: POINT_VALUES.event_register,
         dedupeKey: `event:${req.params.id}`,
       });
     }

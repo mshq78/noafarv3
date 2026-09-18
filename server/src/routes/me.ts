@@ -176,13 +176,15 @@ meRouter.post(
       return inserted.rows[0]!;
     });
 
-    // Awarded once per tool, so re-saving the same canvas cannot farm points.
+    // Awarded once per member, not once per tool: keyed on the tool it paid
+    // out again for every tool in the box, which is a few hundred points for
+    // opening and saving each canvas once.
     await awardPoints({
       userId: req.user!.id,
       reason: 'first_canvas',
-      reasonFa: `تکمیل و ذخیره بوم «${tool.title}»`,
+      reasonFa: `تکمیل و ذخیره اولین بوم دیجیتال («${tool.title}»)`,
       points: 30,
-      dedupeKey: `canvas:${tool.id}`,
+      dedupeKey: 'first_canvas',
     });
 
     res.status(201).json(mapCanvas(saved));
