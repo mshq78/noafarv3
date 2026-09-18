@@ -1,4 +1,4 @@
-import { SectionSlug, SectionMeta } from '../types';
+import { SectionSlug, SectionMeta } from '../types/index.js';
 
 export const SECTIONS: Record<SectionSlug, SectionMeta> = {
   academy: {

@@ -1,5 +1,5 @@
-import { Book } from '../types';
-import { ACADEMY_CATEGORIES } from '../config/categories';
+import { Book } from '../types/index.js';
+import { ACADEMY_CATEGORIES } from '../config/categories.js';
 
 export const MOCK_BOOKS: Book[] = [
   {

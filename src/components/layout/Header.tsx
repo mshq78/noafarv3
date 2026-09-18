@@ -141,7 +141,7 @@ export const Header: React.FC = () => {
                     className="fixed inset-0 z-30"
                     onClick={() => setIsUserMenuOpen(false)}
                   />
-                  <div className="absolute start-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-ink-200 py-1.5 z-40 animate-in fade-in duration-150">
+                  <div className="absolute end-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-xl border border-ink-200 py-1.5 z-40 animate-in fade-in duration-150">
                     <div className="px-4 py-2.5 border-b border-ink-100">
                       <p className="text-xs font-bold text-ink-900 truncate">
                         {user.displayName || 'کاربر نوآفر'}

@@ -1,4 +1,4 @@
-import { Event } from '../types';
+import { Event } from '../types/index.js';
 
 export const MOCK_EVENTS: Event[] = [
   // 4 upcoming / registering events
