@@ -107,6 +107,33 @@ function resolveDatabaseUrl(): string {
   return '';
 }
 
+
+/**
+ * Connecting a Blob store usually writes `BLOB_READ_WRITE_TOKEN`, but a
+ * project with more than one store, or one connected under a custom prefix,
+ * gets a prefixed name instead. Rather than fail silently with uploads off,
+ * fall back to any variable that ends in `_READ_WRITE_TOKEN` and carries a
+ * blob token, and record which one was used.
+ */
+let BLOB_TOKEN_SOURCE = '';
+
+function resolveBlobToken(): string {
+  const direct = optional('BLOB_READ_WRITE_TOKEN');
+  if (direct) {
+    BLOB_TOKEN_SOURCE = 'BLOB_READ_WRITE_TOKEN';
+    return direct;
+  }
+  for (const [name, value] of Object.entries(process.env)) {
+    if (!name.endsWith('_READ_WRITE_TOKEN')) continue;
+    const trimmed = (value ?? '').trim();
+    if (trimmed.startsWith('vercel_blob_rw_')) {
+      BLOB_TOKEN_SOURCE = name;
+      return trimmed;
+    }
+  }
+  return '';
+}
+
 export const env = {
   nodeEnv: NODE_ENV,
   isProduction: IS_PRODUCTION,
@@ -158,7 +185,9 @@ export const env = {
    * the only thing that works on a serverless host, where the disk is wiped
    * between invocations and the function body itself is capped at 4.5 MB.
    */
-  blobToken: optional('BLOB_READ_WRITE_TOKEN'),
+  blobToken: resolveBlobToken(),
+  /** Which variable supplied the blob token, for diagnostics. */
+  blobTokenSource: BLOB_TOKEN_SOURCE,
   /** Ceiling for an operator's media upload once Blob is in use. */
   blobMediaMaxBytes: num('BLOB_MEDIA_MAX_BYTES', 512 * 1024 * 1024),
 

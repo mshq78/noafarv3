@@ -131,6 +131,12 @@ const KIND_RULES: Record<UploadKind, { types: string[]; maxBytes: number; operat
 uploadsRouter.get('/config', (_req, res) => {
   res.json({
     mode: BLOB_ENABLED ? 'blob' : uploadsUsable ? 'disk' : 'disabled',
+    // Names only — never the token. When uploads are off, this says whether
+    // the store was never connected or its variable is named something else.
+    tokenSource: env.blobTokenSource || null,
+    candidateTokenVars: BLOB_ENABLED
+      ? undefined
+      : Object.keys(process.env).filter((n) => n.endsWith('_READ_WRITE_TOKEN')),
     maxBytes: {
       avatar: AVATAR_MAX_BYTES,
       submission: SUBMISSION_MAX_BYTES,
