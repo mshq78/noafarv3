@@ -154,6 +154,41 @@ export const SiteSettingsManager: React.FC = () => {
           </div>
         </div>
 
+        {/* Social Media Links */}
+        <div className="space-y-4">
+          <h4 className="text-base font-bold text-sky-800 border-b border-sky-100 pb-2">شبکه‌های اجتماعی</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input 
+              label="آدرس اینستاگرام" 
+              value={settings.instagramUrl || ''} 
+              onChange={e => setSettings({...settings, instagramUrl: e.target.value})} 
+              dir="ltr"
+              placeholder="https://instagram.com/..."
+            />
+            <Input 
+              label="آدرس تلگرام" 
+              value={settings.telegramUrl || ''} 
+              onChange={e => setSettings({...settings, telegramUrl: e.target.value})} 
+              dir="ltr"
+              placeholder="https://t.me/..."
+            />
+            <Input 
+              label="آدرس آپارات" 
+              value={settings.aparatUrl || ''} 
+              onChange={e => setSettings({...settings, aparatUrl: e.target.value})} 
+              dir="ltr"
+              placeholder="https://aparat.com/..."
+            />
+            <Input 
+              label="آدرس لینکدین" 
+              value={settings.linkedinUrl || ''} 
+              onChange={e => setSettings({...settings, linkedinUrl: e.target.value})} 
+              dir="ltr"
+              placeholder="https://linkedin.com/in/..."
+            />
+          </div>
+        </div>
+
         {/* About Page */}
         <div className="space-y-4">
           <h4 className="text-base font-bold text-sky-800 border-b border-sky-100 pb-2">صفحه درباره ما</h4>

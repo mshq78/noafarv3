@@ -8,9 +8,11 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface BookCardProps {
   book: Book;
+  emphasis?: 'normal' | 'tall';
 }
 
-export const BookCard: React.FC<BookCardProps> = ({ book }) => {
+export const BookCard: React.FC<BookCardProps> = ({ book, emphasis = 'normal' }) => {
+  const isTall = emphasis === 'tall';
   const kindConfigs: Record<LibraryKind, { label: string; icon: React.ReactNode; color: 'sky' | 'pink' | 'amber' | 'ink' }> = {
     book: { label: 'کتاب', icon: <BookIcon className="w-3.5 h-3.5" />, color: 'sky' },
     booklet: { label: 'کتابچه کاربردی', icon: <BookIcon className="w-3.5 h-3.5" />, color: 'sky' },
@@ -23,11 +25,11 @@ export const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const kindConfig = kindConfigs[book.kind] || kindConfigs.book;
 
   return (
-    <div className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-200">
+    <div className="group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-200">
       {/* Cover */}
       <Link
         to={`/library/${book.slug}`}
-        className="relative aspect-[3/4] bg-ink-100 overflow-hidden block flex items-center justify-center"
+        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[3/4]'} bg-ink-100 overflow-hidden block flex items-center justify-center`}
       >
         <SmartImage
           src={book.coverImage?.url || book.heroImage?.url || '/mock/book-cover.svg'}
@@ -36,7 +38,18 @@ export const BookCard: React.FC<BookCardProps> = ({ book }) => {
           loading="lazy"
           fallbackSrc="/mock/book-cover.svg"
         />
-        <div className="absolute top-2.5 start-2.5">
+
+        {/* Hover / Focus Summary Overlay */}
+        {book.summary && (
+          <div className="absolute inset-0 bg-ink-950/85 backdrop-blur-xs p-4 flex flex-col justify-center text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+            <span className="text-[11px] font-bold text-amber-300 mb-1">درباره این اثر:</span>
+            <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
+              {book.summary}
+            </p>
+          </div>
+        )}
+
+        <div className="absolute top-2.5 start-2.5 z-20">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur-xs text-ink-800 shadow-2xs">
             {kindConfig.icon}
             <span>{kindConfig.label}</span>

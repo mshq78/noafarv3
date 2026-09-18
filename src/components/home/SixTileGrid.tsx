@@ -1,29 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-  GraduationCap,
-  Wrench,
-  BookOpen,
-  Footprints,
-  Users,
-  Sparkles,
-  ArrowLeft,
-} from 'lucide-react';
+import { GraduationCap, ArrowLeft } from 'lucide-react';
 import { SECTION_LIST } from '../../config/sections';
+import { ICON_MAP } from '../../config/sectionIcons';
 import { SectionMeta } from '../../types';
 import { useInViewColor } from '../../hooks/useInViewColor';
 import { cn } from '../../utils/cn';
 import { motion } from 'framer-motion';
-
-// Icon map for the 6 sections
-const ICON_MAP: Record<string, React.ReactNode> = {
-  GraduationCap: <GraduationCap className="w-7 h-7" />,
-  Wrench: <Wrench className="w-7 h-7" />,
-  BookOpen: <BookOpen className="w-7 h-7" />,
-  Footprints: <Footprints className="w-7 h-7" />,
-  Users: <Users className="w-7 h-7" />,
-  Sparkles: <Sparkles className="w-7 h-7" />,
-};
 
 interface TileProps {
   section: SectionMeta;

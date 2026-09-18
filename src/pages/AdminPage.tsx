@@ -1568,49 +1568,43 @@ export const AdminPage: React.FC = () => {
           <SiteSettingsManager />
         )}
         {activeTab === 'backup' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center">
-                <Download className="w-5 h-5" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Working Export Card */}
+              <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
+                <div className="w-10 h-10 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center">
+                  <Download className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900">پشتیبان‌گیری از کل دیتابیس</h3>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  تمام دوره‌ها، ابزارها، کتاب‌ها، ارسال‌های کاربران، دیدگاه‌ها و پیام‌ها در قالب یک فایل استاندارد JSON ذخیره می‌شود.
+                </p>
+                <Button variant="primary" size="sm" onClick={handleExportDb} rightIcon={<Download className="w-4 h-4" />}>
+                  دانلود فایل JSON خروجی
+                </Button>
               </div>
-              <h3 className="text-sm font-bold text-ink-900">پشتیبان‌گیری از کل دیتابیس</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                تمام دوره‌ها، ابزارها، کتاب‌ها، ارسال‌های کاربران، دیدگاه‌ها و پیام‌ها در قالب یک فایل استاندارد JSON ذخیره می‌شود.
-              </p>
-              <Button variant="primary" size="sm" onClick={handleExportDb} rightIcon={<Download className="w-4 h-4" />}>
-                دانلود فایل JSON خروجی
-              </Button>
-            </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-amber-50 text-amber-700 rounded-xl flex items-center justify-center">
-                <Upload className="w-5 h-5" />
+              {/* Server Note (Non-clickable guidance) */}
+              <div className="bg-ink-50/70 p-6 rounded-2xl border border-ink-200/80 space-y-4">
+                <div className="flex items-center gap-2 text-ink-700 font-bold text-sm">
+                  <Database className="w-4 h-4 text-ink-500" />
+                  <span>راهنمای عملیات سرور و بازیابی داده‌ها</span>
+                </div>
+                <div className="space-y-3 text-xs text-ink-600 leading-relaxed">
+                  <div className="p-3 bg-white/80 rounded-xl border border-ink-100 space-y-1">
+                    <p className="font-semibold text-ink-800">بازیابی نسخه پشتیبان (Restore):</p>
+                    <p className="text-ink-500">
+                      جهت جلوگیری از بازنویسی اشتباه داده‌های زنده، بازیابی پایگاه‌داده PostgreSQL مستقیماً از طریق ابزار استاندارد <code className="font-sans px-1.5 py-0.5 bg-ink-100 rounded text-ink-800">pg_restore</code> در ترمینال سرور انجام می‌شود.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/80 rounded-xl border border-ink-100 space-y-1">
+                    <p className="font-semibold text-ink-800">بارگذاری اولیه اطلاعات (Seed):</p>
+                    <p className="text-ink-500">
+                      برای مقداردهی یا پر کردن اولیه پایگاه داده، دستور <code className="font-sans px-1.5 py-0.5 bg-ink-100 rounded text-ink-800">npm run db:seed</code> روی سرور اجرا می‌شود.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-sm font-bold text-ink-900">بازیابی اطلاعات (Restore)</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                اطلاعات روی پایگاه‌داده PostgreSQL نگهداری می‌شود؛ بازیابی نسخه پشتیبان با ابزار
-                استاندارد <span className="font-sans">pg_restore</span> روی سرور انجام می‌گیرد تا
-                داده‌های زنده به‌اشتباه بازنویسی نشوند.
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
-                <Upload className="w-4 h-4" />
-                <span>از طریق سرور</span>
-              </span>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-pink-50 text-pink-700 rounded-xl flex items-center justify-center">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-ink-900">بارگذاری محتوای اولیه</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                برای پر کردن اولیه سایت، دستور <span className="font-sans">npm run db:seed</span> روی
-                سرور اجرا می‌شود. این کار محتوای موجود را حذف نمی‌کند.
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
-                <RotateCcw className="w-4 h-4" />
-                <span>از طریق سرور</span>
-              </span>
             </div>
           </div>
         )}

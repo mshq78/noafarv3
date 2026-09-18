@@ -1,6 +1,7 @@
 import React from 'react';
 import { Difficulty } from '../../types';
 import { cn } from '../../utils/cn';
+import { DIFFICULTY_LABELS } from '../../config/categories';
 
 interface DifficultyDotsProps {
   difficulty: Difficulty;
@@ -14,12 +15,12 @@ export const DifficultyDots: React.FC<DifficultyDotsProps> = ({
   showLabel = true,
 }) => {
   const configs: Record<Difficulty, { level: number; label: string; dotColor: string }> = {
-    easy: { level: 1, label: 'مقدماتی', dotColor: 'bg-sky-600' },
-    beginner: { level: 1, label: 'مقدماتی', dotColor: 'bg-sky-600' },
-    medium: { level: 2, label: 'متوسط', dotColor: 'bg-amber-600' },
-    intermediate: { level: 2, label: 'متوسط', dotColor: 'bg-amber-600' },
-    hard: { level: 3, label: 'پیشرفته', dotColor: 'bg-pink-600' },
-    advanced: { level: 3, label: 'پیشرفته', dotColor: 'bg-pink-600' },
+    easy: { level: 1, label: DIFFICULTY_LABELS.easy.label, dotColor: 'bg-sky-600' },
+    beginner: { level: 1, label: DIFFICULTY_LABELS.easy.label, dotColor: 'bg-sky-600' },
+    medium: { level: 2, label: DIFFICULTY_LABELS.medium.label, dotColor: 'bg-amber-600' },
+    intermediate: { level: 2, label: DIFFICULTY_LABELS.medium.label, dotColor: 'bg-amber-600' },
+    hard: { level: 3, label: DIFFICULTY_LABELS.hard.label, dotColor: 'bg-pink-600' },
+    advanced: { level: 3, label: DIFFICULTY_LABELS.hard.label, dotColor: 'bg-pink-600' },
   };
 
   const config = configs[difficulty] || configs.easy;
