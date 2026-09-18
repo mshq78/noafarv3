@@ -114,10 +114,14 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
                 <span className="text-xs font-bold uppercase tracking-wider text-ink-400 font-sans">
                   {sectionMeta.slug}
                 </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
-                <span className="text-xs font-bold text-ink-600">
-                  {sectionMeta.taglineFa || sectionMeta.countLabel}
-                </span>
+                {sectionMeta.taglineFa ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
+                    <span className="text-xs font-bold text-ink-600">
+                      {sectionMeta.taglineFa}
+                    </span>
+                  </>
+                ) : null}
               </div>
 
               <h1 className="text-2xl sm:text-4xl font-black text-ink-900">

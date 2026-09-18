@@ -270,6 +270,7 @@ export interface SectionMeta {
   minHeightClass: string;
   accentColorHex: string;
   iconName?: string;
+  comingSoon?: boolean;
 }
 
 export interface SiteSettings {

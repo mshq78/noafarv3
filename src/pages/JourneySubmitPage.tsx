@@ -12,7 +12,7 @@ export const JourneySubmitPage: React.FC = () => {
           className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-600 hover:text-ink-900 transition-colors"
         >
           <ArrowRight className="w-4 h-4" />
-          <span>بازگشت به درگاه سفر تجربیات</span>
+          <span>بازگشت به درگاه تور نوآوری</span>
         </Link>
 
         <ExperienceSubmissionForm />

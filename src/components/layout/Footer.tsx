@@ -52,13 +52,20 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2">
               {SECTION_LIST.map((sec) => (
                 <li key={sec.slug}>
-                  <Link
-                    to={`/${sec.slug}`}
-                    className="hover:text-white transition-colors flex items-center justify-between"
-                  >
-                    <span>{sec.nameFa}</span>
-                    <span className="text-[10px] text-ink-500 font-sans">{sec.slug}</span>
-                  </Link>
+                  {sec.comingSoon ? (
+                    <div className="text-ink-500 cursor-not-allowed select-none flex items-center justify-between opacity-60">
+                      <span>{sec.nameFa}</span>
+                      <span className="text-[10px] text-ink-500 bg-ink-800 px-1.5 py-0.5 rounded">به زودی</span>
+                    </div>
+                  ) : (
+                    <Link
+                      to={`/${sec.slug}`}
+                      className="hover:text-white transition-colors flex items-center justify-between"
+                    >
+                      <span>{sec.nameFa}</span>
+                      <span className="text-[10px] text-ink-500 font-sans">{sec.slug}</span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

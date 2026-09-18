@@ -54,7 +54,7 @@ export const IS_PRODUCTION = NODE_ENV === 'production';
  * connections and exhaust the database's limit.
  */
 export const IS_SERVERLESS = Boolean(
-  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY,
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME,
 );
 
 /**

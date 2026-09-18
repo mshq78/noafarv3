@@ -20,7 +20,7 @@ import { uploadsRouter, UPLOAD_ROOT } from './routes/uploads.js';
 const app = express();
 
 if (env.trustProxy) {
-  // Runflare (and any reverse proxy) terminates TLS; without this the secure
+  // A reverse proxy terminates TLS; without this the secure
   // cookie flag and the client IP used for rate limiting would both be wrong.
   app.set('trust proxy', 1);
 }

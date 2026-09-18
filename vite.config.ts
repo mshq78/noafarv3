@@ -1,11 +1,28 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+import { handleMockApiRequest } from './src/dev/mockApiServer';
+
+function mockApiPlugin(): Plugin {
+  return {
+    name: 'mock-api-server',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        void handleMockApiRequest(req, res, next);
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        void handleMockApiRequest(req, res, next);
+      });
+    },
+  };
+}
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), mockApiPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -14,37 +31,11 @@ export default defineConfig(() => {
     server: {
       host: '0.0.0.0',
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      proxy: {
-        '/api': {
-          target: 'http://localhost:4000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/uploads': {
-          target: 'http://localhost:4000',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
     },
     preview: {
       host: '0.0.0.0',
-      proxy: {
-        '/api': {
-          target: 'http://localhost:4000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/uploads': {
-          target: 'http://localhost:4000',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
     },
   };
 });

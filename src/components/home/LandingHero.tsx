@@ -1,135 +1,111 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowDown, Sparkles, Compass, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Button } from '../ui';
 import { NoafarMark } from '../brand/NoafarMark';
 import { TricolorRule } from '../brand/TricolorRule';
 import { DotPattern } from '../brand/DotPattern';
-import { useAuth } from '../../hooks/useAuth';
-import { useSiteSettings } from '../../hooks/useSiteSettings';
-import { SmartImage } from '../ui/SmartImage';
-import { motion } from 'framer-motion';
 
 export const LandingHero: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const [query, setQuery] = useState('');
+  const navigate = useNavigate();
 
-  const settings = useSiteSettings();
-  const handleScrollToSections = () => {
-    const el = document.getElementById('six-sections-grid');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    navigate(`/search?q=${encodeURIComponent(trimmed)}`);
   };
 
   return (
     <section className="relative overflow-hidden bg-white border-b border-ink-100">
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/70 lg:to-white/40 z-10" />
-        <SmartImage 
-          src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1600&auto=format&fit=crop&q=80" 
-          alt="همکاری اجتماعی و تیمی" 
-          className="w-full h-full object-cover opacity-60"
-          fallbackSrc="/mock/journey-cover.svg"
+      {/* Background with soft brand color gradients & DotPattern */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute -top-32 right-1/4 w-[420px] h-[420px] rounded-full blur-3xl opacity-20"
+          style={{ backgroundColor: '#73CFED' }}
         />
+        <div
+          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[460px] h-[460px] rounded-full blur-3xl opacity-15"
+          style={{ backgroundColor: '#FFCC6D' }}
+        />
+        <div
+          className="absolute -bottom-32 right-1/3 w-[400px] h-[400px] rounded-full blur-3xl opacity-15"
+          style={{ backgroundColor: '#ED3F86' }}
+        />
+        <DotPattern opacity={0.06} />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 py-16 sm:py-24 lg:py-32 grid lg:grid-cols-2 gap-12 items-center">
-        {/* Text Content */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10 py-16 sm:py-24 lg:py-28">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="space-y-6 text-start"
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          className="flex flex-col items-center text-center space-y-6"
         >
-          <div className="inline-flex p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-sky-100 ring-4 ring-white/50 mb-2">
+          {/* 1. Noafar Mark */}
+          <div className="inline-flex p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-sky-100 ring-4 ring-white/50 mb-1">
             <NoafarMark size={48} />
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black text-ink-900 leading-tight tracking-tight whitespace-pre-line">{settings.heroTitle}</h1>
-          <p className="text-base sm:text-lg text-ink-700 leading-relaxed font-medium whitespace-pre-line">{settings.heroSubtitle}</p>
+          {/* 2. Main Title */}
+          <h1 className="text-3xl sm:text-5xl font-black text-ink-900 leading-tight tracking-tight">
+            مرکز نوآوری نوآفر
+          </h1>
 
-          <div className="max-w-xs py-2">
+          {/* 3. Short description */}
+          <p className="text-base sm:text-lg text-ink-700 leading-relaxed font-medium max-w-2xl mx-auto">
+            نوآفر جایی است برای یاد گرفتن روشهای تازهٔ حل مسئلههای اجتماعی و فرهنگی — ابزارها، تجربههای واقعی، آموزشها و آدمهایی که کار متفاوت میکنند.
+          </p>
+
+          {/* 4. Link to /about with ArrowLeft */}
+          <div>
+            <Link
+              to="/about"
+              className="inline-flex items-center gap-1.5 text-sm sm:text-base font-semibold text-sky-700 hover:text-sky-800 transition-colors group"
+            >
+              <span>آشنایی بیشتر با نوآفر</span>
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            </Link>
+          </div>
+
+          {/* 5. TricolorRule divider */}
+          <div className="w-28 sm:w-36 mx-auto py-2">
             <TricolorRule height={3} />
           </div>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4">
-            <Button
-              size="lg"
-              variant="primary"
-              onClick={handleScrollToSections}
-              rightIcon={<ArrowDown className="w-4 h-4" />}
-              className="w-full sm:w-auto shadow-md"
-            >
-              کاوش در ۶ درگاه نوآفر
-            </Button>
-
-            {isAuthenticated ? (
-              <Link to="/profile" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  rightIcon={<Users className="w-4 h-4 text-sky-600" />}
-                  className="w-full sm:w-auto bg-white/80 backdrop-blur hover:bg-white"
-                >
-                  میز کار کاربری ({user?.displayName})
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/login" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="accent"
-                  rightIcon={<Sparkles className="w-4 h-4" />}
-                  className="w-full sm:w-auto"
-                >
-                  پیوستن به خانواده نوآفر
-                </Button>
-              </Link>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Visual Stats / Image Showcase */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-          className="relative lg:h-[500px] flex items-center justify-center"
-        >
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <motion.div whileHover={{ y: -5 }} className="space-y-4 pt-12">
-              <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-sky-100 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 end-0 w-24 h-24 bg-sky-100 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-sky-200 transition-colors" />
-                <span className="text-xs text-sky-600 font-bold block mb-1 relative z-10">دوره‌های تخصصی</span>
-                <span className="text-3xl font-black text-sky-900 font-sans relative z-10 block">۳۴</span>
-                <span className="text-xs text-ink-500 block mt-1 relative z-10">دوره و کارگاه آموزشی</span>
+          {/* 6. Search Box */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="w-full max-w-2xl mx-auto pt-2"
+            role="search"
+          >
+            <div className="relative flex items-center bg-white rounded-2xl border border-ink-200 shadow-sm hover:border-ink-300 focus-within:border-sky-500 focus-within:ring-4 focus-within:ring-sky-100 transition-all p-1.5 sm:p-2">
+              <div className="pe-2 ps-3 text-ink-400 flex items-center pointer-events-none">
+                <Search className="w-5 h-5 text-ink-400" aria-hidden="true" />
               </div>
-              <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-pink-100 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 end-0 w-24 h-24 bg-pink-100 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-pink-200 transition-colors" />
-                <span className="text-xs text-pink-600 font-bold block mb-1 relative z-10">بوم‌ها و کاربرگ‌ها</span>
-                <span className="text-3xl font-black text-pink-900 font-sans relative z-10 block">۲۸</span>
-                <span className="text-xs text-ink-500 block mt-1 relative z-10">ابزار تعاملی حل مسئله</span>
-              </div>
-            </motion.div>
-            
-            <motion.div whileHover={{ y: -5 }} className="space-y-4">
-              <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-amber-100 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 end-0 w-24 h-24 bg-amber-100 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-amber-200 transition-colors" />
-                <span className="text-xs text-amber-600 font-bold block mb-1 relative z-10">تجارب بومی</span>
-                <span className="text-3xl font-black text-amber-900 font-sans relative z-10 block">۴۲</span>
-                <span className="text-xs text-ink-500 block mt-1 relative z-10">روایت میدانی موفق</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-emerald-100 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 end-0 w-24 h-24 bg-emerald-100 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-emerald-200 transition-colors" />
-                <span className="text-xs text-emerald-600 font-bold block mb-1 relative z-10">منابع و کتب</span>
-                <span className="text-3xl font-black text-emerald-900 font-sans relative z-10 block">۱۵۰+</span>
-                <span className="text-xs text-ink-500 block mt-1 relative z-10">منبع غنی برای مطالعه</span>
-              </div>
-            </motion.div>
-          </div>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="جستجو در نوآفر…"
+                aria-label="جستجو در نوآفر"
+                className="w-full bg-transparent border-none text-ink-900 placeholder:text-ink-400 text-sm sm:text-base focus:outline-none focus:ring-0 px-2 py-2"
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="shrink-0 font-medium px-5 sm:px-6 rounded-xl"
+              >
+                جستجو
+              </Button>
+            </div>
+          </form>
         </motion.div>
       </div>
     </section>
   );
 };
+

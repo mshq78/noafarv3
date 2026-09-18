@@ -93,6 +93,59 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
 
   const theme = colorThemes[section.colorFamily] || colorThemes.sky;
 
+  if (section.comingSoon) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <div
+          aria-disabled="true"
+          className="relative h-full flex flex-col justify-between p-6 sm:p-7 rounded-2xl border border-ink-200 bg-white/80 shadow-2xs opacity-65 cursor-not-allowed select-none overflow-hidden"
+        >
+          {/* Background Section Mark/Watermark */}
+          <div className="absolute -bottom-8 -start-8 opacity-5 pointer-events-none transform -rotate-12 scale-150 text-ink-400">
+            {ICON_MAP[section.iconName] || <GraduationCap className="w-32 h-32" />}
+          </div>
+
+          <div className="space-y-4 relative z-10">
+            {/* Top: Icon + Section Key */}
+            <div className="flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-pink-50 text-pink-600">
+                {ICON_MAP[section.iconName]}
+              </div>
+
+              <span className="text-xs font-bold uppercase tracking-wider font-sans text-ink-400 opacity-60">
+                {section.slug}
+              </span>
+            </div>
+
+            {/* Title & Tagline */}
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-black text-ink-800">
+                {section.nameFa}
+              </h3>
+              {section.taglineFa ? (
+                <p className="text-xs font-semibold text-ink-400">
+                  {section.taglineFa}
+                </p>
+              ) : null}
+            </div>
+
+            {/* Description */}
+            <p className="text-xs sm:text-sm leading-relaxed text-ink-500">
+              {section.descriptionFa}
+            </p>
+          </div>
+
+          {/* Bottom Label: به زودی instead of "ورود به ..." and arrow */}
+          <div className="pt-6 mt-4 border-t border-ink-100 flex items-center justify-between relative z-10 text-xs font-bold">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-bold">
+              به زودی
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div variants={itemVariants} className="h-full">
       <Link

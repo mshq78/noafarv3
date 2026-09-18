@@ -1039,7 +1039,7 @@ export const AdminPage: React.FC = () => {
                   { slug: 'academy', label: 'آکادمی' },
                   { slug: 'toolbox', label: 'جعبه‌ابزار' },
                   { slug: 'library', label: 'کتابخانه' },
-                  { slug: 'journey', label: 'سفر تجربه' },
+                  { slug: 'journey', label: 'تور نوآوری' },
                   { slug: 'gathering', label: 'رویدادها' },
                   { slug: 'spark', label: 'جرقه‌ها' },
                 ].map((s) => (
@@ -1479,7 +1479,7 @@ export const AdminPage: React.FC = () => {
                           <span
                             className={cn(
                               'px-2 py-0.5 rounded font-bold text-[10px]',
-                              u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-ink-100 text-ink-700'
+                              u.role === 'admin' ? 'bg-pink-100 text-pink-700' : 'bg-ink-100 text-ink-700'
                             )}
                           >
                             {u.role === 'admin' ? 'مدیر سیستم (Admin)' : 'کاربر عادی'}
@@ -1607,7 +1607,7 @@ export const AdminPage: React.FC = () => {
                     <option value="academy">آکادمی (دوره آموزشی)</option>
                     <option value="toolbox">جعبه‌ابزار (ابزار و بوم)</option>
                     <option value="library">کتابخانه (کتاب و منبع)</option>
-                    <option value="journey">سفر تجربه (روایت میدانی)</option>
+                    <option value="journey">تور نوآوری (روایت میدانی)</option>
                     <option value="gathering">رویدادها و کارگاه‌ها</option>
                     <option value="spark">جرقه (ایده نوآورانه)</option>
                     <option value="blog">بلاگ و مقالات</option>

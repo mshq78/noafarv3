@@ -133,7 +133,7 @@ export const ExperienceSubmissionForm: React.FC = () => {
             <Footprints className="w-5 h-5" />
           </div>
           <h2 className="text-xl font-black text-ink-900">
-            ثبت روایت تجربه میدانی در درگاه سفر
+            ثبت روایت تجربه میدانی در درگاه تور نوآوری
           </h2>
         </div>
         <p className="text-xs sm:text-sm text-ink-500 leading-relaxed">
