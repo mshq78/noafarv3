@@ -259,6 +259,12 @@ export const PUBLIC_SETTINGS_KEYS = [
   'contactAddress',
   'footerDescription',
   'footerCopyright',
+  // Social profiles shown in the footer; each is optional and the footer
+  // renders only the ones that carry a value.
+  'instagramUrl',
+  'telegramUrl',
+  'aparatUrl',
+  'linkedinUrl',
 ] as const;
 
 miscRouter.get(

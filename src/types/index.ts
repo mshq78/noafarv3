@@ -286,4 +286,10 @@ export interface SiteSettings {
   contactAddress?: string;
   footerDescription?: string;
   footerCopyright?: string;
+  /** Social profiles for the footer. Each is optional. */
+  instagramUrl?: string;
+  telegramUrl?: string;
+  aparatUrl?: string;
+  linkedinUrl?: string;
+
 }

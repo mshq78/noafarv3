@@ -125,6 +125,16 @@ export const env = {
   /** Absolute site URL used to build links inside emails. */
   publicUrl: optional('PUBLIC_URL').replace(/\/$/, ''),
 
+  /**
+   * Vercel Blob. When this is set, uploads go straight from the browser to
+   * object storage and the local filesystem is not involved at all — which is
+   * the only thing that works on a serverless host, where the disk is wiped
+   * between invocations and the function body itself is capped at 4.5 MB.
+   */
+  blobToken: optional('BLOB_READ_WRITE_TOKEN'),
+  /** Ceiling for an operator's media upload once Blob is in use. */
+  blobMediaMaxBytes: num('BLOB_MEDIA_MAX_BYTES', 512 * 1024 * 1024),
+
   uploadDir: optional('UPLOAD_DIR', IS_SERVERLESS ? '/tmp/noafar-uploads' : 'uploads'),
   /**
    * Set to true only where UPLOAD_DIR really survives a redeploy (a mounted

@@ -765,6 +765,9 @@ adminRouter.get(
   }),
 );
 
+/** Settings whose value is a link, so it is validated as one. */
+const URL_SETTINGS = new Set(['logoUrl', 'instagramUrl', 'telegramUrl', 'aparatUrl', 'linkedinUrl']);
+
 adminRouter.put(
   '/settings',
   asyncRoute(async (req, res) => {
@@ -772,10 +775,9 @@ adminRouter.put(
     const clean: Record<string, unknown> = {};
     for (const key of PUBLIC_SETTINGS_KEYS) {
       if (incoming[key] === undefined) continue;
-      clean[key] =
-        key === 'logoUrl'
-          ? sanitizeUrl(incoming[key], { allowData: true })
-          : sanitizeMultilineText(incoming[key], 4_000);
+      clean[key] = URL_SETTINGS.has(key)
+        ? sanitizeUrl(incoming[key], { allowData: key === 'logoUrl' })
+        : sanitizeMultilineText(incoming[key], 4_000);
     }
 
     const row = await queryOne<{ data: Record<string, unknown> }>(

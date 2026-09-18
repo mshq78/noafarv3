@@ -1,12 +1,13 @@
 import { Router } from 'express';
+import { handleUpload } from '@vercel/blob/client';
 import multer from 'multer';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { env } from '../env.js';
 import { requireAuth, requireOperator } from '../lib/auth.js';
-import { HttpError, asyncRoute, badRequest } from '../lib/http.js';
-import { rateLimit } from '../lib/rateLimit.js';
+import { HttpError, asyncRoute, badRequest, forbidden, unauthorized } from '../lib/http.js';
+import { clientIp, rateLimit } from '../lib/rateLimit.js';
 
 export const uploadsRouter = Router();
 
@@ -75,8 +76,6 @@ const VIDEO_TYPES: Record<string, string> = {
   'video/webm': '.webm',
 };
 
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
-
 function makeStorage(subdir: string) {
   const dir = path.join(UPLOAD_ROOT, subdir);
   ensureDir(dir);
@@ -104,14 +103,98 @@ function makeUploader(subdir: string, allowedTypes: Record<string, string>, maxB
   });
 }
 
-/** Rejects every upload with an explanation when there is nowhere to store one. */
+/**
+ * Where uploaded files go. Blob wins when it is configured: the browser talks
+ * to object storage directly, so neither the wiped serverless disk nor the
+ * 4.5 MB function-body cap is in the path, and a course video can actually be
+ * uploaded. Disk is the self-hosted fallback.
+ */
+const BLOB_ENABLED = Boolean(env.blobToken);
+type UploadKind = 'avatars' | 'submissions' | 'media';
+
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const SUBMISSION_MAX_BYTES = 4 * 1024 * 1024;
+/** Only meaningful for Blob: a lesson video has no business being 8 MB. */
+const BLOB_MEDIA_MAX_BYTES = env.blobMediaMaxBytes;
+
+const KIND_RULES: Record<UploadKind, { types: string[]; maxBytes: number; operatorOnly: boolean }> = {
+  avatars: { types: Object.keys(IMAGE_TYPES), maxBytes: AVATAR_MAX_BYTES, operatorOnly: false },
+  submissions: { types: Object.keys(IMAGE_TYPES), maxBytes: SUBMISSION_MAX_BYTES, operatorOnly: false },
+  media: {
+    types: [...Object.keys(IMAGE_TYPES), ...Object.keys(DOCUMENT_TYPES), ...Object.keys(VIDEO_TYPES)],
+    maxBytes: BLOB_MEDIA_MAX_BYTES,
+    operatorOnly: true,
+  },
+};
+
+/** Lets the client pick its upload path without guessing. */
+uploadsRouter.get('/config', (_req, res) => {
+  res.json({
+    mode: BLOB_ENABLED ? 'blob' : uploadsUsable ? 'disk' : 'disabled',
+    maxBytes: {
+      avatar: AVATAR_MAX_BYTES,
+      submission: SUBMISSION_MAX_BYTES,
+      media: BLOB_ENABLED ? BLOB_MEDIA_MAX_BYTES : env.uploadMaxBytes,
+    },
+  });
+});
+
+/**
+ * Issues a short-lived, single-upload token to the browser. Everything that
+ * decides what may be uploaded — who the caller is, which folder, which types,
+ * how large — is settled here on the server; the token carries those limits and
+ * the storage service enforces them.
+ */
+if (BLOB_ENABLED) {
+  uploadsRouter.post(
+    '/blob',
+    rateLimit({
+      name: 'upload-blob-token',
+      limit: 120,
+      windowSeconds: 60 * 60,
+      key: (req) => req.user?.id ?? clientIp(req),
+    }),
+    asyncRoute(async (req, res) => {
+      const result = await handleUpload({
+        token: env.blobToken,
+        request: req,
+        body: req.body as Parameters<typeof handleUpload>[0]['body'],
+        onBeforeGenerateToken: async (pathname) => {
+          const kind = pathname.split('/')[0] as UploadKind;
+          const rules = KIND_RULES[kind];
+          if (!rules) throw badRequest('مسیر بارگذاری معتبر نیست.');
+          if (!req.user) throw unauthorized();
+          if (rules.operatorOnly && req.user.role !== 'operator' && req.user.role !== 'admin') {
+            throw forbidden();
+          }
+          return {
+            allowedContentTypes: rules.types,
+            maximumSizeInBytes: rules.maxBytes,
+            addRandomSuffix: true,
+            tokenPayload: JSON.stringify({ userId: req.user.id, kind }),
+          };
+        },
+        // Called by the storage service once the file lands, not by the
+        // browser. Nothing here needs the session, and a throw would make the
+        // upload look failed to the user, so it only records the outcome.
+        onUploadCompleted: async ({ blob }) => {
+          // eslint-disable-next-line no-console
+          console.info('[noafar][uploads] فایل روی فضای ذخیره‌سازی ثبت شد:', blob.pathname);
+        },
+      });
+      res.json(result);
+    }),
+  );
+}
+
+/** Rejects every disk upload with an explanation when there is nowhere to store one. */
 uploadsRouter.use((_req, _res, next) => {
-  if (uploadsUsable) return next();
+  if (BLOB_ENABLED || uploadsUsable) return next();
   next(
     new HttpError(
       503,
       'بارگذاری فایل روی این میزبان در دسترس نیست؛ فضای ذخیره‌سازی پایدار تنظیم نشده است. ' +
-        'فعلاً می‌توانید نشانی اینترنتی تصویر را مستقیم وارد کنید.',
+        'برای فعال‌سازی، BLOB_READ_WRITE_TOKEN را تنظیم کنید یا UPLOAD_DIR را روی یک volume دائمی ببرید.',
       'uploads_unavailable',
     ),
   );
@@ -119,7 +202,7 @@ uploadsRouter.use((_req, _res, next) => {
 
 const avatarUpload = makeUploader('avatars', IMAGE_TYPES, AVATAR_MAX_BYTES);
 // Members may attach an image to their own idea/experience submission.
-const submissionUpload = makeUploader('submissions', IMAGE_TYPES, 4 * 1024 * 1024);
+const submissionUpload = makeUploader('submissions', IMAGE_TYPES, SUBMISSION_MAX_BYTES);
 const mediaUpload = makeUploader(
   'media',
   { ...IMAGE_TYPES, ...DOCUMENT_TYPES, ...VIDEO_TYPES },
