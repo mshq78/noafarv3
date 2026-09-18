@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, queryOne, queryRows, transaction } from '../db.js';
 import { requireAdmin, requireOperator, revokeAllSessionsForUser } from '../lib/auth.js';
+import { rateLimit } from '../lib/rateLimit.js';
 import { asyncRoute, badRequest, forbidden, notFound } from '../lib/http.js';
 import {
   mapComment,
@@ -787,6 +788,47 @@ adminRouter.put(
       [JSON.stringify(clean)],
     );
     res.json(row?.data ?? clean);
+  }),
+);
+
+// ============================================================== content seed =
+
+/**
+ * Loads the sample catalogue into the database. It exists as a route because
+ * the seed script cannot be run on a serverless host — there is no shell — and
+ * SEED_ON_BOOT is only read by the long-running entry point.
+ *
+ * Every insert is `ON CONFLICT (section, slug) DO NOTHING`, so running it twice
+ * adds nothing the second time and never overwrites edited content. Admin only:
+ * it writes to every section.
+ */
+adminRouter.post(
+  '/seed',
+  requireAdmin,
+  rateLimit({
+    name: 'admin-seed',
+    limit: 6,
+    windowSeconds: 60 * 60,
+    key: (req) => req.user?.id ?? 'anon',
+  }),
+  asyncRoute(async (req, res) => {
+    const onlyIfEmpty = (req.body as { onlyIfEmpty?: unknown } | undefined)?.onlyIfEmpty === true;
+    const { seed } = await import('../seed.js');
+    const counts = await seed({ onlyIfEmpty });
+    if (!counts) {
+      res.json({ success: true, skipped: true, message: 'محتوا از قبل موجود بود؛ چیزی اضافه نشد.' });
+      return;
+    }
+    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    res.json({
+      success: true,
+      skipped: false,
+      counts,
+      total,
+      message: total
+        ? `${total} مورد محتوای نمونه افزوده شد.`
+        : 'همهٔ محتوای نمونه از قبل موجود بود؛ چیزی اضافه نشد.',
+    });
   }),
 );
 

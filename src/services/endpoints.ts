@@ -544,6 +544,19 @@ export interface AdminStats {
   registrationCount: number;
 }
 
+export interface SeedResult {
+  success: boolean;
+  skipped: boolean;
+  total?: number;
+  counts?: Record<string, number>;
+  message: string;
+}
+
+/** Loads the sample catalogue. Safe to repeat: existing content is untouched. */
+export function adminSeedContent(onlyIfEmpty = false): Promise<SeedResult> {
+  return post<SeedResult>('/admin/seed', { onlyIfEmpty });
+}
+
 export function adminGetStats(): Promise<AdminStats> {
   return get<AdminStats>('/admin/stats');
 }

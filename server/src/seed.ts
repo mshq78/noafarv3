@@ -112,7 +112,7 @@ async function insertSection(section: string, items: SeedItem[]): Promise<number
 }
 
 const DEFAULT_SETTINGS = {
-  heroTitle: 'مدرسه کنشگری نوآفر',
+  heroTitle: 'مرکز نوآوری نوآفر',
   heroSubtitle: 'بستری برای یادگیری، تجربه و خلق ارزش‌های اجتماعی',
   aboutText:
     '<p>نوآفر یک اکوسیستم باز و مشارکتی برای یادگیری روش‌های نوین حل مسائل اجتماعی، ابزارهای طراحی کسب‌وکار اجتماعی و شبکه‌سازی میان کنشگران، محققان و سازمان‌های مردم‌نهاد است.</p>',
@@ -123,13 +123,23 @@ const DEFAULT_SETTINGS = {
   footerCopyright: 'تمام حقوق برای پلتفرم نوآفر محفوظ است.',
 };
 
-export async function seed({ onlyIfEmpty = false } = {}): Promise<void> {
+export interface SeedCounts {
+  academy: number;
+  toolbox: number;
+  library: number;
+  journey: number;
+  gathering: number;
+  spark: number;
+  blog: number;
+}
+
+export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | null> {
   if (onlyIfEmpty) {
     const existing = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM content`);
     if ((existing.rows[0]?.count ?? 0) > 0) {
       // eslint-disable-next-line no-console
       console.info('[noafar][seed] محتوا از قبل موجود است؛ از seed صرف‌نظر شد.');
-      return;
+      return null;
     }
   }
 
@@ -151,6 +161,7 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.info('[noafar][seed] محتوای اولیه ثبت شد:', counts);
+  return counts;
 }
 
 // Allow `node dist-server/seed.js` as a one-off command.

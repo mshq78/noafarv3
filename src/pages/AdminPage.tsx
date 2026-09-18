@@ -74,6 +74,7 @@ import {
   adminGetStats,
   type AdminStats,
   adminSetUserBlocked,
+  adminSeedContent,
   getCategories,
 } from '../services/endpoints';
 import { ApiError } from '../services/api';
@@ -470,6 +471,31 @@ export const AdminPage: React.FC = () => {
         error instanceof ApiError ? error.message : 'تغییر نقش کاربر ناموفق بود.',
         'error',
       );
+    }
+  };
+
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeedContent = async () => {
+    if (
+      !window.confirm(
+        'محتوای نمونه به سایت اضافه می‌شود. موارد موجود دست‌نخورده می‌مانند. ادامه می‌دهید؟',
+      )
+    ) {
+      return;
+    }
+    setIsSeeding(true);
+    try {
+      const result = await adminSeedContent();
+      showToast(result.message, 'success');
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'بارگذاری محتوای نمونه ناموفق بود.',
+        'error',
+      );
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -1597,13 +1623,29 @@ export const AdminPage: React.FC = () => {
                       جهت جلوگیری از بازنویسی اشتباه داده‌های زنده، بازیابی پایگاه‌داده PostgreSQL مستقیماً از طریق ابزار استاندارد <code className="font-sans px-1.5 py-0.5 bg-ink-100 rounded text-ink-800">pg_restore</code> در ترمینال سرور انجام می‌شود.
                     </p>
                   </div>
-                  <div className="p-3 bg-white/80 rounded-xl border border-ink-100 space-y-1">
-                    <p className="font-semibold text-ink-800">بارگذاری اولیه اطلاعات (Seed):</p>
-                    <p className="text-ink-500">
-                      برای مقداردهی یا پر کردن اولیه پایگاه داده، دستور <code className="font-sans px-1.5 py-0.5 bg-ink-100 rounded text-ink-800">npm run db:seed</code> روی سرور اجرا می‌شود.
-                    </p>
-                  </div>
                 </div>
+              </div>
+
+              {/* Sample catalogue */}
+              <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
+                <div className="w-10 h-10 bg-amber-50 text-amber-800 rounded-xl flex items-center justify-center">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900">بارگذاری محتوای نمونه</h3>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  مجموعهٔ نمونهٔ دوره‌ها، ابزارها، کتاب‌ها، تجربه‌ها، رویدادها، ایده‌ها و
+                  مطالب بلاگ را وارد سایت می‌کند. اجرای دوباره چیزی را تکراری یا بازنویسی
+                  نمی‌کند؛ هر موردی که از قبل باشد دست‌نخورده می‌ماند.
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSeedContent}
+                  disabled={isSeeding}
+                  rightIcon={<RotateCcw className={cn('w-4 h-4', isSeeding && 'animate-spin')} />}
+                >
+                  {isSeeding ? 'در حال بارگذاری…' : 'بارگذاری محتوای نمونه'}
+                </Button>
               </div>
             </div>
           </div>
