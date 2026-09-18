@@ -56,7 +56,7 @@ export const LandingHero: React.FC = () => {
 
           {/* 3. Short description */}
           <p className="text-base sm:text-lg text-ink-700 leading-relaxed font-medium max-w-2xl mx-auto">
-            نوآفر جایی است برای یاد گرفتن روشهای تازهٔ حل مسئلههای اجتماعی و فرهنگی — ابزارها، تجربههای واقعی، آموزشها و آدمهایی که کار متفاوت میکنند.
+            نوآفر جایی است برای یاد گرفتن روش‌های تازهٔ حل مسئله‌های اجتماعی و فرهنگی — ابزارها، تجربه‌های واقعی، آموزش‌ها و آدم‌هایی که کار متفاوت می‌کنند.
           </p>
 
           {/* 4. Link to /about with ArrowLeft */}

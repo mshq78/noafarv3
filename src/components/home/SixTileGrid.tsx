@@ -135,10 +135,10 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
             </p>
           </div>
 
-          {/* Bottom Label: به زودی instead of "ورود به ..." and arrow */}
+          {/* Bottom Label: به‌زودی instead of "ورود به ..." and arrow */}
           <div className="pt-6 mt-4 border-t border-ink-100 flex items-center justify-between relative z-10 text-xs font-bold">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-bold">
-              به زودی
+              به‌زودی
             </span>
           </div>
         </div>

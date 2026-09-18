@@ -240,7 +240,7 @@ export const Header: React.FC = () => {
                   >
                     <span>{sec.nameFa}</span>
                     <span className="text-[10px] font-medium text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
-                      به زودی
+                      به‌زودی
                     </span>
                   </div>
                 );
