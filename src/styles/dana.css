@@ -1,0 +1,79 @@
+/* ==========================================================================
+   NOAFAR TYPOGRAPHY — SELF-HOSTED DANA
+   The brand guideline's typeface. Nine static weights, converted from the
+   supplied TTFs to woff2 (~26KB each) and served from /public/fonts/dana.
+   Vazirmatn stays in the stack below Dana as the fallback for any glyph Dana
+   does not carry.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/dana/dana-thin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/fonts/dana/dana-extralight.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/dana/dana-light.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/dana/dana-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/dana/dana-medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/dana/dana-demibold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/dana/dana-bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/dana/dana-extrabold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Dana';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/dana/dana-black.woff2') format('woff2');
+}

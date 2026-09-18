@@ -1,9 +1,10 @@
+@import "./styles/dana.css";
 @import "./styles/vazirmatn.css";
 @import "tailwindcss";
 
 @theme {
   --font-dana: "Dana", "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-sans: "Vazirmatn", "Dana", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Dana", "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Ink / Neutral Palette */
   --color-ink-50: #f8fafc;
