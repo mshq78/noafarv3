@@ -11,15 +11,6 @@ loadDotenv();
  */
 export const configProblems: string[] = [];
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value || !value.trim()) {
-    configProblems.push(`متغیر محیطی «${name}» تنظیم نشده است.`);
-    return '';
-  }
-  return value.trim();
-}
-
 function optional(name: string, fallback = ''): string {
   const value = process.env[name];
   return value === undefined || value === null ? fallback : value.trim();
@@ -82,13 +73,49 @@ function resolveSessionSecret(): string {
   return crypto.randomBytes(48).toString('hex');
 }
 
+
+/**
+ * A Postgres integration does not always write `DATABASE_URL`. Neon's Vercel
+ * integration, for instance, injects `POSTGRES_URL` and its unpooled twin, and
+ * a project can end up with one name set by hand and another by the
+ * integration — pointing at different databases. Preferring an explicit
+ * `DATABASE_URL` and recording which name won turns "wrong password" into a
+ * question with an answer.
+ */
+const DATABASE_URL_NAMES = [
+  'DATABASE_URL',
+  'POSTGRES_URL',
+  'DATABASE_URL_UNPOOLED',
+  'POSTGRES_URL_NON_POOLING',
+] as const;
+
+let DATABASE_URL_SOURCE = '';
+
+function resolveDatabaseUrl(): string {
+  for (const name of DATABASE_URL_NAMES) {
+    const value = optional(name);
+    if (value) {
+      DATABASE_URL_SOURCE = name;
+      return value;
+    }
+  }
+  if (IS_PRODUCTION) {
+    configProblems.push(
+      `متغیر محیطی «DATABASE_URL» تنظیم نشده است (نام‌های پذیرفته‌شده: ${DATABASE_URL_NAMES.join('، ')}).`,
+    );
+  }
+  return '';
+}
+
 export const env = {
   nodeEnv: NODE_ENV,
   isProduction: IS_PRODUCTION,
   port: num('PORT', 4000),
   host: optional('HOST', '0.0.0.0'),
 
-  databaseUrl: IS_PRODUCTION ? required('DATABASE_URL') : optional('DATABASE_URL'),
+  databaseUrl: resolveDatabaseUrl(),
+  /** Which variable the connection string came from, for diagnostics. */
+  databaseUrlSource: DATABASE_URL_SOURCE,
   databaseSsl: bool('DATABASE_SSL', false),
   databasePoolMax: num('DATABASE_POOL_MAX', IS_SERVERLESS ? 1 : 10),
 

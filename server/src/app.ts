@@ -167,6 +167,41 @@ function describeDatabaseFailure(error: unknown): string | null {
   return null;
 }
 
+
+/**
+ * Describes the connection the service is actually using, so a credentials
+ * failure can be diagnosed without anyone reading the secret back out. It
+ * reports the shape of the string — where it came from, which host and role,
+ * how long the password is — and never the password itself.
+ */
+function describeConnection(): Record<string, unknown> {
+  const raw = env.databaseUrl;
+  if (!raw) return { source: null, note: 'هیچ رشتهٔ اتصالی تنظیم نشده است.' };
+  try {
+    const parsed = new URL(raw);
+    return {
+      source: env.databaseUrlSource,
+      host: parsed.hostname,
+      port: parsed.port || '5432',
+      user: decodeURIComponent(parsed.username),
+      database: parsed.pathname.replace(/^\//, ''),
+      passwordLength: decodeURIComponent(parsed.password).length,
+      params: Object.fromEntries(parsed.searchParams),
+      sslEnabled: env.databaseSsl,
+    };
+  } catch {
+    // A value that will not parse is almost always a paste accident: the
+    // variable name left in front of the URL, surrounding quotes, or a line
+    // break pulled in with it.
+    return {
+      source: env.databaseUrlSource,
+      note: 'رشتهٔ اتصال قابل تجزیه نیست؛ احتمالاً نام متغیر، گیومه یا خط تازه همراهش کپی شده است.',
+      startsWith: raw.slice(0, 12),
+      length: raw.length,
+    };
+  }
+}
+
 // ------------------------------------------------------ health check -------
 /**
  * Declared before every other `/api` handler so it still answers when the
@@ -185,13 +220,21 @@ app.get('/api/health', (_req, res) => {
   }
   pool
     .query('SELECT 1')
-    .then(() => res.json({ ok: true, env: env.nodeEnv }))
+    .then(() =>
+      res.json({
+        ok: true,
+        env: env.nodeEnv,
+        connection: describeConnection(),
+      }),
+    )
     .catch((error: unknown) => {
       res.status(503).json({
         ok: false,
         env: env.nodeEnv,
         code: 'database_unavailable',
         message: describeDatabaseFailure(error) ?? 'اتصال به پایگاه‌داده برقرار نیست.',
+        pgCode: String((error as { code?: string })?.code ?? '') || undefined,
+        connection: describeConnection(),
       });
     });
 });
