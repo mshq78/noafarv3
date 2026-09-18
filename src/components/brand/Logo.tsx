@@ -19,10 +19,12 @@ export const Logo: React.FC<LogoProps> = ({
   showText = true,
   invert = false,
 }) => {
+  // In the supplied artwork the mark and the logotype are the same height and
+  // sit about 0.18 of that height apart, so the two scales move together.
   const markSizes = {
-    sm: 28,
-    md: 36,
-    lg: 48,
+    sm: 24,
+    md: 32,
+    lg: 44,
   };
 
   const textHeights = {
@@ -56,10 +58,16 @@ export const Logo: React.FC<LogoProps> = ({
     <Link
       to="/"
       id="brand-logo-link"
-      className={`inline-flex items-center gap-3 text-ink-900 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-sky-600 rounded-md ${className}`}
+      className={`inline-flex items-center gap-1.5 text-ink-900 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-sky-600 rounded-md ${className}`}
       aria-label="نوآفر - بازگشت به صفحه اصلی"
     >
-      <NoafarMark size={markSizes[size]} accent={markAccent} />
+      <NoafarMark
+        size={markSizes[size]}
+        accent={markAccent}
+        // On the dark footer the pink cluster loses contrast, so the dots
+        // there follow the surrounding text colour instead.
+        body={invert ? 'currentColor' : undefined}
+      />
       {showText && (
         <img
           src="/brand/noafar-logotype.svg"
