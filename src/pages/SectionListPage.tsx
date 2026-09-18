@@ -10,6 +10,7 @@ import { Button, Skeleton, EmptyState } from '../components/ui';
 import { DotPattern } from '../components/brand/DotPattern';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { ComingSoonSection } from '../components/sections/ComingSoonSection';
 
 interface SectionListPageProps {
   explicitSection?: SectionSlug;
@@ -96,6 +97,12 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
     setExtraFilters({});
     setPage(1);
   };
+
+  // A portal that has not opened yet is still reachable by URL; it shows the
+  // announcement rather than an empty, filterable list of nothing.
+  if (sectionMeta.comingSoon) {
+    return <ComingSoonSection section={sectionMeta} />;
+  }
 
   return (
     <div className="min-h-screen bg-ink-50/40 py-8 sm:py-12">

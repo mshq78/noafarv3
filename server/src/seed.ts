@@ -16,9 +16,11 @@ import { MOCK_BLOG_POSTS } from '../../src/mocks/blog.js';
 /**
  * Empty or sample placeholder video URLs are dropped at seed time — the
  * player then shows its "no video uploaded yet" state until a real file is
- * attached from the admin panel.
+ * attached from the admin panel. Google's public demo clips are matched too:
+ * the sample data used to point at them, and a reintroduced copy would look
+ * like real course material.
  */
-const PLACEHOLDER_VIDEO = /sample-videos\.com/i;
+const PLACEHOLDER_VIDEO = /commondatastorage\.googleapis\.com|sample-videos\.com/i;
 
 function cleanVideoUrl(url: unknown): string | undefined {
   if (typeof url !== 'string' || !url.trim()) return undefined;

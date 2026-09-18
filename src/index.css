@@ -99,3 +99,46 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================================================
+   Portal tiles — desaturated until pointed at
+   The six-portal grid reads as one calm block and each tile takes on its own
+   brand colour only when the visitor reaches for it. Gated on a real hover-
+   capable pointer: on a touch screen there is no hover, and the tiles get
+   their colour from the in-view hook instead, so desaturating there would
+   leave them permanently grey.
+   ========================================================================== */
+@media (hover: hover) and (pointer: fine) {
+  .tile-desaturate {
+    filter: grayscale(1);
+    transition:
+      filter 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      background-color 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .tile-desaturate:hover,
+  .tile-desaturate:focus-visible,
+  .tile-desaturate:focus-within {
+    filter: grayscale(0);
+    transform: translateY(-4px);
+  }
+
+  /* A portal that has not opened yet never gains its colour. */
+  .tile-desaturate-locked {
+    filter: grayscale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-desaturate {
+    transition-duration: 1ms;
+  }
+  .tile-desaturate:hover,
+  .tile-desaturate:focus-visible,
+  .tile-desaturate:focus-within {
+    transform: none;
+  }
+}
