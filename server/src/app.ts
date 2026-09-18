@@ -41,8 +41,15 @@ app.use(
         'img-src': ["'self'", 'data:', 'blob:', 'https:'],
         'media-src': ["'self'", 'data:', 'blob:', 'https:'],
         'font-src': ["'self'"],
-        // Direct-to-storage uploads talk to the Blob API from the browser.
-        'connect-src': ["'self'", 'https://blob.vercel-storage.com', 'https://*.public.blob.vercel-storage.com'],
+        // Direct-to-storage uploads talk to the Blob API from the browser. The
+        // store's own hosts are listed too: a large file is uploaded in parts,
+        // and a store may serve either a public or a private hostname.
+        'connect-src': [
+          "'self'",
+          'https://blob.vercel-storage.com',
+          'https://*.public.blob.vercel-storage.com',
+          'https://*.private.blob.vercel-storage.com',
+        ],
         // Video lessons are embedded from these hosts and nowhere else. The
         // player accepts all three, so the policy has to list all three or the
         // frame is blocked and the lesson silently shows nothing.
