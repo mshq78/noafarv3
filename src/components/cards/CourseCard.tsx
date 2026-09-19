@@ -32,7 +32,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'norm
 
         {/* Hover / Focus Summary Overlay */}
         {course.summary && (
-          <div className="absolute inset-0 bg-ink-950/85 backdrop-blur-xs p-4 flex flex-col justify-center text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
             <span className="text-[11px] font-bold text-sky-300 mb-1">خلاصه دوره:</span>
             <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
               {course.summary}
@@ -47,7 +47,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'norm
             </Chip>
           )}
         </div>
-        <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2 py-0.5 rounded-md flex items-center gap-1 font-sans z-20">
+        <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2 py-0.5 rounded-md flex items-center gap-1 font-sans z-20 transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0">
           <Clock className="w-3.5 h-3.5" />
           <span>{formatMinutes(course.durationMinutes)}</span>
         </div>

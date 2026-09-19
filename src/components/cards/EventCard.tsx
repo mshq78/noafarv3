@@ -44,7 +44,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
 
         {/* Hover / Focus Summary Overlay */}
         {event.summary && (
-          <div className="absolute inset-0 bg-ink-950/85 backdrop-blur-xs p-4 flex flex-col justify-center text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
             <span className="text-[11px] font-bold text-pink-300 mb-1">درباره رویداد:</span>
             <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
               {event.summary}
@@ -79,7 +79,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
         </div>
 
         {/* Date banner */}
-        <div className="absolute bottom-2.5 start-2.5 bg-ink-950/80 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-sans z-20">
+        <div className="absolute bottom-2.5 start-2.5 bg-ink-950/80 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-sans z-20 transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0">
           <Calendar className="w-3.5 h-3.5 text-amber-400" />
           <span>{formatPersianDate(event.startsAt, 'D MMMM YYYY')}</span>
         </div>

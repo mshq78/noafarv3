@@ -34,7 +34,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
       >
         {/* Hover / Focus Summary Overlay */}
         {tool.summary && (
-          <div className="absolute inset-0 bg-ink-950/85 backdrop-blur-xs p-4 flex flex-col justify-center text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
             <span className="text-[11px] font-bold text-pink-300 mb-1">معرفی و کاربرد ابزار:</span>
             <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
               {tool.summary}
