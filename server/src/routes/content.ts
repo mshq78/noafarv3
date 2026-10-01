@@ -7,6 +7,7 @@ import { mapContent, mapComment, type ContentRow, type CommentRow } from '../lib
 import {
   CONTENT_COLUMNS,
   NO_VIEWER_COLUMNS,
+  PUBLIC_CONTENT_SQL,
   isSection,
   listContentRows,
   viewerColumns,
@@ -219,7 +220,7 @@ contentRouter.get(
     const pageSize = toPositiveInt(req.query.pageSize, 12, MAX_PAGE_SIZE);
     const viewerId = req.user?.id ?? null;
 
-    const conditions = [`c.section = $1`, `c.status = 'published'`];
+    const conditions = [`c.section = $1`, PUBLIC_CONTENT_SQL];
     const params: unknown[] = [section];
 
     const pushParam = (value: unknown): string => {
@@ -314,16 +315,25 @@ contentRouter.get(
       viewer = viewerColumns(params.length);
     }
 
+    // Staff may open a draft or a scheduled item by its address — that is what
+    // the admin list's "view" link and any preview need. Everyone else gets
+    // only what is live.
+    const isStaff = req.user?.role === 'operator' || req.user?.role === 'admin';
     const row = await queryOne<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.section = $1 AND c.slug = $2 AND c.status = 'published'`,
+        WHERE c.section = $1 AND c.slug = $2
+          ${isStaff ? '' : `AND ${PUBLIC_CONTENT_SQL}`}`,
       params,
     );
     if (!row) throw notFound('محتوای مورد نظر یافت نشد.');
 
-    // Fire-and-forget view counter; a failure here must not break the page.
-    query(`UPDATE content SET view_count = view_count + 1 WHERE id = $1`, [row.id]).catch(() => {});
+    // Fire-and-forget view counter; a failure here must not break the page, and
+    // a staff preview of something not yet live is not a view.
+    const isLive = row.status === 'published' && new Date(row.published_at as string | Date) <= new Date();
+    if (isLive) {
+      query(`UPDATE content SET view_count = view_count + 1 WHERE id = $1`, [row.id]).catch(() => {});
+    }
 
     res.json(mapContent(row));
   }),
@@ -346,7 +356,7 @@ contentRouter.get(
 
     // Prefer siblings in the same category, then fall back to the newest.
     const items = await listContentRows(
-      `c.status = 'published' AND c.id <> $1 AND c.section <> 'blog'`,
+      `${PUBLIC_CONTENT_SQL} AND c.id <> $1 AND c.section <> 'blog'`,
       [current.id, current.category?.slug ?? null],
       req.user?.id ?? null,
       `(c.category->>'slug' IS NOT DISTINCT FROM $2) DESC, c.published_at DESC`,

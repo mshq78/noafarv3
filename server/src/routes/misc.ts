@@ -5,7 +5,13 @@ import { requireAuth } from '../lib/auth.js';
 import { asyncRoute, badRequest, conflict, notFound } from '../lib/http.js';
 import { clientIp, rateLimit } from '../lib/rateLimit.js';
 import { mapContent, mapRegistration, type ContentRow } from '../lib/mappers.js';
-import { CONTENT_COLUMNS, NO_VIEWER_COLUMNS, isSection, viewerColumns } from '../lib/content.js';
+import {
+  CONTENT_COLUMNS,
+  NO_VIEWER_COLUMNS,
+  PUBLIC_CONTENT_SQL,
+  isSection,
+  viewerColumns,
+} from '../lib/content.js';
 import { sanitizeMultilineText, sanitizePlainText } from '../lib/sanitize.js';
 import { POINT_VALUES, awardPoints } from '../lib/points.js';
 import crypto from 'node:crypto';
@@ -42,7 +48,7 @@ miscRouter.get(
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.status = 'published'
+        WHERE ${PUBLIC_CONTENT_SQL}
           AND ($2::text = '' OR c.section = $2)
           AND (c.title ILIKE $1 ESCAPE '\\'
             OR c.summary ILIKE $1 ESCAPE '\\'
@@ -86,7 +92,7 @@ miscRouter.get(
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.section = 'blog' AND c.status = 'published'
+        WHERE c.section = 'blog' AND ${PUBLIC_CONTENT_SQL}
         ORDER BY c.published_at DESC
         LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
@@ -107,7 +113,7 @@ miscRouter.get(
     const row = await queryOne<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.section = 'blog' AND c.slug = $1 AND c.status = 'published'`,
+        WHERE c.section = 'blog' AND c.slug = $1 AND ${PUBLIC_CONTENT_SQL}`,
       params,
     );
     if (!row) throw notFound('مطلب بلاگ یافت نشد.');
@@ -179,7 +185,7 @@ miscRouter.post(
     const registration = await transaction(async (client) => {
       const event = await client.query<{ id: string; title: string; data: Record<string, unknown> }>(
         `SELECT id, title, data FROM content
-          WHERE id = $1 AND section = 'gathering' AND status = 'published'
+          WHERE id = $1 AND section = 'gathering' AND status = 'published' AND published_at <= now()
           FOR UPDATE`,
         [req.params.id],
       );
