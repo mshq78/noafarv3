@@ -24,7 +24,7 @@ import { CoursePlayer } from '../components/course/CoursePlayer';
 import { ContentActions } from '../components/content/ContentActions';
 import { CommentSection } from '../components/content/CommentSection';
 import { RelatedContent } from '../components/content/RelatedContent';
-import { AttachmentsList } from '../components/content/AttachmentsList';
+import { AttachmentsList, collectDownloads } from '../components/content/AttachmentsList';
 import { Chip, Button, Skeleton } from '../components/ui';
 import { SmartImage } from '../components/ui/SmartImage';
 import { NotFoundPage } from './NotFoundPage';
@@ -356,15 +356,16 @@ export const ContentDetailPage: React.FC = () => {
 
         {/* Detailed Body Narrative (Markdown / Paragraphs) */}
         {content.body && (
-          <div className="prose prose-ink max-w-none text-ink-800 text-sm sm:text-base leading-loose space-y-4 pt-4">
+          <div className="rich-content text-ink-800 text-sm sm:text-base leading-loose space-y-4 pt-4">
             <SafeHtml className="leading-relaxed" html={content.body} />
           </div>
         )}
 
         {/* Attachments & Worksheets */}
-        {content.attachments && content.attachments.length > 0 && (
-          <AttachmentsList attachments={content.attachments} />
-        )}
+        {(() => {
+          const downloads = collectDownloads(content as Parameters<typeof collectDownloads>[0]);
+          return downloads.length > 0 ? <AttachmentsList attachments={downloads} /> : null;
+        })()}
 
         {/* Tags / Keywords */}
         {content.tags && content.tags.length > 0 && (

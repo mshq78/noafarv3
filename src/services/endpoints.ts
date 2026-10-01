@@ -1,4 +1,5 @@
-import { API_BASE_URL, del, get, patch, post, put, request } from './api';
+import { API_BASE_URL, ApiError, del, get, patch, post, put, request } from './api';
+import { formatFileSize, toFaDigits } from '../utils/format';
 import {
   SectionSlug,
   ContentBase,
@@ -356,22 +357,33 @@ export function getMyEventRegistrations(): Promise<EventRegistration[]> {
 export interface UploadConfig {
   mode: 'blob' | 'disk' | 'disabled';
   maxBytes: { avatar: number; submission: number; media: number };
+  /** Names only. Present when uploads are off and a look-alike variable exists. */
+  candidateTokenVars?: string[];
 }
 
 let uploadConfig: Promise<UploadConfig> | null = null;
 
 /**
- * Asked once per page load. On a serverless host files go straight from the
- * browser to object storage, because the function body is capped well below
- * the size of a lesson video and its disk does not survive the request; a
- * self-hosted server still takes the multipart POST.
+ * Asked once per page load, but only a successful answer is remembered. It used
+ * to turn any failure into `mode: 'disk'` and cache that: on a serverless host
+ * the disk route cannot work, so one failed request at page load made every
+ * later upload fail with a misleading error until the tab was refreshed. A
+ * failure now surfaces with the server's own message and the next upload asks
+ * again.
+ *
+ * On a serverless host files go straight from the browser to object storage,
+ * because the function body is capped well below the size of a lesson video and
+ * its disk does not survive the request; a self-hosted server still takes the
+ * multipart POST.
  */
 export function getUploadConfig(): Promise<UploadConfig> {
   if (!uploadConfig) {
-    uploadConfig = get<UploadConfig>('/uploads/config').catch(() => ({
-      mode: 'disk' as const,
-      maxBytes: { avatar: 2_097_152, submission: 4_194_304, media: 8_388_608 },
-    }));
+    uploadConfig = get<UploadConfig>('/uploads/config', undefined, { redirectOnUnauthorized: false }).catch(
+      (error: unknown) => {
+        uploadConfig = null;
+        throw error;
+      },
+    );
   }
   return uploadConfig;
 }
@@ -389,34 +401,211 @@ function safeName(name: string): string {
   return name.replace(/[^\p{Letter}\p{Number}._-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'file';
 }
 
-async function uploadToBlob(folder: string, file: File): Promise<MediaAsset> {
-  const { upload: blobUpload } = await import('@vercel/blob/client');
-  const result = await blobUpload(`${folder}/${safeName(file.name)}`, file, {
-    access: 'public',
-    handleUploadUrl: `${API_BASE_URL}/uploads/blob`,
-    // The upload route is state-changing, so it needs the same header every
-    // other mutating request carries or the CSRF guard turns it away.
-    headers: { 'X-Noafar-Client': 'web' },
+/**
+ * How long an upload may go without making progress before it is given up on.
+ *
+ * The Blob client retries a failed request ten times with exponential backoff
+ * (1s, 2s, 4s … 512s, each stretched by up to 2x), so a request that cannot
+ * connect keeps the caller waiting for between roughly 17 and 34 minutes. To
+ * the person watching the spinner that is "forever". An abort signal alone does
+ * not help: the client only looks at it when the next attempt starts, which can
+ * be minutes away. So the wait itself is raced against this timer.
+ */
+const UPLOAD_IDLE_TIMEOUT_MS = 30_000;
+
+function uploadTimeoutError(idleMs: number): ApiError {
+  return new ApiError(
+    `بارگذاری فایل بیش از ${toFaDigits(Math.round(idleMs / 1000))} ثانیه پیشرفتی نداشت و متوقف شد. ` +
+      'اتصال اینترنت (و فیلترشکن یا افزونهٔ مسدودکننده) را بررسی کنید و دوباره تلاش کنید.',
+    0,
+    'upload_timeout',
+  );
+}
+
+/**
+ * Runs `run` and rejects if `touch` is not called again within `idleMs`. On
+ * timeout the signal is aborted too, so the work stops retrying in the
+ * background instead of finishing a minute later behind a closed dialog.
+ */
+function withIdleTimeout<T>(
+  idleMs: number,
+  run: (signal: AbortSignal, touch: () => void) => Promise<T>,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+
+    const finish = (settle: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      settle();
+    };
+    const arm = () => {
+      if (settled) return;
+      clearTimeout(timer);
+      timer = setTimeout(
+        () =>
+          finish(() => {
+            controller.abort();
+            reject(uploadTimeoutError(idleMs));
+          }),
+        idleMs,
+      );
+    };
+
+    arm();
+    Promise.resolve()
+      .then(() => run(controller.signal, arm))
+      .then(
+        (value) => finish(() => resolve(value)),
+        (error: unknown) => finish(() => reject(error)),
+      );
   });
-  return {
-    id: result.pathname,
-    type: mediaTypeOf(file),
-    url: result.url,
-    fileName: file.name.slice(0, 200),
-    fileSizeBytes: file.size,
-  };
+}
+
+/**
+ * Turns whatever an upload threw into the one error the UI shows. The Blob
+ * client reports failures as plain `Error`s whose only identity is their text,
+ * so they are matched by message.
+ */
+function toUploadError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const make = (text: string, code: string) => new ApiError(text, 0, code, error);
+
+  if (/network request (failed|timed out)|failed to fetch|networkerror|load failed/i.test(message)) {
+    return make(
+      'ارتباط با فضای ذخیره‌سازی برقرار نشد. اتصال اینترنت و فیلترشکن یا افزونهٔ مسدودکننده را بررسی کنید.',
+      'upload_network',
+    );
+  }
+  if (/access denied/i.test(message)) {
+    return make(
+      'فضای ذخیره‌سازی مجوز بارگذاری را نپذیرفت. اگر توکن Blob را تازه تنظیم کرده‌اید، باید یک استقرار جدید (Redeploy) انجام شود.',
+      'upload_denied',
+    );
+  }
+  if (/file is too large/i.test(message)) return make('حجم فایل بیش از حد مجاز است.', 'file_too_large');
+  if (/content type/i.test(message)) return make('نوع این فایل برای بارگذاری مجاز نیست.', 'unsupported_media_type');
+  if (/token has expired/i.test(message)) {
+    return make('مجوز بارگذاری منقضی شد؛ دوباره تلاش کنید.', 'upload_token_expired');
+  }
+  if (/store (does not exist|has been suspended)/i.test(message)) {
+    return make('فضای ذخیره‌سازی (Blob) پروژه وجود ندارد یا معلق شده است.', 'upload_store');
+  }
+  if (/not available|service_unavailable/i.test(message)) {
+    return make('سرویس ذخیره‌سازی موقتاً در دسترس نیست؛ کمی بعد دوباره تلاش کنید.', 'upload_unavailable');
+  }
+  if (/aborted/i.test(message)) return make('بارگذاری لغو شد.', 'upload_aborted');
+  return make('بارگذاری فایل ناموفق بود. دوباره تلاش کنید.', 'upload_failed');
+}
+
+/** The text to show for a failed upload, whatever was thrown. */
+export function uploadErrorMessage(error: unknown): string {
+  return toUploadError(error).message;
+}
+
+/**
+ * The Blob client discards our server's reason when it refuses the token
+ * request — a 401, 403 or 429 all become "Failed to retrieve the client token".
+ * Asking the route again, ourselves, recovers the real answer.
+ */
+async function explainTokenRefusal(folder: string, file: File, original: unknown): Promise<ApiError> {
+  try {
+    await request('/uploads/blob', {
+      method: 'POST',
+      body: {
+        type: 'blob.generate-client-token',
+        payload: { pathname: `${folder}/${safeName(file.name)}`, clientPayload: null, multipart: false },
+      },
+      redirectOnUnauthorized: false,
+    });
+  } catch (error) {
+    return toUploadError(error);
+  }
+  // The route accepts the same request now, so the first refusal was transient.
+  return new ApiError('دریافت مجوز بارگذاری ناموفق بود؛ دوباره تلاش کنید.', 0, 'upload_token', original);
+}
+
+async function uploadToBlob(folder: string, file: File): Promise<MediaAsset> {
+  try {
+    const { upload: blobUpload } = await import('@vercel/blob/client');
+    const result = await withIdleTimeout(UPLOAD_IDLE_TIMEOUT_MS, (signal, touch) =>
+      blobUpload(`${folder}/${safeName(file.name)}`, file, {
+        access: 'public',
+        handleUploadUrl: `${API_BASE_URL}/uploads/blob`,
+        // The upload route is state-changing, so it needs the same header every
+        // other mutating request carries or the CSRF guard turns it away.
+        headers: { 'X-Noafar-Client': 'web' },
+        abortSignal: signal,
+        // Every progress tick proves the transfer is alive and restarts the clock.
+        onUploadProgress: touch,
+      }),
+    );
+    return {
+      id: result.pathname,
+      type: mediaTypeOf(file),
+      url: result.url,
+      fileName: file.name.slice(0, 200),
+      fileSizeBytes: file.size,
+    };
+  } catch (error) {
+    if (error instanceof Error && /retrieve the client token/i.test(error.message)) {
+      throw await explainTokenRefusal(folder, file, error);
+    }
+    throw error;
+  }
 }
 
 async function uploadToDisk(endpoint: string, file: File): Promise<MediaAsset> {
   const formData = new FormData();
   formData.append('file', file);
-  return request<MediaAsset>(endpoint, { method: 'POST', body: formData });
+  // A plain POST reports no progress, so allow a floor plus time for the bytes.
+  const budgetMs = 60_000 + Math.ceil(file.size / 65_536) * 1_000;
+  return withIdleTimeout(budgetMs, (signal) =>
+    request<MediaAsset>(endpoint, { method: 'POST', body: formData, signal }),
+  );
 }
 
-async function upload(endpoint: string, folder: string, file: File): Promise<MediaAsset> {
-  const config = await getUploadConfig();
-  if (config.mode === 'blob') return uploadToBlob(folder, file);
-  return uploadToDisk(endpoint, file);
+const UPLOADS_DISABLED_TEXT =
+  'بارگذاری فایل روی این میزبان فعال نیست. فضای ذخیره‌سازی (Vercel Blob) به پروژه وصل نشده یا توکن آن ' +
+  '(BLOB_READ_WRITE_TOKEN) پس از تنظیم هنوز در یک استقرار جدید (Redeploy) اعمال نشده است.';
+
+const SIZE_LIMIT_OF: Record<'avatars' | 'submissions' | 'media', keyof UploadConfig['maxBytes']> = {
+  avatars: 'avatar',
+  submissions: 'submission',
+  media: 'media',
+};
+
+async function upload(
+  endpoint: string,
+  folder: 'avatars' | 'submissions' | 'media',
+  file: File,
+): Promise<MediaAsset> {
+  try {
+    if (file.size === 0) throw new ApiError('فایل انتخاب‌شده خالی است.', 0, 'empty_file');
+
+    const config = await getUploadConfig();
+    if (config.mode === 'disabled') throw new ApiError(UPLOADS_DISABLED_TEXT, 503, 'uploads_disabled');
+
+    const max = config.maxBytes?.[SIZE_LIMIT_OF[folder]];
+    if (max && file.size > max) {
+      throw new ApiError(
+        `حجم فایل (${formatFileSize(file.size)}) بیش از حد مجاز (${formatFileSize(max)}) است.`,
+        413,
+        'file_too_large',
+      );
+    }
+
+    return config.mode === 'blob' ? await uploadToBlob(folder, file) : await uploadToDisk(endpoint, file);
+  } catch (error) {
+    // The raw error is what a developer needs; the person sees the sentence.
+    // eslint-disable-next-line no-console
+    console.error(`[noafar][upload:${folder}] «${file.name}» (${file.size} B, ${file.type || '?'})`, error);
+    throw toUploadError(error);
+  }
 }
 
 export function uploadAvatar(file: File): Promise<MediaAsset> {

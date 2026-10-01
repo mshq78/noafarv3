@@ -17,6 +17,15 @@ export function isSection(value: unknown): value is Section {
   return typeof value === 'string' && (SECTIONS as readonly string[]).includes(value);
 }
 
+/**
+ * What the public may see: published, and whose publication time has come.
+ * A row can be `published` with a `published_at` in the future — that is how a
+ * scheduled item is stored — and it stays out of every public query until the
+ * clock catches up, with no job needed to flip a flag. Anything that lists or
+ * opens content for visitors must use this; only staff previews skip it.
+ */
+export const PUBLIC_CONTENT_SQL = `c.status = 'published' AND c.published_at <= now()`;
+
 export const CONTENT_COLUMNS = `c.id, c.section, c.slug, c.title, c.summary, c.body,
   c.hero_image, c.gallery, c.attachments, c.category, c.tags, c.author, c.data,
   c.status, c.view_count, c.like_count, c.comment_count, c.published_at`;
@@ -51,7 +60,7 @@ export async function findContentBySlug(
     `SELECT ${CONTENT_COLUMNS}, ${viewer}
        FROM content c
       WHERE c.section = $1 AND c.slug = $2
-        ${includeUnpublished ? '' : `AND c.status = 'published'`}`,
+        ${includeUnpublished ? '' : `AND ${PUBLIC_CONTENT_SQL}`}`,
     params,
   );
   return row ? mapContent(row) : null;

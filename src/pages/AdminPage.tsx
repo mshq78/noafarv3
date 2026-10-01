@@ -51,6 +51,7 @@ import {
   EventRegistration,
   User,
   Category,
+  MediaAsset,
 } from '../types';
 import {
   adminGetAllSubmissions,
@@ -79,10 +80,12 @@ import {
 } from '../services/endpoints';
 import { ApiError } from '../services/api';
 import { isOperatorRole } from '../services/auth';
-import { Button, Input, Textarea, Chip, Modal, RichTextEditor, FileUpload } from '../components/ui';
+import { Button, Input, Textarea, Chip, Modal, RichTextEditor, MediaUploadField } from '../components/ui';
+import { ScheduleField } from '../components/admin/ScheduleField';
 import { useToast } from '../components/ui/Toast';
 import { toFaDigits } from '../utils/format';
 import { formatPersianDate } from '../utils/date';
+import { formatIranDateTime, fromIranDateTime, toIranDateTime, type IranDateTime } from '../utils/jalali';
 import { cn } from '../utils/cn';
 
 type AdminTab =
@@ -95,6 +98,40 @@ type AdminTab =
   | 'users'
   | 'backup'
   | 'settings';
+
+type SaveMode = 'default' | 'draft' | 'publish' | 'schedule';
+type PublishState = 'draft' | 'scheduled' | 'published' | 'archived';
+
+/**
+ * Where an item stands for the public. `publishStatus` is only sent for rows
+ * that are not `published`; a published row whose time has not come yet is
+ * scheduled, because every public query also requires `published_at <= now()`.
+ */
+function publishStateOf(item: Pick<ContentBase, 'publishedAt'>): PublishState {
+  const status = (item as { publishStatus?: string }).publishStatus;
+  if (status === 'draft' || status === 'archived') return status;
+  const at = item.publishedAt ? new Date(item.publishedAt).getTime() : 0;
+  return at > Date.now() ? 'scheduled' : 'published';
+}
+
+const PUBLISH_STATE_LABEL: Record<PublishState, string> = {
+  published: 'منتشرشده',
+  scheduled: 'زمان‌بندی‌شده',
+  draft: 'پیش‌نویس',
+  archived: 'بایگانی',
+};
+
+const PUBLISH_STATE_CLASS: Record<PublishState, string> = {
+  published: 'bg-emerald-100 text-emerald-800',
+  scheduled: 'bg-sky-100 text-sky-800',
+  draft: 'bg-amber-100 text-amber-800',
+  archived: 'bg-ink-100 text-ink-600',
+};
+
+/** Tomorrow at 09:00 Iran time: a sensible default that is never in the past. */
+function defaultSchedule(): IranDateTime {
+  return { ...toIranDateTime(Date.now() + 24 * 3_600_000), hour: 9, minute: 0 };
+}
 
 export const AdminPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -142,6 +179,13 @@ export const AdminPage: React.FC = () => {
     capacity: 50,
     readingMinutes: 5,
   });
+
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState<IranDateTime>(defaultSchedule);
+  const [savingMode, setSavingMode] = useState<SaveMode | null>(null);
+  /** A file still on its way up must not be left out of the save that follows. */
+  const [busyUploads, setBusyUploads] = useState({ image: false, pdf: false });
+  const [contentFilterState, setContentFilterState] = useState<string>('all');
 
   // Submission action modal
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -238,7 +282,9 @@ export const AdminPage: React.FC = () => {
       body: '',
       categorySlug: categoriesList[0]?.slug || 'general',
       tagsString: 'نوآوری اجتماعی, توسعه محلی',
-      imageUrl: '/mock/course-cover.svg',
+      imageUrl: '',
+      pdf: null,
+      otherAttachments: [],
       duration: '۴ ساعت',
       level: 'مقدماتی تا پیشرفته',
       author: 'دبیرخانه نوآفر',
@@ -249,13 +295,29 @@ export const AdminPage: React.FC = () => {
       capacity: 50,
       readingMinutes: 6,
     });
+    setScheduleOpen(false);
+    setScheduleAt(defaultSchedule());
     setIsContentModalOpen(true);
   };
 
   const handleOpenEditContent = (item: ContentBase) => {
     setEditingContent(item);
     setContentFormSection(item.sectionSlug as SectionSlug);
+
+    // The book file lives in `attachments` (what the detail page lists) and in
+    // `downloadUrl`. Show whichever exists as the current file, and keep every
+    // other attachment so replacing the PDF never drops a worksheet.
+    const attachments = (item.attachments ?? []) as MediaAsset[];
+    const downloadUrl = (item as { downloadUrl?: string }).downloadUrl;
+    const primaryPdf =
+      attachments.find((a) => a.type === 'pdf' && (!downloadUrl || a.url === downloadUrl)) ??
+      attachments.find((a) => a.type === 'pdf');
+    const currentPdf: MediaAsset | null =
+      primaryPdf ?? (downloadUrl ? { id: 'pdf-1', type: 'pdf', url: downloadUrl } : null);
+
     setContentFormData({
+      pdf: currentPdf,
+      otherAttachments: attachments.filter((a) => a !== primaryPdf),
       title: item.title,
       slug: item.slug,
       summary: item.summary || '',
@@ -276,15 +338,41 @@ export const AdminPage: React.FC = () => {
       startsAt: (item as any).startsAt || '',
       readingMinutes: (item as any).readingMinutes || 5,
     });
+    if (publishStateOf(item) === 'scheduled') {
+      setScheduleAt(toIranDateTime(item.publishedAt));
+      setScheduleOpen(true);
+    } else {
+      setScheduleAt(defaultSchedule());
+      setScheduleOpen(false);
+    }
     setIsContentModalOpen(true);
   };
 
-  const handleSaveContent = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveContent = async (requested: SaveMode) => {
+    if (isSavingContent) return;
 
+    if (busyUploads.image || busyUploads.pdf) {
+      showToast('بارگذاری فایل هنوز تمام نشده است؛ چند لحظه صبر کنید.', 'error');
+      return;
+    }
     if (!contentFormData.title?.trim()) {
       showToast('عنوان محتوا الزامی است.', 'error');
       return;
+    }
+
+    // What the primary button means depends on where the item stands: publish
+    // something new or not yet live, simply save something already live.
+    const liveNow = editingContent ? publishStateOf(editingContent) === 'published' : false;
+    const mode: 'draft' | 'publish' | 'schedule' | 'keep' =
+      requested === 'default' ? (editingContent && liveNow ? 'keep' : 'publish') : requested;
+
+    let scheduledFor: Date | null = null;
+    if (mode === 'schedule') {
+      scheduledFor = fromIranDateTime(scheduleAt);
+      if (scheduledFor.getTime() < Date.now() + 60_000) {
+        showToast('زمان انتشار باید دست‌کم چند دقیقه بعد از اکنون باشد.', 'error');
+        return;
+      }
     }
 
     const tags = contentFormData.tagsString
@@ -328,6 +416,9 @@ export const AdminPage: React.FC = () => {
       if (contentFormData.imageUrl) {
         data.coverImage = { id: 'cover-1', type: 'image', url: contentFormData.imageUrl };
       }
+      // An empty value is a deliberate removal: the API clears keys it is sent
+      // empty, which is how a replaced or deleted PDF stops being offered.
+      data.downloadUrl = (contentFormData.pdf as MediaAsset | null)?.url ?? '';
     }
 
     const payload: Record<string, unknown> = {
@@ -344,24 +435,66 @@ export const AdminPage: React.FC = () => {
       data,
     };
 
+    if (section === 'library') {
+      const pdf = contentFormData.pdf as MediaAsset | null;
+      payload.attachments = [
+        ...((contentFormData.otherAttachments ?? []) as MediaAsset[]),
+        ...(pdf
+          ? [
+              {
+                id: pdf.id || 'pdf-1',
+                type: 'pdf',
+                url: pdf.url,
+                fileName: pdf.fileName,
+                fileSizeBytes: pdf.fileSizeBytes,
+              },
+            ]
+          : []),
+      ];
+    }
+
+    // Publication state. A new item is stamped "now" by the API when no time is
+    // sent; one that is being published after being a draft or scheduled gets
+    // the current time so it sorts as newly published, not as when it was drafted.
+    if (mode === 'draft') {
+      payload.status = 'draft';
+    } else if (mode === 'schedule' && scheduledFor) {
+      payload.status = 'published';
+      payload.publishedAt = scheduledFor.toISOString();
+    } else if (mode === 'publish') {
+      payload.status = 'published';
+      if (editingContent && !liveNow) payload.publishedAt = new Date().toISOString();
+    }
+
     setIsSavingContent(true);
+    setSavingMode(requested);
     try {
       if (editingContent) {
         await adminUpdateContent(editingContent.id, payload);
-        showToast('محتوا با موفقیت بروزرسانی شد.', 'success');
       } else {
         await adminAddContent(section, payload);
-        showToast('محتوای جدید با موفقیت ایجاد و منتشر شد.', 'success');
       }
+      showToast(
+        mode === 'draft'
+          ? 'پیش‌نویس ذخیره شد.'
+          : mode === 'schedule' && scheduledFor
+            ? `انتشار برای ${formatIranDateTime(scheduledFor)} (به وقت ایران) زمان‌بندی شد.`
+            : editingContent
+              ? mode === 'publish'
+                ? 'محتوا منتشر شد.'
+                : 'محتوا با موفقیت بروزرسانی شد.'
+              : 'محتوای جدید با موفقیت ایجاد و منتشر شد.',
+        'success',
+      );
       setIsContentModalOpen(false);
       triggerRefresh();
     } catch (error) {
-      showToast(
-        error instanceof ApiError ? error.message : 'ذخیره محتوا ناموفق بود.',
-        'error',
-      );
+      // eslint-disable-next-line no-console
+      console.error('[noafar][admin] ذخیرهٔ محتوا ناموفق بود', error);
+      showToast(error instanceof ApiError ? error.message : 'ذخیره محتوا ناموفق بود.', 'error');
     } finally {
       setIsSavingContent(false);
+      setSavingMode(null);
     }
   };
 
@@ -594,6 +727,7 @@ export const AdminPage: React.FC = () => {
   // Filtered contents
   const filteredContent = allContent.filter((item) => {
     if (contentFilterSection !== 'all' && item.sectionSlug !== contentFilterSection) return false;
+    if (contentFilterState !== 'all' && publishStateOf(item) !== contentFilterState) return false;
     if (contentSearchQuery.trim()) {
       const q = contentSearchQuery.toLowerCase();
       return item.title.toLowerCase().includes(q) || item.summary?.toLowerCase().includes(q);
@@ -999,7 +1133,7 @@ export const AdminPage: React.FC = () => {
                                 {sub.kind === 'idea' ? 'جرقه ایده' : 'روایت تجربه'}
                               </span>
                             </div>
-                            <div className="text-ink-500 line-clamp-1 mt-0.5 prose-sm prose-ink *:!m-0">
+                            <div className="text-ink-500 line-clamp-1 mt-0.5 rich-content rich-content-flat">
                               {sub.summary ? sub.summary : htmlToPlainText(sub.body, 240)}
                             </div>
                           </div>
@@ -1121,6 +1255,30 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-bold text-ink-700 me-1">وضعیت انتشار:</span>
+              {[
+                { slug: 'all', label: 'همه' },
+                { slug: 'published', label: 'منتشرشده' },
+                { slug: 'scheduled', label: 'زمان‌بندی‌شده' },
+                { slug: 'draft', label: 'پیش‌نویس' },
+                { slug: 'archived', label: 'بایگانی' },
+              ].map((st) => (
+                <button
+                  key={st.slug}
+                  onClick={() => setContentFilterState(st.slug)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer',
+                    contentFilterState === st.slug
+                      ? 'bg-ink-900 text-white shadow-xs'
+                      : 'bg-ink-50 text-ink-600 hover:bg-ink-100'
+                  )}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+
             {/* Content Table */}
             <div className="bg-white rounded-2xl border border-ink-200 shadow-2xs overflow-hidden">
               <div className="overflow-x-auto">
@@ -1130,6 +1288,7 @@ export const AdminPage: React.FC = () => {
                       <th className="py-3 px-4 text-start">عنوان محتوا</th>
                       <th className="py-3 px-4 text-start">بخش</th>
                       <th className="py-3 px-4 text-start">دسته‌بندی</th>
+                      <th className="py-3 px-4 text-start">وضعیت</th>
                       <th className="py-3 px-4 text-start">لایک / دیدگاه</th>
                       <th className="py-3 px-4 text-start">تاریخ انتشار</th>
                       <th className="py-3 px-4 text-center">عملیات</th>
@@ -1148,18 +1307,30 @@ export const AdminPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-ink-600">{item.category?.nameFa || 'عمومی'}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded font-bold text-[11px]',
+                              PUBLISH_STATE_CLASS[publishStateOf(item)]
+                            )}
+                          >
+                            {PUBLISH_STATE_LABEL[publishStateOf(item)]}
+                          </span>
+                        </td>
                         <td className="py-3 px-4 text-ink-600 font-sans">
                           {toFaDigits(item.likeCount)} لایک • {toFaDigits(item.commentCount)} دیدگاه
                         </td>
                         <td className="py-3 px-4 text-ink-500 font-sans">
-                          {formatPersianDate(item.publishedAt)}
+                          {publishStateOf(item) === 'scheduled'
+                            ? formatIranDateTime(item.publishedAt)
+                            : formatPersianDate(item.publishedAt)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1.5">
                             <Link
                               to={`/${item.sectionSlug}/${item.slug}`}
                               className="p-1.5 text-ink-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
-                              title="مشاهده زنده در سایت"
+                              title={publishStateOf(item) === 'published' ? 'مشاهده زنده در سایت' : 'پیش‌نمایش (فقط برای مدیران)'}
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
@@ -1320,7 +1491,7 @@ export const AdminPage: React.FC = () => {
                       <div>
                         <span className="block text-xs text-ink-500 mb-2">متن کامل:</span>
                         <SafeHtml
-                          className="text-ink-800 leading-relaxed prose prose-sm prose-ink max-w-none"
+                          className="text-ink-800 leading-relaxed rich-content"
                           html={sub.body}
                         />
                       </div>
@@ -1673,7 +1844,11 @@ export const AdminPage: React.FC = () => {
           </div>
           
           <div className="max-w-4xl mx-auto w-full px-4 py-8 pb-32">
-            <form onSubmit={handleSaveContent} className="space-y-6 text-sm">
+            {/* No native validation and no submit button: Enter in a text field must not
+                  publish, and a browser tooltip on a field scrolled out of view is
+                  exactly the "button does nothing" this form used to have. Every
+                  action below validates itself and answers with a message. */}
+            <form noValidate onSubmit={(e) => e.preventDefault()} className="space-y-6 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="font-bold text-ink-800">بخش مربوطه</label>
@@ -1721,9 +1896,11 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-ink-800">نامک انگلیسی (Slug)</label>
+                  <label className="font-bold text-ink-800">
+                    نامک (Slug){' '}
+                    <span className="font-normal text-ink-400 text-xs">— اختیاری، از عنوان ساخته می‌شود</span>
+                  </label>
                   <Input
-                    required
                     dir="ltr"
                     value={contentFormData.slug}
                     onChange={(e) => setContentFormData({ ...contentFormData, slug: e.target.value })}
@@ -1736,7 +1913,7 @@ export const AdminPage: React.FC = () => {
                 <label className="font-bold text-ink-800">خلاصه کوتاه</label>
                 <RichTextEditor
                   value={contentFormData.summary}
-                  onChange={(html) => setContentFormData({ ...contentFormData, summary: html })}
+                  onChange={(html) => setContentFormData((prev: any) => ({ ...prev, summary: html }))}
                   placeholder="چکیده‌ای در ۱ یا ۲ جمله برای نمایش در کارت‌ها..."
                   minHeight="120px"
                 />
@@ -1746,7 +1923,7 @@ export const AdminPage: React.FC = () => {
                 <label className="font-bold text-ink-800">متن کامل و شرح تفصیلی (WYSIWYG)</label>
                 <RichTextEditor
                   value={contentFormData.body}
-                  onChange={(html) => setContentFormData({ ...contentFormData, body: html })}
+                  onChange={(html) => setContentFormData((prev: any) => ({ ...prev, body: html }))}
                   placeholder="متن اصلی درسنامه، راهنما، روایت یا جزئیات را بنویسید یا تصویر و جداول را درج کنید..."
                   minHeight="300px"
                 />
@@ -1762,32 +1939,40 @@ export const AdminPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <FileUpload
-                    label="آپلود تصویر شاخص"
-                    accept="image/*"
-                    value={contentFormData.imageUrl.length > 100 ? 'تصویر آپلود شده' : null}
-                    onChange={async (file) => {
-                      if (!file) {
-                        setContentFormData({ ...contentFormData, imageUrl: '' });
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = (evt) => {
-                        setContentFormData({ ...contentFormData, imageUrl: evt.target?.result as string });
-                      };
-                      reader.readAsDataURL(file);
-                    }}
-                    helperText="امکان آپلود از کامپیوتر یا وارد کردن آدرس اینترنتی (در کادر زیر)"
+                <div className="space-y-2 flex flex-col justify-end">
+                  <MediaUploadField
+                    label="تصویر شاخص"
+                    kind="image"
+                    value={contentFormData.imageUrl ? { url: contentFormData.imageUrl } : null}
+                    onChange={(asset) =>
+                      setContentFormData((prev: any) => ({ ...prev, imageUrl: asset?.url ?? '' }))
+                    }
+                    onBusyChange={(busy) => setBusyUploads((prev) => ({ ...prev, image: busy }))}
+                    helperText="تصویر روی فضای ذخیره‌سازی بارگذاری می‌شود و فقط نشانی آن ذخیره می‌شود"
                   />
                   <Input
                     dir="ltr"
                     value={contentFormData.imageUrl}
-                    onChange={(e) => setContentFormData({ ...contentFormData, imageUrl: e.target.value })}
-                    placeholder="یا نشانی URL تصویر (مثال: /mock/image.png)"
+                    onChange={(e) =>
+                      setContentFormData((prev: any) => ({ ...prev, imageUrl: e.target.value }))
+                    }
+                    placeholder="یا نشانی URL تصویر (مثال: https://…/image.png)"
                   />
                 </div>
               </div>
+
+              {contentFormSection === 'library' && (
+                <div className="p-4 bg-ink-50 rounded-xl">
+                  <MediaUploadField
+                    label="فایل PDF کتاب یا منبع"
+                    kind="pdf"
+                    value={contentFormData.pdf ?? null}
+                    onChange={(asset) => setContentFormData((prev: any) => ({ ...prev, pdf: asset }))}
+                    onBusyChange={(busy) => setBusyUploads((prev) => ({ ...prev, pdf: busy }))}
+                    helperText="بازدیدکنندگان این فایل را در صفحهٔ منبع می‌بینند و دانلود می‌کنند"
+                  />
+                </div>
+              )}
 
               {/* Section specific fields */}
               {contentFormSection === 'academy' && (
@@ -1854,13 +2039,72 @@ export const AdminPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-6 border-t border-ink-100">
-                <Button type="button" variant="ghost" onClick={() => setIsContentModalOpen(false)}>
-                  انصراف
-                </Button>
-                <Button type="submit" variant="primary">
-                  {editingContent ? 'ذخیره تغییرات' : 'انتشار در سایت'}
-                </Button>
+              <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-3 pb-4 space-y-3 bg-white/95 backdrop-blur border-t border-ink-100">
+                {scheduleOpen && (
+                  <ScheduleField value={scheduleAt} onChange={setScheduleAt} disabled={isSavingContent} />
+                )}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={isSavingContent}
+                    onClick={() => setIsContentModalOpen(false)}
+                  >
+                    انصراف
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    isLoading={savingMode === 'draft'}
+                    disabled={isSavingContent}
+                    onClick={() => void saveContent('draft')}
+                  >
+                    ذخیره به‌عنوان پیش‌نویس
+                  </Button>
+                  {scheduleOpen ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={isSavingContent}
+                        onClick={() => setScheduleOpen(false)}
+                      >
+                        لغو زمان‌بندی
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="accent"
+                        isLoading={savingMode === 'schedule'}
+                        disabled={isSavingContent}
+                        onClick={() => void saveContent('schedule')}
+                      >
+                        تأیید زمان‌بندی
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isSavingContent}
+                      onClick={() => setScheduleOpen(true)}
+                    >
+                      زمان‌بندی انتشار…
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="primary"
+                    isLoading={savingMode === 'default'}
+                    disabled={isSavingContent}
+                    onClick={() => void saveContent('default')}
+                  >
+                    {!editingContent
+                      ? 'انتشار در سایت'
+                      : publishStateOf(editingContent) === 'published'
+                        ? 'ذخیره تغییرات'
+                        : 'انتشار اکنون'}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

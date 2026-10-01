@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { query, queryOne, queryRows, transaction } from '../db.js';
 import { requireAdmin, requireOperator, revokeAllSessionsForUser } from '../lib/auth.js';
 import { rateLimit } from '../lib/rateLimit.js';
-import { asyncRoute, badRequest, forbidden, notFound } from '../lib/http.js';
+import { asyncRoute, badRequest, forbidden, notFound, describeValidationIssues } from '../lib/http.js';
 import {
   mapComment,
   mapContactMessage,
@@ -253,7 +253,7 @@ adminRouter.post(
 
     const parsed = contentSchema.safeParse((req.body as { content?: unknown }).content ?? req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات محتوا کامل نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات محتوا کامل نیست.');
     }
     const input = parsed.data;
 
@@ -298,7 +298,7 @@ adminRouter.patch(
 
     const parsed = contentSchema.partial({ title: true }).safeParse(req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات محتوا معتبر نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات محتوا معتبر نیست.');
     }
     const input = parsed.data;
 

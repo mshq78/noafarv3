@@ -31,12 +31,14 @@ import {
   X,
   Plus,
   Check,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
 import { toFaDigits } from '../../utils/format';
 import { SafeHtml } from './SafeHtml';
-import { uploadMedia } from '../../services/endpoints';
+import { uploadMedia, uploadErrorMessage } from '../../services/endpoints';
+import { ApiError } from '../../services/api';
 
 export interface RichTextEditorProps {
   label?: string;
@@ -126,6 +128,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
    */
   const lastEmittedHtml = useRef(value || '');
 
+  /**
+   * The parent's latest `onChange`. `execCommand` below is memoised on
+   * `[disabled, viewMode]`, so it keeps whichever `handleEditorInput` — and
+   * through it whichever `onChange` — existed when the editor mounted. Every
+   * toolbar button then called a stale handler, and a form that does
+   * `setForm({ ...form, body })` wrote back the snapshot from the moment it
+   * opened: one click on H1 reset the title, the slug and everything else the
+   * person had typed. The same happened to an image that finished uploading
+   * after the form had changed. Reading the handler through a ref fixes both.
+   */
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   // Seed the editor once, on mount.
   useEffect(() => {
     if (editorRef.current) editorRef.current.innerHTML = value || '';
@@ -169,7 +184,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const html = editorRef.current.innerHTML;
     lastEmittedHtml.current = html;
     setInternalHtml(html);
-    onChange(html);
+    onChangeRef.current(html);
   };
 
   /**
@@ -178,6 +193,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
    * rights), so a picture never bloats the stored document by megabytes.
    */
   const INLINE_IMAGE_LIMIT = 400 * 1024;
+
+  /**
+   * Inserting a small picture inline is only the answer for someone who is not
+   * allowed to upload (a member writing a comment). For anyone else the upload
+   * failing is something to report, not paper over: the old code swallowed the
+   * error and then told the writer their picture was "too large".
+   */
+  const isNotAllowedToUpload = (error: unknown): boolean =>
+    error instanceof ApiError && (error.status === 401 || error.status === 403);
+
+  const insertInline = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      insertImageToEditor(String(e.target?.result ?? ''), file.name);
+      setIsImageModalOpen(false);
+    };
+    reader.onerror = () => setUploadError('خواندن فایل تصویر ناموفق بود.');
+    reader.readAsDataURL(file);
+  };
 
   const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -191,25 +225,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       const asset = await uploadMedia(file);
       insertImageToEditor(asset.url, file.name);
       setIsImageModalOpen(false);
-      return;
-    } catch {
-      // Falls through to the inline fallback below.
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[noafar][editor] بارگذاری تصویر ناموفق بود', error);
+      if (isNotAllowedToUpload(error) && file.size <= INLINE_IMAGE_LIMIT) {
+        insertInline(file);
+      } else if (isNotAllowedToUpload(error)) {
+        setUploadError('حجم تصویر بیش از حد مجاز است. لطفاً تصویر کوچک‌تری انتخاب کنید.');
+      } else {
+        setUploadError(uploadErrorMessage(error));
+      }
     } finally {
       setIsUploadingImage(false);
     }
-
-    if (file.size > INLINE_IMAGE_LIMIT) {
-      setUploadError('حجم تصویر بیش از حد مجاز است. لطفاً تصویر کوچک‌تری انتخاب کنید.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      insertImageToEditor(String(e.target?.result ?? ''), file.name);
-      setIsImageModalOpen(false);
-    };
-    reader.onerror = () => setUploadError('خواندن فایل تصویر ناموفق بود.');
-    reader.readAsDataURL(file);
   };
 
   /** Escapes text before it is spliced into an HTML string. */
@@ -642,7 +670,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               // Content is written imperatively (see the effects above) so React
               // never re-renders this node while the user is typing in it.
               suppressContentEditableWarning
-              className="outline-none min-h-[160px] text-ink-900 text-sm leading-relaxed prose prose-sm max-w-none focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-300 empty:before:pointer-events-none"
+              className="outline-none min-h-[160px] text-ink-900 text-sm leading-relaxed rich-content focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-300 empty:before:pointer-events-none"
               data-placeholder={placeholder}
               dir="auto"
             />
@@ -671,7 +699,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </div>
               {internalHtml ? (
                 <SafeHtml
-                  className="prose prose-sm max-w-none text-ink-900 text-sm leading-relaxed"
+                  className="rich-content text-ink-900 text-sm leading-relaxed"
                   html={internalHtml}
                 />
               ) : (
@@ -693,6 +721,36 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         </div>
       </div>
+
+      {!isImageModalOpen && (isUploadingImage || uploadError) && (
+        <div
+          role={uploadError ? 'alert' : 'status'}
+          className={cn(
+            'flex items-start gap-2 rounded-lg border px-3 py-2 text-xs font-medium',
+            uploadError
+              ? 'border-rose-200 bg-rose-50 text-rose-700'
+              : 'border-sky-200 bg-sky-50 text-sky-800',
+          )}
+        >
+          {isUploadingImage ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>در حال بارگذاری تصویر…</span>
+            </>
+          ) : (
+            <>
+              <span className="flex-1 break-words">{uploadError}</span>
+              <button
+                type="button"
+                onClick={() => setUploadError('')}
+                className="shrink-0 underline underline-offset-2"
+              >
+                بستن
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {helperText && !error && <p className="text-xs text-ink-500">{helperText}</p>}
       {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}

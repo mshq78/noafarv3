@@ -17,3 +17,4 @@ export * from './DifficultyDots';
 export * from './Tabs';
 export * from './Accordion';
 export * from './RichTextEditor';
+export * from './MediaUploadField';

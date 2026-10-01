@@ -11,7 +11,7 @@ import {
   mapRegistration,
   type ContentRow,
 } from '../lib/mappers.js';
-import { CONTENT_COLUMNS, isSection } from '../lib/content.js';
+import { CONTENT_COLUMNS, PUBLIC_CONTENT_SQL, isSection } from '../lib/content.js';
 import { sanitizePlainText } from '../lib/sanitize.js';
 import { awardPoints } from '../lib/points.js';
 
@@ -35,7 +35,7 @@ meRouter.get(
          JOIN content c ON c.id = b.content_id
         WHERE b.user_id = $1
           AND ($2::text = '' OR c.section = $2)
-          AND c.status = 'published'
+          AND ${PUBLIC_CONTENT_SQL}
         ORDER BY b.created_at DESC
         LIMIT 200`,
       [req.user!.id, section],

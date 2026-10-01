@@ -42,10 +42,18 @@ app.use(
         'media-src': ["'self'", 'data:', 'blob:', 'https:'],
         'font-src': ["'self'"],
         // Direct-to-storage uploads talk to the Blob API from the browser. The
-        // store's own hosts are listed too: a large file is uploaded in parts,
-        // and a store may serve either a public or a private hostname.
+        // client library's own endpoint is https://vercel.com/api/blob — not a
+        // blob.vercel-storage.com host — so it has to be listed as well, or a
+        // page served by this app can never start an upload: the browser refuses
+        // the request before it is sent, which the library reads as a network
+        // failure and retries for up to half an hour. (On Vercel the page is a
+        // static file and carries no policy at all; this matters wherever
+        // Express serves the page itself.) The store's own hosts are listed
+        // too: a large file is uploaded in parts, and a store may serve either
+        // a public or a private hostname.
         'connect-src': [
           "'self'",
+          'https://vercel.com',
           'https://blob.vercel-storage.com',
           'https://*.public.blob.vercel-storage.com',
           'https://*.private.blob.vercel-storage.com',
