@@ -63,7 +63,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   {toast.type === 'info' && (
                     <Info className="w-5 h-5 text-ink-500 shrink-0" />
                   )}
-                  <p className="truncate text-ink-800">{toast.message}</p>
+                  <p className="text-ink-800 break-words line-clamp-4">{toast.message}</p>
                 </div>
                 <button
                   type="button"

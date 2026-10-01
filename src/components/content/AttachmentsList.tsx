@@ -3,6 +3,37 @@ import { Download, FileText, FileSpreadsheet, Paperclip } from 'lucide-react';
 import { MediaAsset } from '../../types';
 import { formatFileSize } from '../../utils/format';
 
+/**
+ * Everything a visitor can download for an item. Library books keep their file
+ * in `downloadUrl` and toolbox items in `printablePdfUrl`, and nothing read
+ * those fields — the list below only knew `attachments`, so a book with a file
+ * and no attachment entry showed no download at all. A file that is already in
+ * `attachments` is not listed twice.
+ */
+export function collectDownloads(content: {
+  title?: string;
+  attachments?: MediaAsset[];
+  downloadUrl?: string;
+  printablePdfUrl?: string;
+}): MediaAsset[] {
+  const list = [...(content.attachments ?? [])];
+  const extras: Array<[string | undefined, string]> = [
+    [content.printablePdfUrl, 'نسخه چاپی'],
+    [content.downloadUrl, ''],
+  ];
+  for (const [url, suffix] of extras) {
+    if (!url || list.some((attachment) => attachment?.url === url)) continue;
+    const base = content.title?.trim() || 'فایل';
+    list.unshift({
+      id: `download-${list.length}`,
+      type: 'pdf',
+      url,
+      fileName: `${base}${suffix ? ` (${suffix})` : ''}.pdf`,
+    });
+  }
+  return list;
+}
+
 interface AttachmentsListProps {
   attachments: MediaAsset[];
   title?: string;
@@ -27,6 +58,11 @@ export const AttachmentsList: React.FC<AttachmentsListProps> = ({
             key={att.id || att.url}
             href={att.url}
             download={att.fileName || 'download'}
+            // `download` is ignored for a file on another origin (object
+            // storage), so the browser navigates to it; a new tab keeps the
+            // reader on the page they came from.
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-between p-3 bg-white rounded-lg border border-ink-200 hover:border-sky-300 hover:shadow-xs transition-all group"
           >
             <div className="flex items-center gap-3 overflow-hidden">

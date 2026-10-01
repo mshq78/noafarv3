@@ -41,7 +41,7 @@ export const AboutPage: React.FC = () => {
 
           {/* Editable from the admin panel (تنظیمات سامانه → متن درباره نوآفر). */}
           <SafeHtml
-            className="text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto"
+            className="rich-content text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto"
             html={settings.aboutText}
           />
 

@@ -150,7 +150,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
               </div>
 
               <SafeHtml
-                className="text-sm text-ink-700 leading-relaxed ps-10 prose prose-sm max-w-none"
+                className="text-sm text-ink-700 leading-relaxed ps-10 rich-content"
                 html={comment.body}
               />
             </div>

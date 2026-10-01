@@ -97,7 +97,7 @@ export const BlogDetailPage: React.FC = () => {
         )}
 
         {/* Body Text */}
-        <div className="prose prose-ink max-w-none text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
+        <div className="rich-content text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
           <SafeHtml className="leading-relaxed" html={post.body} />
         </div>
 
