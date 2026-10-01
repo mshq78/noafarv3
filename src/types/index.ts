@@ -40,6 +40,8 @@ export interface User {
   city?: string;
   interests?: string[];
   role: UserRole;
+  /** Only present in the admin user listing. */
+  isBlocked?: boolean;
   avatarUrl?: string;
   bio?: string;
   joinedAt: string;          // ISO
@@ -241,7 +243,8 @@ export interface SavedCanvas {
 export interface PointEntry {
   id: string;
   reason: 'like' | 'comment' | 'bookmark' | 'share' | 'submit_idea'
-        | 'submit_experience' | 'complete_profile' | 'complete_course' | 'first_canvas';
+        | 'submit_experience' | 'complete_profile' | 'complete_course' | 'first_canvas'
+        | 'event_register' | 'admin_grant';
   reasonFa?: string;
   points: number;
   createdAt: string;
@@ -270,6 +273,7 @@ export interface SectionMeta {
   minHeightClass: string;
   accentColorHex: string;
   iconName?: string;
+  comingSoon?: boolean;
 }
 
 export interface SiteSettings {
@@ -282,4 +286,10 @@ export interface SiteSettings {
   contactAddress?: string;
   footerDescription?: string;
   footerCopyright?: string;
+  /** Social profiles for the footer. Each is optional. */
+  instagramUrl?: string;
+  telegramUrl?: string;
+  aparatUrl?: string;
+  linkedinUrl?: string;
+
 }

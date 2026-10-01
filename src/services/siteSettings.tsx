@@ -9,7 +9,7 @@ import { getSiteSettings } from './endpoints';
  * saving in the admin panel updates the live page without a full reload.
  */
 const DEFAULT_SETTINGS: SiteSettings = {
-  heroTitle: 'مدرسه کنشگری نوآفر',
+  heroTitle: 'مرکز نوآوری نوآفر',
   heroSubtitle: 'بستری برای یادگیری، تجربه و خلق ارزش‌های اجتماعی',
   aboutText:
     '<p>نوآفر یک اکوسیستم باز و مشارکتی برای یادگیری روش‌های نوین حل مسائل اجتماعی، ابزارهای طراحی کسب‌وکار اجتماعی و شبکه‌سازی میان کنشگران، محققان و سازمان‌های مردم‌نهاد است.</p>',

@@ -1,6 +1,6 @@
 /**
- * Entry point for a long-running host (Runflare, Docker, `npm start`).
- * Serverless deployments use `api/[...path].ts`, which imports the same app.
+ * Entry point for a long-running Node.js host (`npm start` or Docker).
+ * Serverless deployments (Vercel) use `api/[...path].ts`, which imports the same app.
  */
 import { env } from './env.js';
 import { closePool, pool } from './db.js';

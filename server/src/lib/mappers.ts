@@ -118,6 +118,12 @@ export function mapUser(row: UserRow): Record<string, unknown> {
     membershipDays,
     points: row.points,
     profileComplete: row.profile_complete,
+    /**
+     * Only selected by the admin listing. Without it the panel cannot tell a
+     * blocked account from an active one, which made the block action in the
+     * API unusable from the UI.
+     */
+    ...(row.is_blocked === undefined ? {} : { isBlocked: Boolean(row.is_blocked) }),
   };
 }
 

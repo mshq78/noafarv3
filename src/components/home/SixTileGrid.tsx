@@ -1,29 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-  GraduationCap,
-  Wrench,
-  BookOpen,
-  Footprints,
-  Users,
-  Sparkles,
-  ArrowLeft,
-} from 'lucide-react';
+import { GraduationCap, ArrowLeft } from 'lucide-react';
 import { SECTION_LIST } from '../../config/sections';
+import { ICON_MAP } from '../../config/sectionIcons';
 import { SectionMeta } from '../../types';
 import { useInViewColor } from '../../hooks/useInViewColor';
 import { cn } from '../../utils/cn';
 import { motion } from 'framer-motion';
-
-// Icon map for the 6 sections
-const ICON_MAP: Record<string, React.ReactNode> = {
-  GraduationCap: <GraduationCap className="w-7 h-7" />,
-  Wrench: <Wrench className="w-7 h-7" />,
-  BookOpen: <BookOpen className="w-7 h-7" />,
-  Footprints: <Footprints className="w-7 h-7" />,
-  Users: <Users className="w-7 h-7" />,
-  Sparkles: <Sparkles className="w-7 h-7" />,
-};
 
 interface TileProps {
   section: SectionMeta;
@@ -43,6 +26,11 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
   const { ref, isInView } = useInViewColor<HTMLAnchorElement>();
 
   /**
+   * The active state paints the tile in the portal's own brand colour — the
+   * 300 step, which is the exact hex from the logo — and keeps the text in
+   * ink, because all three brand colours are light enough that white type
+   * would fall under the contrast floor while ink clears it comfortably.
+   *
    * Every class is written out in full, including its `hover:` /
    * `group-hover:` variants. Tailwind scans the source for literal class
    * names, so a class assembled at runtime (the previous
@@ -64,34 +52,87 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
   > = {
     sky: {
       cardBorder: 'hover:border-sky-500',
-      activeBg: 'bg-sky-700 text-white',
-      hoverBg: 'hover:bg-sky-700 hover:text-white',
+      activeBg: 'bg-sky-300 text-ink-900',
+      hoverBg: 'hover:bg-sky-300 hover:text-ink-900',
       iconBg: 'bg-sky-50 text-sky-700',
-      activeIconBg: 'bg-white/20 text-white',
-      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
+      activeIconBg: 'bg-white/70 text-sky-700',
+      hoverIconBg: 'group-hover:bg-white/70 group-hover:text-sky-700',
       accentText: 'text-sky-700',
     },
     pink: {
       cardBorder: 'hover:border-pink-500',
-      activeBg: 'bg-pink-600 text-white',
-      hoverBg: 'hover:bg-pink-600 hover:text-white',
+      activeBg: 'bg-pink-300 text-ink-900',
+      hoverBg: 'hover:bg-pink-300 hover:text-ink-900',
       iconBg: 'bg-pink-50 text-pink-700',
-      activeIconBg: 'bg-white/20 text-white',
-      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
+      activeIconBg: 'bg-white/80 text-pink-600',
+      hoverIconBg: 'group-hover:bg-white/80 group-hover:text-pink-600',
       accentText: 'text-pink-600',
     },
     amber: {
       cardBorder: 'hover:border-amber-500',
-      activeBg: 'bg-amber-600 text-white',
-      hoverBg: 'hover:bg-amber-600 hover:text-white',
+      activeBg: 'bg-amber-300 text-ink-900',
+      hoverBg: 'hover:bg-amber-300 hover:text-ink-900',
       iconBg: 'bg-amber-50 text-amber-800',
-      activeIconBg: 'bg-white/20 text-white',
-      hoverIconBg: 'group-hover:bg-white/20 group-hover:text-white',
+      activeIconBg: 'bg-white/70 text-amber-800',
+      hoverIconBg: 'group-hover:bg-white/70 group-hover:text-amber-800',
       accentText: 'text-amber-800',
     },
   };
 
   const theme = colorThemes[section.colorFamily] || colorThemes.sky;
+
+  if (section.comingSoon) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <div
+          aria-disabled="true"
+          className="tile-desaturate-locked relative h-full flex flex-col justify-between p-6 sm:p-7 rounded-2xl border border-ink-200 bg-white/80 shadow-2xs opacity-65 cursor-not-allowed select-none overflow-hidden"
+        >
+          {/* Background Section Mark/Watermark */}
+          <div className="absolute -bottom-8 -start-8 opacity-5 pointer-events-none transform -rotate-12 scale-150 text-ink-400">
+            {ICON_MAP[section.iconName] || <GraduationCap className="w-32 h-32" />}
+          </div>
+
+          <div className="space-y-4 relative z-10">
+            {/* Top: Icon + Section Key */}
+            <div className="flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-pink-50 text-pink-600">
+                {ICON_MAP[section.iconName]}
+              </div>
+
+              <span className="text-xs font-bold uppercase tracking-wider font-sans text-ink-400 opacity-60">
+                {section.slug}
+              </span>
+            </div>
+
+            {/* Title & Tagline */}
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-black text-ink-800">
+                {section.nameFa}
+              </h3>
+              {section.taglineFa ? (
+                <p className="text-xs font-semibold text-ink-400">
+                  {section.taglineFa}
+                </p>
+              ) : null}
+            </div>
+
+            {/* Description */}
+            <p className="text-xs sm:text-sm leading-relaxed text-ink-500">
+              {section.descriptionFa}
+            </p>
+          </div>
+
+          {/* Bottom Label: به‌زودی instead of "ورود به ..." and arrow */}
+          <div className="pt-6 mt-4 border-t border-ink-100 flex items-center justify-between relative z-10 text-xs font-bold">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-bold">
+              به‌زودی
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div variants={itemVariants} className="h-full">
@@ -101,6 +142,8 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
         className={cn(
           'group relative h-full flex flex-col justify-between p-6 sm:p-7 rounded-2xl border transition-all duration-300 overflow-hidden',
           'bg-white border-ink-200 shadow-2xs hover:shadow-lg',
+          // Grey until pointed at, then the portal's own colour arrives.
+          'tile-desaturate',
           theme.cardBorder,
           isInView ? theme.activeBg : theme.hoverBg
         )}
@@ -139,9 +182,11 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
             </h3>
             <p
               className={cn(
-                'text-xs font-semibold transition-colors opacity-90',
-                isInView ? 'text-white' : theme.accentText,
-                'group-hover:text-white'
+                // The active tile is painted in a light brand colour, so the
+                // secondary text stays in ink rather than going white.
+                'text-xs font-semibold transition-colors',
+                isInView ? 'text-ink-800' : theme.accentText,
+                'group-hover:text-ink-800'
               )}
             >
               {section.taglineFa}
@@ -152,8 +197,8 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
           <p
             className={cn(
               'text-xs sm:text-sm leading-relaxed transition-colors',
-              isInView ? 'text-white/90' : 'text-ink-500',
-              'group-hover:text-white/95'
+              isInView ? 'text-ink-800' : 'text-ink-500',
+              'group-hover:text-ink-800'
             )}
           >
             {section.descriptionFa}

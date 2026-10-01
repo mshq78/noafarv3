@@ -10,6 +10,9 @@ import { Button, Skeleton, EmptyState } from '../components/ui';
 import { DotPattern } from '../components/brand/DotPattern';
 import { TricolorRule } from '../components/brand/TricolorRule';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { ComingSoonSection } from '../components/sections/ComingSoonSection';
+import { ICON_MAP, getSectionDarkColorClass } from '../config/sectionIcons';
+import { cn } from '../utils/cn';
 
 interface SectionListPageProps {
   explicitSection?: SectionSlug;
@@ -97,6 +100,12 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
     setPage(1);
   };
 
+  // A portal that has not opened yet is still reachable by URL; it shows the
+  // announcement rather than an empty, filterable list of nothing.
+  if (sectionMeta.comingSoon) {
+    return <ComingSoonSection section={sectionMeta} />;
+  }
+
   return (
     <div className="min-h-screen bg-ink-50/40 py-8 sm:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
@@ -109,24 +118,45 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           />
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-ink-400 font-sans">
-                  {sectionMeta.slug}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
-                <span className="text-xs font-bold text-ink-600">
-                  {sectionMeta.taglineFa || sectionMeta.countLabel}
-                </span>
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5 max-w-2xl">
+              {/* Section Identity Icon (approx. 56px rounded square with subtle section tint) */}
+              <div
+                className={cn(
+                  'w-14 h-14 min-w-[56px] min-h-[56px] rounded-2xl flex items-center justify-center shrink-0 border border-current/10 shadow-2xs',
+                  getSectionDarkColorClass(sectionMeta.colorFamily)
+                )}
+                style={{
+                  backgroundColor: sectionMeta.accentColorHex ? `${sectionMeta.accentColorHex}26` : undefined,
+                }}
+                aria-hidden="true"
+              >
+                {ICON_MAP[sectionMeta.iconName]}
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-black text-ink-900">
-                {sectionMeta.nameFa}
-              </h1>
+              {/* Title & Description column */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink-400 font-sans">
+                    {sectionMeta.slug}
+                  </span>
+                  {sectionMeta.taglineFa ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
+                      <span className="text-xs font-bold text-ink-600">
+                        {sectionMeta.taglineFa}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
 
-              <p className="text-xs sm:text-sm text-ink-500 leading-relaxed">
-                {sectionMeta.descriptionFa}
-              </p>
+                <h1 className="text-2xl sm:text-4xl font-black text-ink-900">
+                  {sectionMeta.nameFa}
+                </h1>
+
+                <p className="text-xs sm:text-sm text-ink-500 leading-relaxed">
+                  {sectionMeta.descriptionFa}
+                </p>
+              </div>
             </div>
 
             {/* Conditional Action buttons for Spark and Journey */}
@@ -186,15 +216,25 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           </div>
         )}
 
-        {/* Cards Grid */}
+        {/* Cards Masonry Layout (CSS Columns) */}
         {isLoading && page === 1 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            className={
+              currentSlug === 'toolbox'
+                ? 'columns-1 sm:columns-2 lg:columns-4 xl:columns-5 gap-5'
+                : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5'
+            }
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white p-4 rounded-xl border border-ink-200 space-y-3"
+                className="break-inside-avoid mb-5 bg-white p-4 rounded-xl border border-ink-200 space-y-3"
               >
-                <Skeleton className="aspect-video w-full rounded-lg" />
+                <Skeleton
+                  className={`${
+                    i % 5 === 0 ? 'aspect-[4/5]' : 'aspect-video'
+                  } w-full rounded-lg`}
+                />
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-1/2" />
@@ -213,9 +253,17 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
           />
         ) : (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-              {items.map((item) => (
-                <ContentCard key={item.id} item={item} />
+            <div
+              className={
+                currentSlug === 'toolbox'
+                  ? 'columns-1 sm:columns-2 lg:columns-4 xl:columns-5 gap-5'
+                  : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5'
+              }
+            >
+              {items.map((item, index) => (
+                <div key={item.id} className="tile-desaturate break-inside-avoid">
+                  <ContentCard item={item} emphasis={index % 5 === 0 ? 'tall' : 'normal'} />
+                </div>
               ))}
             </div>
 

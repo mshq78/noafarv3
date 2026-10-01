@@ -1,5 +1,5 @@
-import { Tool } from '../types';
-import { TOOLBOX_STAGES } from '../config/categories';
+import { Tool } from '../types/index.js';
+import { TOOLBOX_STAGES } from '../config/categories.js';
 
 export const MOCK_TOOLS: Tool[] = [
   {

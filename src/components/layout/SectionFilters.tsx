@@ -4,6 +4,13 @@ import { SectionSlug, Category } from '../../types';
 import { Chip, Select } from '../ui';
 import { toFaDigits } from '../../utils/format';
 import { cn } from '../../utils/cn';
+import {
+  TOOLBOX_FORMATS,
+  LIBRARY_KINDS,
+  GATHERING_KINDS,
+  GATHERING_STATUSES,
+  DIFFICULTY_LABELS,
+} from '../../config/categories';
 
 interface SectionFiltersProps {
   section: SectionSlug;
@@ -303,26 +310,11 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
             <>
               <div className="w-40">
                 <Select
-                  value={extraFilters.stage || ''}
-                  onChange={(e) => onExtraFilterChange('stage', e.target.value || undefined)}
-                  options={[
-                    { value: '', label: 'همه مراحل' },
-                    { value: 'discover', label: 'مرحله ۱: کشف' },
-                    { value: 'define', label: 'مرحله ۲: تعریف' },
-                    { value: 'develop', label: 'مرحله ۳: توسعه' },
-                    { value: 'deliver', label: 'مرحله ۴: تحویل' },
-                  ]}
-                />
-              </div>
-              <div className="w-36">
-                <Select
                   value={extraFilters.format || ''}
                   onChange={(e) => onExtraFilterChange('format', e.target.value || undefined)}
                   options={[
                     { value: '', label: 'همه قالب‌ها' },
-                    { value: 'canvas', label: 'بوم تعاملی' },
-                    { value: 'worksheet', label: 'کاربرگ' },
-                    { value: 'guide', label: 'راهنما' },
+                    ...TOOLBOX_FORMATS.map((f) => ({ value: f.id, label: f.nameFa })),
                   ]}
                 />
               </div>
@@ -332,9 +324,12 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                   onChange={(e) => onExtraFilterChange('difficulty', e.target.value || undefined)}
                   options={[
                     { value: '', label: 'همه سطوح' },
-                    { value: 'beginner', label: 'مقدماتی' },
-                    { value: 'intermediate', label: 'متوسط' },
-                    { value: 'advanced', label: 'پیشرفته' },
+                    ...(Object.entries(DIFFICULTY_LABELS) as [keyof typeof DIFFICULTY_LABELS, { label: string }][]).map(
+                      ([key, val]) => ({
+                        value: key,
+                        label: val.label,
+                      })
+                    ),
                   ]}
                 />
               </div>
@@ -347,11 +342,8 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                 value={extraFilters.kind || ''}
                 onChange={(e) => onExtraFilterChange('kind', e.target.value || undefined)}
                 options={[
-                  { value: '', label: 'همه قالب‌ها' },
-                  { value: 'book', label: 'کتاب' },
-                  { value: 'article', label: 'مقاله' },
-                  { value: 'podcast', label: 'پادکست' },
-                  { value: 'video', label: 'فیلم مستند' },
+                  { value: '', label: 'همه انواع' },
+                  ...LIBRARY_KINDS.map((k) => ({ value: k.id, label: k.nameFa })),
                 ]}
               />
             </div>
@@ -365,8 +357,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                   onChange={(e) => onExtraFilterChange('kind', e.target.value || undefined)}
                   options={[
                     { value: '', label: 'همه رویدادها' },
-                    { value: 'workshop', label: 'کارگاه حضوری' },
-                    { value: 'webinar', label: 'وبینار آنلاین' },
+                    ...GATHERING_KINDS.map((k) => ({ value: k.id, label: k.nameFa })),
                   ]}
                 />
               </div>
@@ -376,8 +367,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                   onChange={(e) => onExtraFilterChange('status', e.target.value || undefined)}
                   options={[
                     { value: '', label: 'همه وضعیت‌ها' },
-                    { value: 'registering', label: 'در حال ثبت‌نام' },
-                    { value: 'past', label: 'برگزار شده' },
+                    ...GATHERING_STATUSES.map((s) => ({ value: s.id, label: s.nameFa })),
                   ]}
                 />
               </div>

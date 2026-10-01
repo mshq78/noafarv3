@@ -8,9 +8,11 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface ToolCardProps {
   tool: Tool;
+  emphasis?: 'normal' | 'tall';
 }
 
-export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
+export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' }) => {
+  const isTall = emphasis === 'tall';
   const formatConfigs: Record<ToolFormat, { label: string; icon: React.ReactNode; color: 'sky' | 'pink' | 'amber' | 'ink' }> = {
     canvas: { label: 'بوم تعاملی', icon: <Layout className="w-3.5 h-3.5" />, color: 'sky' },
     game: { label: 'بازی و شبیه‌سازی', icon: <BookOpen className="w-3.5 h-3.5" />, color: 'sky' },
@@ -24,13 +26,23 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
   const formatConfig = formatConfigs[tool.format] || formatConfigs.canvas;
 
   return (
-    <div className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-pink-300 transition-all duration-200">
+    <div className="group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-pink-300 transition-all duration-200">
       {/* Cover / Visual Banner */}
       <Link
         to={`/toolbox/${tool.slug}`}
-        className="relative aspect-[16/9] bg-gradient-to-br from-ink-50 to-pink-50/40 p-4 flex flex-col justify-between overflow-hidden block border-b border-ink-100"
+        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[16/9]'} bg-gradient-to-br from-ink-50 to-pink-50/40 p-4 flex flex-col justify-between overflow-hidden block border-b border-ink-100`}
       >
-        <div className="flex items-center justify-between w-full">
+        {/* Hover / Focus Summary Overlay */}
+        {tool.summary && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+            <span className="text-[11px] font-bold text-pink-300 mb-1">معرفی و کاربرد ابزار:</span>
+            <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
+              {tool.summary}
+            </p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between w-full relative z-10">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur-xs text-ink-800 shadow-2xs">
             {formatConfig.icon}
             <span>{formatConfig.label}</span>
@@ -43,16 +55,16 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
         </div>
 
         {/* Preview image */}
-        <div className="flex items-center justify-center py-2">
+        <div className="flex items-center justify-center py-2 relative z-10">
           <SmartImage
             src={tool.previewSvgUrl || '/mock/canvas-preview.svg'}
             alt={tool.title}
-            className="h-20 w-auto object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200"
+            className={`${isTall ? 'h-28' : 'h-20'} w-auto object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200`}
             fallbackSrc="/mock/canvas-preview.svg"
           />
         </div>
 
-        <div className="flex items-center justify-between text-xs text-ink-500 font-sans">
+        <div className="flex items-center justify-between text-xs text-ink-500 font-sans relative z-10">
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
             <span>زمان تقریبی: {formatMinutes(tool.estimatedMinutes)}</span>

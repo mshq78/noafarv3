@@ -1,5 +1,5 @@
-import { Experience } from '../types';
-import { JOURNEY_FIELDS } from '../config/categories';
+import { Experience } from '../types/index.js';
+import { JOURNEY_FIELDS } from '../config/categories.js';
 
 export const MOCK_EXPERIENCES: Experience[] = [
   {

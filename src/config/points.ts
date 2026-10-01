@@ -10,6 +10,9 @@ export const POINT_REASONS_FA: Record<PointEntry['reason'], { label: string; poi
   complete_profile: { label: 'تکمیل اطلاعات حساب کاربری', points: 20 },
   complete_course: { label: 'تکمیل و مشاهده کامل دوره', points: 40 },
   first_canvas: { label: 'ساخت اولین بوم دیجیتال', points: 30 },
+  event_register: { label: 'ثبت‌نام در رویداد', points: 30 },
+  /** The operator chooses the amount, so there is no fixed value to show. */
+  admin_grant: { label: 'امتیاز اهدایی از سوی نوآفر', points: 0 },
 };
 
 export const POINT_CONFIGS = POINT_REASONS_FA;

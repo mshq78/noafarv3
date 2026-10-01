@@ -376,7 +376,7 @@ export const ProfilePage: React.FC = () => {
             {submissions.length === 0 ? (
               <EmptyState
                 title="هنوز مطلبی ارسال نکرده‌اید"
-                description="می‌توانید با ثبت ایده در درگاه جرقه یا روایت تجربه در درگاه سفر، امتیاز کسب کنید."
+                description="می‌توانید با ثبت ایده در درگاه جرقه یا روایت تجربه در درگاه تور نوآوری، امتیاز کسب کنید."
               />
             ) : (
               <div className="space-y-3">

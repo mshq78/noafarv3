@@ -9,16 +9,18 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface EventCardProps {
   event: Event;
+  emphasis?: 'normal' | 'tall';
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal' }) => {
   const isPast = event.status === 'past';
   const isWorkshop = event.kind === 'workshop';
+  const isTall = emphasis === 'tall';
 
   return (
     <div
       className={cn(
-        'group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs transition-all duration-200',
+        'group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs transition-all duration-200',
         isPast
           ? 'hover:border-ink-300'
           : 'hover:shadow-md hover:border-pink-300'
@@ -27,7 +29,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
       {/* Cover Image & Badges */}
       <Link
         to={`/gathering/${event.slug}`}
-        className="relative aspect-[16/9] bg-ink-100 overflow-hidden block"
+        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[16/9]'} bg-ink-100 overflow-hidden block`}
       >
         <SmartImage
           src={event.heroImage?.url || '/mock/event-cover.svg'}
@@ -40,11 +42,22 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
           fallbackSrc="/mock/event-cover.svg"
         />
 
-        {/* Status chip */}
-        <div className="absolute top-2.5 start-2.5">
+        {/* Hover / Focus Summary Overlay */}
+        {event.summary && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+            <span className="text-[11px] font-bold text-pink-300 mb-1">درباره رویداد:</span>
+            <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
+              {event.summary}
+            </p>
+          </div>
+        )}
+
+        {/* Status / Report chip */}
+        <div className="absolute top-2.5 start-2.5 z-20">
           {isPast ? (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-ink-100/95 text-ink-700 backdrop-blur-xs border border-ink-200">
-              برگزار شده
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-ink-100/95 text-ink-800 backdrop-blur-xs border border-ink-200 shadow-2xs">
+              <FileText className="w-3.5 h-3.5 text-ink-600" />
+              <span>گزارش رویداد</span>
             </span>
           ) : (
             <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-pink-600 text-white shadow-xs animate-pulse">
@@ -54,7 +67,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         </div>
 
         {/* Kind Chip */}
-        <div className="absolute top-2.5 end-2.5">
+        <div className="absolute top-2.5 end-2.5 z-20">
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur-xs text-ink-800 shadow-2xs">
             {isWorkshop ? (
               <Users className="w-3.5 h-3.5 text-pink-600" />
@@ -66,7 +79,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         </div>
 
         {/* Date banner */}
-        <div className="absolute bottom-2.5 start-2.5 bg-ink-950/80 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-sans">
+        <div className="absolute bottom-2.5 start-2.5 bg-ink-950/80 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-sans z-20 transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0">
           <Calendar className="w-3.5 h-3.5 text-amber-400" />
           <span>{formatPersianDate(event.startsAt, 'D MMMM YYYY')}</span>
         </div>
@@ -102,7 +115,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
               className="inline-flex items-center gap-1 text-xs font-bold text-ink-600 hover:text-ink-900"
             >
               <FileText className="w-3.5 h-3.5 text-ink-400" />
-              <span>مشاهده گزارش و دستاوردها</span>
+              <span>مشاهده گزارش</span>
               <ArrowLeft className="w-3.5 h-3.5" />
             </Link>
           ) : (
@@ -110,7 +123,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
               to={`/gathering/${event.slug}`}
               className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700"
             >
-              <span>اطلاعات و ثبت‌نام در رویداد</span>
+              <span>ثبت نام در رویداد</span>
               <ArrowLeft className="w-3.5 h-3.5" />
             </Link>
           )}

@@ -8,17 +8,19 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface CourseCardProps {
   course: Course;
+  emphasis?: 'normal' | 'tall';
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'normal' }) => {
   const hasProgress = (course.myProgressPercent || 0) > 0;
+  const isTall = emphasis === 'tall';
 
   return (
-    <div className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-sky-300 transition-all duration-200">
+    <div className="group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-sky-300 transition-all duration-200">
       {/* Cover Image & Badges */}
       <Link
         to={`/academy/${course.slug}`}
-        className="relative aspect-video bg-ink-100 overflow-hidden block"
+        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-video'} bg-ink-100 overflow-hidden block`}
       >
         <SmartImage
           src={course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'}
@@ -27,14 +29,25 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
           loading="lazy"
           fallbackSrc="/mock/course-thumb.svg"
         />
-        <div className="absolute top-2.5 start-2.5">
+
+        {/* Hover / Focus Summary Overlay */}
+        {course.summary && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+            <span className="text-[11px] font-bold text-sky-300 mb-1">خلاصه دوره:</span>
+            <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
+              {course.summary}
+            </p>
+          </div>
+        )}
+
+        <div className="absolute top-2.5 start-2.5 z-20">
           {course.category && (
             <Chip size="sm" variant="sky" className="bg-white/95 backdrop-blur-xs font-semibold">
               {course.category.nameFa}
             </Chip>
           )}
         </div>
-        <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2 py-0.5 rounded-md flex items-center gap-1 font-sans">
+        <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2 py-0.5 rounded-md flex items-center gap-1 font-sans z-20 transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0">
           <Clock className="w-3.5 h-3.5" />
           <span>{formatMinutes(course.durationMinutes)}</span>
         </div>

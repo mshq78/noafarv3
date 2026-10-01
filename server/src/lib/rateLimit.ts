@@ -2,12 +2,17 @@ import type { Request, RequestHandler } from 'express';
 import { query, queryOne } from '../db.js';
 import { tooManyRequests } from './http.js';
 
-/** Best-effort client identity for rate limiting. */
+/**
+ * Best-effort client identity for rate limiting.
+ *
+ * `X-Forwarded-For` is only believed when the service actually runs behind a
+ * proxy. Anyone can set that header, so reading it on a directly-exposed host
+ * would let a caller pick a fresh rate-limit bucket per request and walk past
+ * every limit in this file. Where a proxy is configured, Express has already
+ * parsed the header into `req.ip` using the trust setting, so that is what we
+ * use rather than parsing it a second time.
+ */
 export function clientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length) {
-    return forwarded.split(',')[0]!.trim();
-  }
   return req.ip || req.socket.remoteAddress || 'unknown';
 }
 

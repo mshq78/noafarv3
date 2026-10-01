@@ -42,6 +42,17 @@ export const Header: React.FC = () => {
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">
             {SECTION_LIST.map((sec) => {
+              if (sec.comingSoon) {
+                return (
+                  <span
+                    key={sec.slug}
+                    aria-disabled="true"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-ink-400 select-none cursor-not-allowed opacity-60"
+                  >
+                    {sec.nameFa}
+                  </span>
+                );
+              }
               const active = isActive(`/${sec.slug}`);
               return (
                 <Link
@@ -130,7 +141,7 @@ export const Header: React.FC = () => {
                     className="fixed inset-0 z-30"
                     onClick={() => setIsUserMenuOpen(false)}
                   />
-                  <div className="absolute start-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-ink-200 py-1.5 z-40 animate-in fade-in duration-150">
+                  <div className="absolute end-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-xl border border-ink-200 py-1.5 z-40 animate-in fade-in duration-150">
                     <div className="px-4 py-2.5 border-b border-ink-100">
                       <p className="text-xs font-bold text-ink-900 truncate">
                         {user.displayName || 'کاربر نوآفر'}
@@ -219,21 +230,37 @@ export const Header: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden border-t border-ink-100 bg-white px-4 py-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-2">
-            {SECTION_LIST.map((sec) => (
-              <Link
-                key={sec.slug}
-                to={`/${sec.slug}`}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  'p-2.5 rounded-lg text-xs font-bold border transition-colors flex items-center justify-between',
-                  isActive(`/${sec.slug}`)
-                    ? 'bg-sky-50 text-sky-700 border-sky-200'
-                    : 'bg-ink-50 text-ink-700 border-ink-100'
-                )}
-              >
-                <span>{sec.nameFa}</span>
-              </Link>
-            ))}
+            {SECTION_LIST.map((sec) => {
+              if (sec.comingSoon) {
+                return (
+                  <div
+                    key={sec.slug}
+                    aria-disabled="true"
+                    className="p-2.5 rounded-lg text-xs font-bold border border-ink-200/70 bg-ink-50/50 text-ink-400 select-none cursor-not-allowed flex items-center justify-between opacity-60"
+                  >
+                    <span>{sec.nameFa}</span>
+                    <span className="text-[10px] font-medium text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
+                      به‌زودی
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={sec.slug}
+                  to={`/${sec.slug}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    'p-2.5 rounded-lg text-xs font-bold border transition-colors flex items-center justify-between',
+                    isActive(`/${sec.slug}`)
+                      ? 'bg-sky-50 text-sky-700 border-sky-200'
+                      : 'bg-ink-50 text-ink-700 border-ink-100'
+                  )}
+                >
+                  <span>{sec.nameFa}</span>
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-ink-100">

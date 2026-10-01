@@ -7,11 +7,14 @@ import { toFaDigits } from '../../utils/format';
 
 interface IdeaCardProps {
   idea: Idea;
+  emphasis?: 'normal' | 'tall';
 }
 
-export const IdeaCard: React.FC<IdeaCardProps> = ({ idea }) => {
+export const IdeaCard: React.FC<IdeaCardProps> = ({ idea, emphasis = 'normal' }) => {
+  const isTall = emphasis === 'tall';
+
   return (
-    <div className="group flex flex-col bg-white rounded-xl border border-ink-200 p-5 shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-200 justify-between">
+    <div className={`group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 ${isTall ? 'p-6 sm:p-7' : 'p-5'} shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-200 justify-between`}>
       <div className="space-y-3">
         {/* Header: Field badge + Lightbulb */}
         <div className="flex items-center justify-between">

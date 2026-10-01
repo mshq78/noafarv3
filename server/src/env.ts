@@ -11,13 +11,6 @@ loadDotenv();
  */
 export const configProblems: string[] = [];
 
-/**
- * Non-fatal notes about the configuration. Unlike a problem these do not
- * refuse requests; they are reported by `/api/health` so an operator can see
- * which fallback the service fell back to.
- */
-export const configWarnings: string[] = [];
-
 function optional(name: string, fallback = ''): string {
   const value = process.env[name];
   return value === undefined || value === null ? fallback : value.trim();
@@ -52,101 +45,14 @@ export const IS_PRODUCTION = NODE_ENV === 'production';
  * connections and exhaust the database's limit.
  */
 export const IS_SERVERLESS = Boolean(
-  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY,
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME,
 );
-
-/**
- * Every variable name a Postgres connection string is accepted under. Vercel's
- * database integrations (Neon among them) name the variable they inject after
- * the product rather than after the app, so a service that only reads
- * `DATABASE_URL` looks unconfigured on a host that has a database attached.
- * The first name that carries a value wins; `DATABASE_URL` stays the one to
- * set by hand.
- */
-export const DATABASE_URL_KEYS = [
-  'DATABASE_URL',
-  'POSTGRES_URL',
-  'DATABASE_URL_UNPOOLED',
-  'POSTGRES_URL_NON_POOLING',
-  'POSTGRES_PRISMA_URL',
-  'NEON_DATABASE_URL',
-] as const;
-
-/** The names above that are actually present. Reported by `/api/health`. */
-export const databaseUrlKeysPresent: string[] = [];
-
-function resolveDatabaseUrl(): string {
-  let resolved = '';
-  for (const key of DATABASE_URL_KEYS) {
-    const value = process.env[key];
-    if (!value || !value.trim()) continue;
-    databaseUrlKeysPresent.push(key);
-    if (!resolved) resolved = value.trim();
-  }
-
-  if (resolved) {
-    if (databaseUrlKeysPresent[0] !== 'DATABASE_URL') {
-      configWarnings.push(
-        `DATABASE_URL تنظیم نشده؛ رشتهٔ اتصال از «${databaseUrlKeysPresent[0]}» خوانده شد.`,
-      );
-    }
-    return resolved;
-  }
-
-  if (IS_PRODUCTION) {
-    configProblems.push(
-      'متغیر محیطی «DATABASE_URL» تنظیم نشده است. ' +
-        `(نام‌های پذیرفته‌شده: ${DATABASE_URL_KEYS.join('، ')})`,
-    );
-  }
-  return '';
-}
-
-/**
- * Managed Postgres (Neon, Supabase, RDS…) refuses a plaintext connection, and
- * `pg` does not turn TLS on by itself. Rather than make every deployment
- * remember `DATABASE_SSL=true`, default it from the connection string: on for
- * anything remote, off for a local database and for an explicit
- * `sslmode=disable`. An explicit `DATABASE_SSL` always wins.
- */
-function resolveDatabaseSsl(databaseUrl: string): boolean {
-  if (optional('DATABASE_SSL')) return bool('DATABASE_SSL');
-  if (!databaseUrl) return false;
-
-  let parsed: URL;
-  try {
-    parsed = new URL(databaseUrl);
-  } catch {
-    return false;
-  }
-
-  const sslMode = parsed.searchParams.get('sslmode');
-  if (sslMode === 'disable') return false;
-
-  const host = parsed.hostname.toLowerCase();
-  const isLocal =
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1' ||
-    host === '[::1]' ||
-    host.endsWith('.local') ||
-    host.endsWith('.internal');
-  return !isLocal;
-}
 
 /**
  * The session secret must be explicit in production. In development we derive a
  * stable-per-process random value so nobody accidentally ships a default secret.
- *
- * When it is missing on a host that does have a database, the secret is derived
- * from the connection string instead of refusing every request: the string
- * already carries a high-entropy password, and the derivation is deterministic,
- * so every instance and every redeploy agree on the same key and sessions keep
- * working. It is a fallback, not the recommendation — rotating the database
- * password signs everyone out — so it is reported as a warning by
- * `/api/health` until a real SESSION_SECRET is set.
  */
-function resolveSessionSecret(databaseUrl: string): string {
+function resolveSessionSecret(): string {
   const fromEnv = optional('SESSION_SECRET');
   if (fromEnv) {
     if (fromEnv.length < 32) {
@@ -154,33 +60,79 @@ function resolveSessionSecret(databaseUrl: string): string {
     }
     return fromEnv;
   }
-
-  if (!IS_PRODUCTION) {
+  if (IS_PRODUCTION) {
+    configProblems.push(
+      'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
+    );
+  } else {
     // eslint-disable-next-line no-console
     console.warn('[noafar] SESSION_SECRET تنظیم نشده؛ یک کلید موقت برای توسعه ساخته شد.');
-    return crypto.randomBytes(48).toString('hex');
   }
-
-  if (databaseUrl) {
-    configWarnings.push(
-      'SESSION_SECRET تنظیم نشده است؛ کلید نشست فعلاً از رشتهٔ اتصال پایگاه‌داده ساخته می‌شود. ' +
-        'یک رشتهٔ تصادفی ۶۴ کاراکتری در متغیرهای محیطی قرار دهید تا تغییر رمز پایگاه‌داده کاربران را از حساب خارج نکند.',
-    );
-    return crypto
-      .createHmac('sha256', databaseUrl)
-      .update('noafar/session-secret/v1')
-      .digest('hex');
-  }
-
-  configProblems.push(
-    'SESSION_SECRET تنظیم نشده است. یک رشته تصادفی ۶۴ کاراکتری بسازید و در متغیرهای محیطی قرار دهید.',
-  );
   // A placeholder keeps the module loadable; requests are refused while any
   // configuration problem stands, so this value is never actually relied on.
   return crypto.randomBytes(48).toString('hex');
 }
 
-const DATABASE_URL = resolveDatabaseUrl();
+
+/**
+ * A Postgres integration does not always write `DATABASE_URL`. Neon's Vercel
+ * integration, for instance, injects `POSTGRES_URL` and its unpooled twin, and
+ * a project can end up with one name set by hand and another by the
+ * integration — pointing at different databases. Preferring an explicit
+ * `DATABASE_URL` and recording which name won turns "wrong password" into a
+ * question with an answer.
+ */
+const DATABASE_URL_NAMES = [
+  'DATABASE_URL',
+  'POSTGRES_URL',
+  'DATABASE_URL_UNPOOLED',
+  'POSTGRES_URL_NON_POOLING',
+] as const;
+
+let DATABASE_URL_SOURCE = '';
+
+function resolveDatabaseUrl(): string {
+  for (const name of DATABASE_URL_NAMES) {
+    const value = optional(name);
+    if (value) {
+      DATABASE_URL_SOURCE = name;
+      return value;
+    }
+  }
+  if (IS_PRODUCTION) {
+    configProblems.push(
+      `متغیر محیطی «DATABASE_URL» تنظیم نشده است (نام‌های پذیرفته‌شده: ${DATABASE_URL_NAMES.join('، ')}).`,
+    );
+  }
+  return '';
+}
+
+
+/**
+ * Connecting a Blob store usually writes `BLOB_READ_WRITE_TOKEN`, but a
+ * project with more than one store, or one connected under a custom prefix,
+ * gets a prefixed name instead. Rather than fail silently with uploads off,
+ * fall back to any variable that ends in `_READ_WRITE_TOKEN` and carries a
+ * blob token, and record which one was used.
+ */
+let BLOB_TOKEN_SOURCE = '';
+
+function resolveBlobToken(): string {
+  const direct = optional('BLOB_READ_WRITE_TOKEN');
+  if (direct) {
+    BLOB_TOKEN_SOURCE = 'BLOB_READ_WRITE_TOKEN';
+    return direct;
+  }
+  for (const [name, value] of Object.entries(process.env)) {
+    if (!name.endsWith('_READ_WRITE_TOKEN')) continue;
+    const trimmed = (value ?? '').trim();
+    if (trimmed.startsWith('vercel_blob_rw_')) {
+      BLOB_TOKEN_SOURCE = name;
+      return trimmed;
+    }
+  }
+  return '';
+}
 
 export const env = {
   nodeEnv: NODE_ENV,
@@ -188,11 +140,13 @@ export const env = {
   port: num('PORT', 4000),
   host: optional('HOST', '0.0.0.0'),
 
-  databaseUrl: DATABASE_URL,
-  databaseSsl: resolveDatabaseSsl(DATABASE_URL),
+  databaseUrl: resolveDatabaseUrl(),
+  /** Which variable the connection string came from, for diagnostics. */
+  databaseUrlSource: DATABASE_URL_SOURCE,
+  databaseSsl: bool('DATABASE_SSL', false),
   databasePoolMax: num('DATABASE_POOL_MAX', IS_SERVERLESS ? 1 : 10),
 
-  sessionSecret: resolveSessionSecret(DATABASE_URL),
+  sessionSecret: resolveSessionSecret(),
   sessionCookieName: optional('SESSION_COOKIE_NAME', 'noafar_session'),
   sessionTtlDays: num('SESSION_TTL_DAYS', 30),
 
@@ -224,6 +178,18 @@ export const env = {
   mailFrom: optional('MAIL_FROM'),
   /** Absolute site URL used to build links inside emails. */
   publicUrl: optional('PUBLIC_URL').replace(/\/$/, ''),
+
+  /**
+   * Vercel Blob. When this is set, uploads go straight from the browser to
+   * object storage and the local filesystem is not involved at all — which is
+   * the only thing that works on a serverless host, where the disk is wiped
+   * between invocations and the function body itself is capped at 4.5 MB.
+   */
+  blobToken: resolveBlobToken(),
+  /** Which variable supplied the blob token, for diagnostics. */
+  blobTokenSource: BLOB_TOKEN_SOURCE,
+  /** Ceiling for an operator's media upload once Blob is in use. */
+  blobMediaMaxBytes: num('BLOB_MEDIA_MAX_BYTES', 512 * 1024 * 1024),
 
   uploadDir: optional('UPLOAD_DIR', IS_SERVERLESS ? '/tmp/noafar-uploads' : 'uploads'),
   /**

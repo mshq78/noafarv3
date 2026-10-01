@@ -49,6 +49,47 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Stats Overview */}
+      <section className="py-10 max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="p-5 sm:p-6 rounded-2xl border border-ink-200/80 bg-white shadow-xs space-y-2 relative overflow-hidden transition-all hover:shadow-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#73CFED' }} />
+            <span className="text-xs text-ink-600 font-bold block">دوره‌های تخصصی</span>
+            <span className="text-3xl sm:text-4xl font-black font-sans block text-sky-700">
+              ۳۴
+            </span>
+            <span className="text-xs text-ink-500 block">دوره و کارگاه آموزشی</span>
+          </div>
+
+          <div className="p-5 sm:p-6 rounded-2xl border border-ink-200/80 bg-white shadow-xs space-y-2 relative overflow-hidden transition-all hover:shadow-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ED3F86' }} />
+            <span className="text-xs text-ink-600 font-bold block">بوم‌ها و کاربرگ‌ها</span>
+            <span className="text-3xl sm:text-4xl font-black font-sans block text-pink-700">
+              ۲۸
+            </span>
+            <span className="text-xs text-ink-500 block">ابزار تعاملی حل مسئله</span>
+          </div>
+
+          <div className="p-5 sm:p-6 rounded-2xl border border-ink-200/80 bg-white shadow-xs space-y-2 relative overflow-hidden transition-all hover:shadow-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FFCC6D' }} />
+            <span className="text-xs text-ink-600 font-bold block">تجارب بومی</span>
+            <span className="text-3xl sm:text-4xl font-black font-sans block text-amber-700">
+              ۴۲
+            </span>
+            <span className="text-xs text-ink-500 block">روایت میدانی موفق</span>
+          </div>
+
+          <div className="p-5 sm:p-6 rounded-2xl border border-ink-200/80 bg-white shadow-xs space-y-2 relative overflow-hidden transition-all hover:shadow-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#73CFED' }} />
+            <span className="text-xs text-ink-600 font-bold block">منابع و کتب</span>
+            <span className="text-3xl sm:text-4xl font-black font-sans block text-sky-700">
+              ۱۵۰+
+            </span>
+            <span className="text-xs text-ink-500 block">منبع غنی برای مطالعه</span>
+          </div>
+        </div>
+      </section>
+
       {/* Mission & Vision */}
       <section className="py-16 max-w-5xl mx-auto px-4 sm:px-6 space-y-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

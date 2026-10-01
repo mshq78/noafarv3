@@ -4,7 +4,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
-import { env, configProblems, configWarnings, databaseUrlKeysPresent } from './env.js';
+import { env, configProblems } from './env.js';
 import { pool } from './db.js';
 import { ensureReady } from './migrate.js';
 import { attachUser } from './lib/auth.js';
@@ -20,7 +20,7 @@ import { uploadsRouter, UPLOAD_ROOT } from './routes/uploads.js';
 const app = express();
 
 if (env.trustProxy) {
-  // Runflare (and any reverse proxy) terminates TLS; without this the secure
+  // A reverse proxy terminates TLS; without this the secure
   // cookie flag and the client IP used for rate limiting would both be wrong.
   app.set('trust proxy', 1);
 }
@@ -41,9 +41,27 @@ app.use(
         'img-src': ["'self'", 'data:', 'blob:', 'https:'],
         'media-src': ["'self'", 'data:', 'blob:', 'https:'],
         'font-src': ["'self'"],
-        'connect-src': ["'self'"],
-        // Video lessons may be hosted on Aparat; nothing else may frame in.
-        'frame-src': ["'self'", 'https://www.aparat.com', 'https://aparat.com'],
+        // Direct-to-storage uploads talk to the Blob API from the browser. The
+        // store's own hosts are listed too: a large file is uploaded in parts,
+        // and a store may serve either a public or a private hostname.
+        'connect-src': [
+          "'self'",
+          'https://blob.vercel-storage.com',
+          'https://*.public.blob.vercel-storage.com',
+          'https://*.private.blob.vercel-storage.com',
+        ],
+        // Video lessons are embedded from these hosts and nowhere else. The
+        // player accepts all three, so the policy has to list all three or the
+        // frame is blocked and the lesson silently shows nothing.
+        'frame-src': [
+          "'self'",
+          'https://www.aparat.com',
+          'https://aparat.com',
+          'https://www.youtube.com',
+          'https://youtube.com',
+          'https://www.youtube-nocookie.com',
+          'https://player.vimeo.com',
+        ],
         'object-src': ["'none'"],
         'base-uri': ["'self'"],
         'form-action': ["'self'"],
@@ -156,31 +174,71 @@ function describeDatabaseFailure(error: unknown): string | null {
   return null;
 }
 
+
+/**
+ * Describes the connection the service is actually using, so a credentials
+ * failure can be diagnosed without anyone reading the secret back out. It
+ * reports the shape of the string — where it came from, which host and role,
+ * how long the password is — and never the password itself.
+ */
+function describeConnection(): Record<string, unknown> {
+  const raw = env.databaseUrl;
+  if (!raw) return { source: null, note: 'هیچ رشتهٔ اتصالی تنظیم نشده است.' };
+  try {
+    const parsed = new URL(raw);
+    return {
+      source: env.databaseUrlSource,
+      host: parsed.hostname,
+      port: parsed.port || '5432',
+      user: decodeURIComponent(parsed.username),
+      database: parsed.pathname.replace(/^\//, ''),
+      passwordLength: decodeURIComponent(parsed.password).length,
+      params: Object.fromEntries(parsed.searchParams),
+      sslEnabled: env.databaseSsl,
+    };
+  } catch {
+    // A value that will not parse is almost always a paste accident: the
+    // variable name left in front of the URL, surrounding quotes, or a line
+    // break pulled in with it.
+    return {
+      source: env.databaseUrlSource,
+      note: 'رشتهٔ اتصال قابل تجزیه نیست؛ احتمالاً نام متغیر، گیومه یا خط تازه همراهش کپی شده است.',
+      startsWith: raw.slice(0, 12),
+      length: raw.length,
+    };
+  }
+}
+
+
+/**
+ * Identifies the running build. Environment variables are baked in when a
+ * deployment is created, so a variable added afterwards is absent until the
+ * next one — and the only way to tell from outside was to compare timestamps
+ * in the dashboard. This answers it in the same request that reports the
+ * problem.
+ */
+function describeDeployment(): Record<string, unknown> | undefined {
+  const id = process.env.VERCEL_DEPLOYMENT_ID;
+  if (!id) return undefined;
+  return {
+    id,
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || undefined,
+    branch: process.env.VERCEL_GIT_COMMIT_REF || undefined,
+    target: process.env.VERCEL_ENV || undefined,
+    region: process.env.VERCEL_REGION || undefined,
+  };
+}
+
 // ------------------------------------------------------ health check -------
 /**
  * Declared before every other `/api` handler so it still answers when the
  * service is misconfigured — that is exactly when someone needs to read it.
  */
 app.get('/api/health', (_req, res) => {
-  /**
-   * Names only — never values. Which variable a connection string arrived
-   * under is the difference between "no database attached" and "attached
-   * under a name this service did not read", and that is exactly what an
-   * operator staring at a 503 needs to know.
-   */
-  const diagnostics = {
-    env: env.nodeEnv,
-    serverless: Boolean(process.env.VERCEL),
-    databaseUrlFrom: databaseUrlKeysPresent[0] ?? null,
-    databaseUrlKeysPresent,
-    databaseSsl: env.databaseSsl,
-    ...(configWarnings.length ? { warnings: configWarnings } : {}),
-  };
-
   if (configProblems.length) {
     res.status(503).json({
       ok: false,
-      ...diagnostics,
+      env: env.nodeEnv,
       code: 'config_error',
       message: 'پیکربندی سرویس ناقص است.',
       problems: configProblems,
@@ -189,13 +247,23 @@ app.get('/api/health', (_req, res) => {
   }
   pool
     .query('SELECT 1')
-    .then(() => res.json({ ok: true, ...diagnostics }))
+    .then(() =>
+      res.json({
+        ok: true,
+        env: env.nodeEnv,
+        deployment: describeDeployment(),
+        connection: describeConnection(),
+      }),
+    )
     .catch((error: unknown) => {
       res.status(503).json({
         ok: false,
-        ...diagnostics,
+        env: env.nodeEnv,
         code: 'database_unavailable',
         message: describeDatabaseFailure(error) ?? 'اتصال به پایگاه‌داده برقرار نیست.',
+        pgCode: String((error as { code?: string })?.code ?? '') || undefined,
+        deployment: describeDeployment(),
+        connection: describeConnection(),
       });
     });
 });

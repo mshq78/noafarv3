@@ -24,21 +24,27 @@ export * from './EventCard';
 export * from './IdeaCard';
 export * from './BlogPostCard';
 
-export const ContentCard: React.FC<{ item: ContentBase }> = ({ item }) => {
+export interface ContentCardProps {
+  item: ContentBase;
+  emphasis?: 'normal' | 'tall';
+}
+
+export const ContentCard: React.FC<ContentCardProps> = ({ item, emphasis = 'normal' }) => {
   switch (item.sectionSlug) {
     case 'academy':
-      return <CourseCard course={item as Course} />;
+      return <CourseCard course={item as Course} emphasis={emphasis} />;
     case 'toolbox':
-      return <ToolCard tool={item as Tool} />;
+      return <ToolCard tool={item as Tool} emphasis={emphasis} />;
     case 'library':
-      return <BookCard book={item as Book} />;
+      return <BookCard book={item as Book} emphasis={emphasis} />;
     case 'journey':
-      return <ExperienceCard experience={item as Experience} />;
+      return <ExperienceCard experience={item as Experience} emphasis={emphasis} />;
     case 'gathering':
-      return <EventCard event={item as Event} />;
+      return <EventCard event={item as Event} emphasis={emphasis} />;
     case 'spark':
-      return <IdeaCard idea={item as Idea} />;
+      return <IdeaCard idea={item as Idea} emphasis={emphasis} />;
     default:
-      return <CourseCard course={item as Course} />;
+      return <CourseCard course={item as Course} emphasis={emphasis} />;
   }
 };
+

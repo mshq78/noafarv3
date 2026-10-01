@@ -74,6 +74,7 @@ import {
   adminGetStats,
   type AdminStats,
   adminSetUserBlocked,
+  adminSeedContent,
   getCategories,
 } from '../services/endpoints';
 import { ApiError } from '../services/api';
@@ -468,6 +469,55 @@ export const AdminPage: React.FC = () => {
     } catch (error) {
       showToast(
         error instanceof ApiError ? error.message : 'تغییر نقش کاربر ناموفق بود.',
+        'error',
+      );
+    }
+  };
+
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeedContent = async () => {
+    if (
+      !window.confirm(
+        'محتوای نمونه به سایت اضافه می‌شود. موارد موجود دست‌نخورده می‌مانند. ادامه می‌دهید؟',
+      )
+    ) {
+      return;
+    }
+    setIsSeeding(true);
+    try {
+      const result = await adminSeedContent();
+      showToast(result.message, 'success');
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'بارگذاری محتوای نمونه ناموفق بود.',
+        'error',
+      );
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleToggleUserBlocked = async (userId: string, isBlocked: boolean) => {
+    if (userId === user?.id) {
+      showToast('مسدود کردن حساب خودتان ممکن نیست.', 'error');
+      return;
+    }
+    const next = !isBlocked;
+    if (
+      next &&
+      !window.confirm('با مسدود کردن این حساب، همهٔ نشست‌های فعال آن بسته می‌شود. ادامه می‌دهید؟')
+    ) {
+      return;
+    }
+    try {
+      await adminSetUserBlocked(userId, next);
+      showToast(next ? 'حساب کاربر مسدود شد.' : 'مسدودیت حساب کاربر برداشته شد.', 'success');
+      triggerRefresh();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'تغییر وضعیت حساب کاربر ناموفق بود.',
         'error',
       );
     }
@@ -1039,7 +1089,7 @@ export const AdminPage: React.FC = () => {
                   { slug: 'academy', label: 'آکادمی' },
                   { slug: 'toolbox', label: 'جعبه‌ابزار' },
                   { slug: 'library', label: 'کتابخانه' },
-                  { slug: 'journey', label: 'سفر تجربه' },
+                  { slug: 'journey', label: 'تور نوآوری' },
                   { slug: 'gathering', label: 'رویدادها' },
                   { slug: 'spark', label: 'جرقه‌ها' },
                 ].map((s) => (
@@ -1463,6 +1513,7 @@ export const AdminPage: React.FC = () => {
                       <th className="py-3 px-4 text-start">کاربر</th>
                       <th className="py-3 px-4 text-start">تلفن</th>
                       <th className="py-3 px-4 text-start">نقش</th>
+                      <th className="py-3 px-4 text-start">وضعیت</th>
                       <th className="py-3 px-4 text-start">امتیاز نوآفری</th>
                       <th className="py-3 px-4 text-center">عملیات</th>
                     </tr>
@@ -1479,10 +1530,20 @@ export const AdminPage: React.FC = () => {
                           <span
                             className={cn(
                               'px-2 py-0.5 rounded font-bold text-[10px]',
-                              u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-ink-100 text-ink-700'
+                              u.role === 'admin' ? 'bg-pink-100 text-pink-700' : 'bg-ink-100 text-ink-700'
                             )}
                           >
                             {u.role === 'admin' ? 'مدیر سیستم (Admin)' : 'کاربر عادی'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded font-bold text-[10px]',
+                              u.isBlocked ? 'bg-pink-100 text-pink-700' : 'bg-sky-50 text-sky-700'
+                            )}
+                          >
+                            {u.isBlocked ? 'مسدود' : 'فعال'}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-sans font-bold text-amber-700">
@@ -1507,6 +1568,14 @@ export const AdminPage: React.FC = () => {
                             >
                               {u.role === 'admin' ? 'تنزل به کاربر' : 'ارتقا به مدیر'}
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleUserBlocked(u.id, Boolean(u.isBlocked))}
+                              className={u.isBlocked ? 'text-sky-700' : 'text-pink-700'}
+                            >
+                              {u.isBlocked ? 'رفع مسدودیت' : 'مسدود کردن'}
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -1525,49 +1594,59 @@ export const AdminPage: React.FC = () => {
           <SiteSettingsManager />
         )}
         {activeTab === 'backup' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center">
-                <Download className="w-5 h-5" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Working Export Card */}
+              <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
+                <div className="w-10 h-10 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center">
+                  <Download className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900">پشتیبان‌گیری از کل دیتابیس</h3>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  تمام دوره‌ها، ابزارها، کتاب‌ها، ارسال‌های کاربران، دیدگاه‌ها و پیام‌ها در قالب یک فایل استاندارد JSON ذخیره می‌شود.
+                </p>
+                <Button variant="primary" size="sm" onClick={handleExportDb} rightIcon={<Download className="w-4 h-4" />}>
+                  دانلود فایل JSON خروجی
+                </Button>
               </div>
-              <h3 className="text-sm font-bold text-ink-900">پشتیبان‌گیری از کل دیتابیس</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                تمام دوره‌ها، ابزارها، کتاب‌ها، ارسال‌های کاربران، دیدگاه‌ها و پیام‌ها در قالب یک فایل استاندارد JSON ذخیره می‌شود.
-              </p>
-              <Button variant="primary" size="sm" onClick={handleExportDb} rightIcon={<Download className="w-4 h-4" />}>
-                دانلود فایل JSON خروجی
-              </Button>
-            </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-amber-50 text-amber-700 rounded-xl flex items-center justify-center">
-                <Upload className="w-5 h-5" />
+              {/* Server Note (Non-clickable guidance) */}
+              <div className="bg-ink-50/70 p-6 rounded-2xl border border-ink-200/80 space-y-4">
+                <div className="flex items-center gap-2 text-ink-700 font-bold text-sm">
+                  <Database className="w-4 h-4 text-ink-500" />
+                  <span>راهنمای عملیات سرور و بازیابی داده‌ها</span>
+                </div>
+                <div className="space-y-3 text-xs text-ink-600 leading-relaxed">
+                  <div className="p-3 bg-white/80 rounded-xl border border-ink-100 space-y-1">
+                    <p className="font-semibold text-ink-800">بازیابی نسخه پشتیبان (Restore):</p>
+                    <p className="text-ink-500">
+                      جهت جلوگیری از بازنویسی اشتباه داده‌های زنده، بازیابی پایگاه‌داده PostgreSQL مستقیماً از طریق ابزار استاندارد <code className="font-sans px-1.5 py-0.5 bg-ink-100 rounded text-ink-800">pg_restore</code> در ترمینال سرور انجام می‌شود.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-sm font-bold text-ink-900">بازیابی اطلاعات (Restore)</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                اطلاعات روی پایگاه‌داده PostgreSQL نگهداری می‌شود؛ بازیابی نسخه پشتیبان با ابزار
-                استاندارد <span className="font-sans">pg_restore</span> روی سرور انجام می‌گیرد تا
-                داده‌های زنده به‌اشتباه بازنویسی نشوند.
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
-                <Upload className="w-4 h-4" />
-                <span>از طریق سرور</span>
-              </span>
-            </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
-              <div className="w-10 h-10 bg-pink-50 text-pink-700 rounded-xl flex items-center justify-center">
-                <RotateCcw className="w-5 h-5" />
+              {/* Sample catalogue */}
+              <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
+                <div className="w-10 h-10 bg-amber-50 text-amber-800 rounded-xl flex items-center justify-center">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900">بارگذاری محتوای نمونه</h3>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  مجموعهٔ نمونهٔ دوره‌ها، ابزارها، کتاب‌ها، تجربه‌ها، رویدادها، ایده‌ها و
+                  مطالب بلاگ را وارد سایت می‌کند. اجرای دوباره چیزی را تکراری یا بازنویسی
+                  نمی‌کند؛ هر موردی که از قبل باشد دست‌نخورده می‌ماند.
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSeedContent}
+                  disabled={isSeeding}
+                  rightIcon={<RotateCcw className={cn('w-4 h-4', isSeeding && 'animate-spin')} />}
+                >
+                  {isSeeding ? 'در حال بارگذاری…' : 'بارگذاری محتوای نمونه'}
+                </Button>
               </div>
-              <h3 className="text-sm font-bold text-ink-900">بارگذاری محتوای اولیه</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">
-                برای پر کردن اولیه سایت، دستور <span className="font-sans">npm run db:seed</span> روی
-                سرور اجرا می‌شود. این کار محتوای موجود را حذف نمی‌کند.
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-ink-100 text-ink-500 rounded-xl text-xs font-bold">
-                <RotateCcw className="w-4 h-4" />
-                <span>از طریق سرور</span>
-              </span>
             </div>
           </div>
         )}
@@ -1607,7 +1686,7 @@ export const AdminPage: React.FC = () => {
                     <option value="academy">آکادمی (دوره آموزشی)</option>
                     <option value="toolbox">جعبه‌ابزار (ابزار و بوم)</option>
                     <option value="library">کتابخانه (کتاب و منبع)</option>
-                    <option value="journey">سفر تجربه (روایت میدانی)</option>
+                    <option value="journey">تور نوآوری (روایت میدانی)</option>
                     <option value="gathering">رویدادها و کارگاه‌ها</option>
                     <option value="spark">جرقه (ایده نوآورانه)</option>
                     <option value="blog">بلاگ و مقالات</option>

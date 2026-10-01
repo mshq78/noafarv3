@@ -1,4 +1,4 @@
-import { del, get, patch, post, put, request } from './api';
+import { API_BASE_URL, del, get, patch, post, put, request } from './api';
 import {
   SectionSlug,
   ContentBase,
@@ -353,23 +353,83 @@ export function getMyEventRegistrations(): Promise<EventRegistration[]> {
 // 11. UPLOADS
 // ==========================================
 
-async function upload(endpoint: string, file: File): Promise<MediaAsset> {
+export interface UploadConfig {
+  mode: 'blob' | 'disk' | 'disabled';
+  maxBytes: { avatar: number; submission: number; media: number };
+}
+
+let uploadConfig: Promise<UploadConfig> | null = null;
+
+/**
+ * Asked once per page load. On a serverless host files go straight from the
+ * browser to object storage, because the function body is capped well below
+ * the size of a lesson video and its disk does not survive the request; a
+ * self-hosted server still takes the multipart POST.
+ */
+export function getUploadConfig(): Promise<UploadConfig> {
+  if (!uploadConfig) {
+    uploadConfig = get<UploadConfig>('/uploads/config').catch(() => ({
+      mode: 'disk' as const,
+      maxBytes: { avatar: 2_097_152, submission: 4_194_304, media: 8_388_608 },
+    }));
+  }
+  return uploadConfig;
+}
+
+function mediaTypeOf(file: File): MediaAsset['type'] {
+  if (file.type.startsWith('image/')) return 'image';
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('audio/')) return 'audio';
+  if (file.type === 'application/pdf') return 'pdf';
+  return 'document';
+}
+
+/** Keeps the stored name readable without letting it steer the storage path. */
+function safeName(name: string): string {
+  return name.replace(/[^\p{Letter}\p{Number}._-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'file';
+}
+
+async function uploadToBlob(folder: string, file: File): Promise<MediaAsset> {
+  const { upload: blobUpload } = await import('@vercel/blob/client');
+  const result = await blobUpload(`${folder}/${safeName(file.name)}`, file, {
+    access: 'public',
+    handleUploadUrl: `${API_BASE_URL}/uploads/blob`,
+    // The upload route is state-changing, so it needs the same header every
+    // other mutating request carries or the CSRF guard turns it away.
+    headers: { 'X-Noafar-Client': 'web' },
+  });
+  return {
+    id: result.pathname,
+    type: mediaTypeOf(file),
+    url: result.url,
+    fileName: file.name.slice(0, 200),
+    fileSizeBytes: file.size,
+  };
+}
+
+async function uploadToDisk(endpoint: string, file: File): Promise<MediaAsset> {
   const formData = new FormData();
   formData.append('file', file);
   return request<MediaAsset>(endpoint, { method: 'POST', body: formData });
 }
 
+async function upload(endpoint: string, folder: string, file: File): Promise<MediaAsset> {
+  const config = await getUploadConfig();
+  if (config.mode === 'blob') return uploadToBlob(folder, file);
+  return uploadToDisk(endpoint, file);
+}
+
 export function uploadAvatar(file: File): Promise<MediaAsset> {
-  return upload('/uploads/avatar', file);
+  return upload('/uploads/avatar', 'avatars', file);
 }
 
 export function uploadMedia(file: File): Promise<MediaAsset> {
-  return upload('/uploads/media', file);
+  return upload('/uploads/media', 'media', file);
 }
 
 /** Image attached by a member to their own idea/experience submission. */
 export function uploadSubmissionImage(file: File): Promise<MediaAsset> {
-  return upload('/uploads/submission', file);
+  return upload('/uploads/submission', 'submissions', file);
 }
 
 // ==========================================
@@ -482,6 +542,19 @@ export interface AdminStats {
   unreadMessages: number;
   userCount: number;
   registrationCount: number;
+}
+
+export interface SeedResult {
+  success: boolean;
+  skipped: boolean;
+  total?: number;
+  counts?: Record<string, number>;
+  message: string;
+}
+
+/** Loads the sample catalogue. Safe to repeat: existing content is untouched. */
+export function adminSeedContent(onlyIfEmpty = false): Promise<SeedResult> {
+  return post<SeedResult>('/admin/seed', { onlyIfEmpty });
 }
 
 export function adminGetStats(): Promise<AdminStats> {

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, queryOne, queryRows, transaction } from '../db.js';
 import { requireAdmin, requireOperator, revokeAllSessionsForUser } from '../lib/auth.js';
+import { rateLimit } from '../lib/rateLimit.js';
 import { asyncRoute, badRequest, forbidden, notFound } from '../lib/http.js';
 import {
   mapComment,
@@ -199,15 +200,27 @@ function sanitizeSyllabus(value: unknown): unknown {
   });
 }
 
-function buildDataPayload(input: Record<string, unknown> | undefined): Record<string, unknown> {
-  const data: Record<string, unknown> = {};
+/**
+ * Splits an incoming `data` object into the fields to write and the fields to
+ * clear. A key the editor sent but that sanitises to nothing — an emptied
+ * video URL, a removed capacity — is a deliberate erasure, so it is reported
+ * separately: the update merges `set` and then subtracts `clear`, which is the
+ * only way to remove a key from a jsonb column that is otherwise merged.
+ */
+function buildDataPayload(input: Record<string, unknown> | undefined): {
+  set: Record<string, unknown>;
+  clear: string[];
+} {
+  const set: Record<string, unknown> = {};
+  const clear: string[] = [];
   for (const [key, value] of Object.entries(input ?? {})) {
     const sanitiser = DATA_FIELD_SANITISERS[key];
     if (!sanitiser) continue; // unknown keys are dropped, never stored blindly
     const clean = sanitiser(value);
-    if (clean !== undefined && clean !== '' && clean !== null) data[key] = clean;
+    if (clean !== undefined && clean !== '' && clean !== null) set[key] = clean;
+    else clear.push(key);
   }
-  return data;
+  return { set, clear };
 }
 
 function normaliseTags(tags: z.infer<typeof contentSchema>['tags']): { id: string; nameFa: string }[] {
@@ -264,7 +277,7 @@ adminRouter.post(
         input.category ? JSON.stringify(sanitizeCategory(input.category)) : null,
         JSON.stringify(normaliseTags(input.tags)),
         JSON.stringify(normaliseAuthor(input.author) ?? null),
-        JSON.stringify(buildDataPayload(input.data)),
+        JSON.stringify(buildDataPayload(input.data).set),
         input.status ?? 'published',
         parseDate(input.publishedAt),
       ],
@@ -294,6 +307,8 @@ adminRouter.patch(
       slug = await uniqueSlug(existing.section, input.slug);
     }
 
+    const dataPayload = buildDataPayload(input.data);
+
     const row = await queryOne<ContentRow>(
       `UPDATE content
           SET title       = COALESCE($2, title),
@@ -306,8 +321,11 @@ adminRouter.patch(
               category    = COALESCE($9::jsonb, category),
               tags        = COALESCE($10::jsonb, tags),
               author      = COALESCE($11::jsonb, author),
-              -- merge so a partial edit never wipes untouched section fields
-              data        = data || COALESCE($12::jsonb, '{}'::jsonb),
+              -- Merge so a partial edit never wipes untouched section fields,
+              -- then subtract the keys the editor deliberately emptied —
+              -- without the subtraction a field could be changed but never
+              -- removed.
+              data        = (data || COALESCE($12::jsonb, '{}'::jsonb)) - $15::text[],
               status      = COALESCE($13, status),
               published_at = COALESCE($14, published_at),
               updated_at  = now()
@@ -325,9 +343,10 @@ adminRouter.patch(
         input.category ? JSON.stringify(sanitizeCategory(input.category)) : null,
         input.tags ? JSON.stringify(normaliseTags(input.tags)) : null,
         input.author === undefined ? null : JSON.stringify(normaliseAuthor(input.author) ?? null),
-        input.data ? JSON.stringify(buildDataPayload(input.data)) : null,
+        input.data ? JSON.stringify(dataPayload.set) : null,
         input.status ?? null,
         parseDate(input.publishedAt),
+        input.data ? dataPayload.clear : [],
       ],
     );
 
@@ -536,31 +555,35 @@ adminRouter.get(
 adminRouter.post(
   '/comments/:id/approve',
   asyncRoute(async (req, res) => {
-    const row = await transaction(async (client) => {
+    await transaction(async (client) => {
       const updated = await client.query<{ id: string; author_id: string | null; content_id: string }>(
         `UPDATE comments SET status = 'approved', updated_at = now()
           WHERE id = $1 AND status <> 'approved'
       RETURNING id, author_id, content_id`,
         [req.params.id],
       );
-      if (updated.rowCount === 0) return null;
+      if (updated.rowCount === 0) return;
 
+      const row = updated.rows[0]!;
       await client.query(
         `UPDATE content SET comment_count = comment_count + 1 WHERE id = $1`,
-        [updated.rows[0]!.content_id],
+        [row.content_id],
       );
-      return updated.rows[0]!;
-    });
 
-    if (row?.author_id) {
-      await awardPoints({
-        userId: row.author_id,
-        reason: 'comment',
-        reasonFa: 'ثبت دیدگاه معتبر',
-        points: 15,
-        dedupeKey: `comment:${row.id}`,
-      });
-    }
+      // Awarded on the same connection as the approval: a crash between the
+      // two would otherwise leave an approved comment whose author never got
+      // the points, with nothing to retry from.
+      if (row.author_id) {
+        await awardPoints({
+          userId: row.author_id,
+          reason: 'comment',
+          reasonFa: 'ثبت دیدگاه معتبر',
+          points: 15,
+          dedupeKey: `comment:${row.id}`,
+          client,
+        });
+      }
+    });
     res.json({ success: true });
   }),
 );
@@ -654,7 +677,7 @@ adminRouter.get(
 // ================================================================== users ===
 
 const USER_COLUMNS = `id, phone, email, display_name, national_id, birth_year, city, interests,
-                      role, avatar_url, bio, points, profile_complete, joined_at`;
+                      role, avatar_url, bio, points, profile_complete, is_blocked, joined_at`;
 
 adminRouter.get(
   '/users',
@@ -704,7 +727,7 @@ adminRouter.post(
 
     await awardPoints({
       userId: req.params.id,
-      reason: 'share',
+      reason: 'admin_grant',
       reasonFa: sanitizePlainText(parsed.data.reasonFa, 300),
       points: parsed.data.points,
     });
@@ -743,6 +766,9 @@ adminRouter.get(
   }),
 );
 
+/** Settings whose value is a link, so it is validated as one. */
+const URL_SETTINGS = new Set(['logoUrl', 'instagramUrl', 'telegramUrl', 'aparatUrl', 'linkedinUrl']);
+
 adminRouter.put(
   '/settings',
   asyncRoute(async (req, res) => {
@@ -750,10 +776,9 @@ adminRouter.put(
     const clean: Record<string, unknown> = {};
     for (const key of PUBLIC_SETTINGS_KEYS) {
       if (incoming[key] === undefined) continue;
-      clean[key] =
-        key === 'logoUrl'
-          ? sanitizeUrl(incoming[key], { allowData: true })
-          : sanitizeMultilineText(incoming[key], 4_000);
+      clean[key] = URL_SETTINGS.has(key)
+        ? sanitizeUrl(incoming[key], { allowData: key === 'logoUrl' })
+        : sanitizeMultilineText(incoming[key], 4_000);
     }
 
     const row = await queryOne<{ data: Record<string, unknown> }>(
@@ -763,6 +788,47 @@ adminRouter.put(
       [JSON.stringify(clean)],
     );
     res.json(row?.data ?? clean);
+  }),
+);
+
+// ============================================================== content seed =
+
+/**
+ * Loads the sample catalogue into the database. It exists as a route because
+ * the seed script cannot be run on a serverless host — there is no shell — and
+ * SEED_ON_BOOT is only read by the long-running entry point.
+ *
+ * Every insert is `ON CONFLICT (section, slug) DO NOTHING`, so running it twice
+ * adds nothing the second time and never overwrites edited content. Admin only:
+ * it writes to every section.
+ */
+adminRouter.post(
+  '/seed',
+  requireAdmin,
+  rateLimit({
+    name: 'admin-seed',
+    limit: 6,
+    windowSeconds: 60 * 60,
+    key: (req) => req.user?.id ?? 'anon',
+  }),
+  asyncRoute(async (req, res) => {
+    const onlyIfEmpty = (req.body as { onlyIfEmpty?: unknown } | undefined)?.onlyIfEmpty === true;
+    const { seed } = await import('../seed.js');
+    const counts = await seed({ onlyIfEmpty });
+    if (!counts) {
+      res.json({ success: true, skipped: true, message: 'محتوا از قبل موجود بود؛ چیزی اضافه نشد.' });
+      return;
+    }
+    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    res.json({
+      success: true,
+      skipped: false,
+      counts,
+      total,
+      message: total
+        ? `${total} مورد محتوای نمونه افزوده شد.`
+        : 'همهٔ محتوای نمونه از قبل موجود بود؛ چیزی اضافه نشد.',
+    });
   }),
 );
 

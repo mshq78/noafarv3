@@ -14,10 +14,11 @@ import { MOCK_IDEAS } from '../../src/mocks/ideas.js';
 import { MOCK_BLOG_POSTS } from '../../src/mocks/blog.js';
 
 /**
- * The sample data pointed video URLs at Google's public demo clips. Those are
- * placeholders, not course material, so they are dropped at seed time — the
+ * Empty or sample placeholder video URLs are dropped at seed time — the
  * player then shows its "no video uploaded yet" state until a real file is
- * attached from the admin panel.
+ * attached from the admin panel. Google's public demo clips are matched too:
+ * the sample data used to point at them, and a reintroduced copy would look
+ * like real course material.
  */
 const PLACEHOLDER_VIDEO = /commondatastorage\.googleapis\.com|sample-videos\.com/i;
 
@@ -111,7 +112,7 @@ async function insertSection(section: string, items: SeedItem[]): Promise<number
 }
 
 const DEFAULT_SETTINGS = {
-  heroTitle: 'مدرسه کنشگری نوآفر',
+  heroTitle: 'مرکز نوآوری نوآفر',
   heroSubtitle: 'بستری برای یادگیری، تجربه و خلق ارزش‌های اجتماعی',
   aboutText:
     '<p>نوآفر یک اکوسیستم باز و مشارکتی برای یادگیری روش‌های نوین حل مسائل اجتماعی، ابزارهای طراحی کسب‌وکار اجتماعی و شبکه‌سازی میان کنشگران، محققان و سازمان‌های مردم‌نهاد است.</p>',
@@ -122,13 +123,23 @@ const DEFAULT_SETTINGS = {
   footerCopyright: 'تمام حقوق برای پلتفرم نوآفر محفوظ است.',
 };
 
-export async function seed({ onlyIfEmpty = false } = {}): Promise<void> {
+export interface SeedCounts {
+  academy: number;
+  toolbox: number;
+  library: number;
+  journey: number;
+  gathering: number;
+  spark: number;
+  blog: number;
+}
+
+export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | null> {
   if (onlyIfEmpty) {
     const existing = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM content`);
     if ((existing.rows[0]?.count ?? 0) > 0) {
       // eslint-disable-next-line no-console
       console.info('[noafar][seed] محتوا از قبل موجود است؛ از seed صرف‌نظر شد.');
-      return;
+      return null;
     }
   }
 
@@ -150,6 +161,7 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.info('[noafar][seed] محتوای اولیه ثبت شد:', counts);
+  return counts;
 }
 
 // Allow `node dist-server/seed.js` as a one-off command.

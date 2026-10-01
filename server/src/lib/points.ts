@@ -10,7 +10,9 @@ export type PointReason =
   | 'submit_experience'
   | 'complete_profile'
   | 'complete_course'
-  | 'first_canvas';
+  | 'first_canvas'
+  | 'event_register'
+  | 'admin_grant';
 
 /** Server-side source of truth; the client can never choose its own amount. */
 export const POINT_VALUES: Record<PointReason, number> = {
@@ -23,6 +25,12 @@ export const POINT_VALUES: Record<PointReason, number> = {
   complete_profile: 20,
   complete_course: 40,
   first_canvas: 30,
+  event_register: 30,
+  /**
+   * An operator chooses the amount, so there is no fixed value here; the
+   * entry exists so the reason is a real code rather than a borrowed one.
+   */
+  admin_grant: 0,
 };
 
 interface AwardOptions {

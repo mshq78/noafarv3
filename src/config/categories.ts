@@ -1,4 +1,4 @@
-import { Category } from '../types';
+import { Category } from '../types/index.js';
 
 // Academy categories (single-select filter: دسته‌بندی موضوعی)
 export const ACADEMY_CATEGORIES: Category[] = [
