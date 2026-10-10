@@ -163,27 +163,27 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
 
             {/* Conditional Action buttons for Spark and Journey */}
             {currentSlug === 'spark' && (
-              <Link to="/spark/submit" className="shrink-0">
-                <Button
-                  size="lg"
-                  variant="accent"
-                  rightIcon={<PlusCircle className="w-4 h-4" />}
-                >
-                  ثبت ایده نو (+۵۰ امتیاز)
-                </Button>
-              </Link>
+              <Button
+                to="/spark/submit"
+                size="lg"
+                variant="accent"
+                className="shrink-0"
+                rightIcon={<PlusCircle className="w-4 h-4" />}
+              >
+                ثبت ایده نو (+۵۰ امتیاز)
+              </Button>
             )}
 
             {currentSlug === 'journey' && (
-              <Link to="/journey/submit" className="shrink-0">
-                <Button
-                  size="lg"
-                  variant="primary"
-                  rightIcon={<PlusCircle className="w-4 h-4" />}
-                >
-                  ثبت روایت تجربه (+۱۰۰ امتیاز)
-                </Button>
-              </Link>
+              <Button
+                to="/journey/submit"
+                size="lg"
+                variant="primary"
+                className="shrink-0"
+                rightIcon={<PlusCircle className="w-4 h-4" />}
+              >
+                ثبت روایت تجربه (+۱۰۰ امتیاز)
+              </Button>
             )}
           </div>
 

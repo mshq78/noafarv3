@@ -164,14 +164,14 @@ export const ContentDetailPage: React.FC = () => {
     <div className="min-h-screen bg-white py-8 sm:py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-2 text-xs text-ink-500 font-medium overflow-x-auto">
-          <Link to="/" className="hover:text-ink-900 transition-colors">
+        <nav aria-label="مسیر صفحه" className="flex items-center gap-2 text-xs text-ink-500 font-medium overflow-x-auto py-2">
+          <Link to="/" className="hover:text-ink-900 transition-colors py-1">
             خانه
           </Link>
           <span>/</span>
           <Link
             to={`/${content.sectionSlug}`}
-            className="hover:text-ink-900 transition-colors"
+            className="hover:text-ink-900 transition-colors py-1"
           >
             {currentSection?.nameFa || content.sectionSlug}
           </Link>
@@ -214,9 +214,9 @@ export const ContentDetailPage: React.FC = () => {
               </span>
             )}
             {content.author && (
-              <span className="flex items-center gap-1 text-ink-700">
-                <User className="w-3.5 h-3.5 text-sky-600" />
-                <span>
+              <span className="flex items-center gap-1 text-ink-700 min-w-0 max-w-full">
+                <User className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                <span className="min-w-0 break-words">
                   نویسنده / ارائه‌دهنده:{' '}
                   {typeof content.author === 'string'
                     ? content.author
@@ -225,9 +225,9 @@ export const ContentDetailPage: React.FC = () => {
               </span>
             )}
             {(content as unknown as { instructor?: { name?: string; displayName?: string } }).instructor && (
-              <span className="flex items-center gap-1 text-ink-700">
-                <User className="w-3.5 h-3.5 text-sky-600" />
-                <span>
+              <span className="flex items-center gap-1 text-ink-700 min-w-0 max-w-full">
+                <User className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                <span className="min-w-0 break-words">
                   مدرس:{' '}
                   {(content as unknown as { instructor?: { name?: string; displayName?: string } }).instructor?.name ||
                     (content as unknown as { instructor?: { name?: string; displayName?: string } }).instructor?.displayName}
@@ -235,9 +235,9 @@ export const ContentDetailPage: React.FC = () => {
               </span>
             )}
             {(content as unknown as { submittedBy?: { displayName?: string } | string }).submittedBy && (
-              <span className="flex items-center gap-1 text-ink-700">
-                <User className="w-3.5 h-3.5 text-sky-600" />
-                <span>
+              <span className="flex items-center gap-1 text-ink-700 min-w-0 max-w-full">
+                <User className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                <span className="min-w-0 break-words">
                   {content.sectionSlug === 'spark' ? 'ایده‌پرداز: ' : 'روایت‌کننده: '}
                   {typeof (content as unknown as { submittedBy?: { displayName?: string } | string }).submittedBy === 'string'
                     ? ((content as unknown as { submittedBy?: { displayName?: string } | string }).submittedBy as string)
@@ -261,23 +261,22 @@ export const ContentDetailPage: React.FC = () => {
               <span className="text-xs font-bold text-pink-700">
                 میز کار تعاملی بوم آنلاین
               </span>
-              <h3 className="text-base font-black text-ink-900">
+              <h2 className="text-base font-black text-ink-900">
                 این ابزار را به صورت آنلاین تکمیل، ذخیره و خروجی بگیرید
-              </h3>
+              </h2>
               <p className="text-xs text-ink-500">
                 با تکمیل هر بوم در حساب کاربری خود، +۳۰ امتیاز نوآفری کسب نمایید.
               </p>
             </div>
-            <Link to={`/toolbox/${content.slug}/canvas`}>
-              <Button
-                variant="accent"
-                size="lg"
-                rightIcon={<Layout className="w-4 h-4" />}
-                className="shadow-md shrink-0"
-              >
-                ورود به بوم تعاملی
-              </Button>
-            </Link>
+            <Button
+              to={`/toolbox/${content.slug}/canvas`}
+              variant="accent"
+              size="lg"
+              rightIcon={<Layout className="w-4 h-4" />}
+              className="shadow-md shrink-0"
+            >
+              ورود به بوم تعاملی
+            </Button>
           </div>
         )}
 

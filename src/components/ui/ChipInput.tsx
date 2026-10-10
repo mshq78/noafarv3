@@ -86,6 +86,7 @@ export const ChipInput: React.FC<ChipInputProps> = ({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={() => inputValue && addTag(inputValue)}
+              aria-label={placeholder || 'افزودن تگ'}
               placeholder={tags.length === 0 ? placeholder : 'تگ دیگر...'}
               className="w-full text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none bg-transparent py-1 px-1"
             />

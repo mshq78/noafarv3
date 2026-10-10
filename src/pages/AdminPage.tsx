@@ -860,7 +860,7 @@ export const AdminPage: React.FC = () => {
               <div>
                 <h1 className="text-lg font-black text-ink-900 flex items-center gap-2">
                   <span>پنل مدیریت و راهبری نوآفر</span>
-                  <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-sans font-bold rounded-full">
+                  <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-[11px] font-sans font-bold rounded-full">
                     نسخه زنده و ۱۰۰٪ فعال
                   </span>
                 </h1>
@@ -879,11 +879,9 @@ export const AdminPage: React.FC = () => {
               >
                 افزودن محتوای جدید
               </Button>
-              <Link to="/">
-                <Button variant="secondary" size="sm" rightIcon={<ExternalLink className="w-4 h-4" />}>
+              <Button to="/" variant="secondary" size="sm" rightIcon={<ExternalLink className="w-4 h-4" />}>
                   مشاهده سایت
                 </Button>
-              </Link>
             </div>
           </div>
 
@@ -925,7 +923,7 @@ export const AdminPage: React.FC = () => {
             >
               <FileText className="w-4 h-4" />
               <span>مدیریت محتوا</span>
-              <span className="px-1.5 py-0.2 bg-white/20 text-current rounded-md text-[10px] font-sans">
+              <span className="px-1.5 py-0.2 bg-white/20 text-current rounded-md text-[11px] font-sans">
                 {toFaDigits(totalContentCount)}
               </span>
             </button>
@@ -942,7 +940,7 @@ export const AdminPage: React.FC = () => {
               <Inbox className="w-4 h-4" />
               <span>درخواست‌ها و ارسال‌ها</span>
               {pendingSubmissionsCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-sans">
+                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[11px] font-sans">
                   {toFaDigits(pendingSubmissionsCount)}
                 </span>
               )}
@@ -960,7 +958,7 @@ export const AdminPage: React.FC = () => {
               <MessageSquare className="w-4 h-4" />
               <span>دیدگاه‌ها</span>
               {pendingCommentsCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-pink-500 text-white rounded-full text-[10px] font-sans">
+                <span className="px-1.5 py-0.2 bg-pink-500 text-white rounded-full text-[11px] font-sans">
                   {toFaDigits(pendingCommentsCount)}
                 </span>
               )}
@@ -978,7 +976,7 @@ export const AdminPage: React.FC = () => {
               <Mail className="w-4 h-4" />
               <span>پیام‌های تماس</span>
               {unreadMessagesCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-sky-500 text-white rounded-full text-[10px] font-sans">
+                <span className="px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[11px] font-sans">
                   {toFaDigits(unreadMessagesCount)}
                 </span>
               )}
@@ -995,7 +993,7 @@ export const AdminPage: React.FC = () => {
             >
               <Calendar className="w-4 h-4" />
               <span>ثبت‌نام رویدادها</span>
-              <span className="px-1.5 py-0.2 bg-white/20 text-current rounded-md text-[10px] font-sans">
+              <span className="px-1.5 py-0.2 bg-white/20 text-current rounded-md text-[11px] font-sans">
                 {toFaDigits(registrations.length)}
               </span>
             </button>
@@ -1112,10 +1110,10 @@ export const AdminPage: React.FC = () => {
               {/* Recent Pending Submissions */}
               <div className="bg-white p-6 rounded-2xl border border-ink-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between border-b border-ink-100 pb-3">
-                  <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-ink-900 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-amber-600" />
                     <span>آخرین ارسال‌های نیازمند داوری</span>
-                  </h3>
+                  </h2>
                   <button
                     onClick={() => setActiveTab('submissions')}
                     className="text-xs font-bold text-sky-600 hover:underline cursor-pointer"
@@ -1141,7 +1139,7 @@ export const AdminPage: React.FC = () => {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-ink-900">{sub.title}</span>
-                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[11px]">
                                 {sub.kind === 'idea' ? 'جرقه ایده' : 'روایت تجربه'}
                               </span>
                             </div>
@@ -1205,7 +1203,7 @@ export const AdminPage: React.FC = () => {
                     </div>
                     <span
                       className={cn(
-                        'px-2 py-0.5 rounded text-[10px] font-bold shrink-0',
+                        'px-2 py-0.5 rounded text-[11px] font-bold shrink-0',
                         msg.status === 'unread'
                           ? 'bg-sky-100 text-sky-800'
                           : msg.status === 'replied'
@@ -1435,7 +1433,7 @@ export const AdminPage: React.FC = () => {
                         </span>
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded font-bold text-[10px]',
+                            'px-2 py-0.5 rounded font-bold text-[11px]',
                             sub.status === 'pending'
                               ? 'bg-amber-100 text-amber-800'
                               : sub.status === 'approved'
@@ -1499,13 +1497,14 @@ export const AdminPage: React.FC = () => {
                         </>
                       )}
                       {sub.publishedSlug && (
-                        <Link
+                        <Button
                           to={`/${sub.kind === 'idea' ? 'spark' : 'journey'}/${sub.publishedSlug}`}
+                          size="sm"
+                          variant="secondary"
+                          rightIcon={<Eye className="w-3.5 h-3.5" />}
                         >
-                          <Button size="sm" variant="secondary" rightIcon={<Eye className="w-3.5 h-3.5" />}>
-                            مشاهده در سایت
-                          </Button>
-                        </Link>
+                          مشاهده در سایت
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1558,7 +1557,7 @@ export const AdminPage: React.FC = () => {
                         <span className="text-ink-400 font-sans">{formatPersianDate(comm.createdAt)}</span>
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded font-bold text-[10px]',
+                            'px-2 py-0.5 rounded font-bold text-[11px]',
                             comm.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                           )}
                         >
@@ -1617,7 +1616,7 @@ export const AdminPage: React.FC = () => {
                         <span className="text-ink-400 font-sans">{formatPersianDate(msg.createdAt)}</span>
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded font-bold text-[10px]',
+                            'px-2 py-0.5 rounded font-bold text-[11px]',
                             msg.status === 'unread'
                               ? 'bg-sky-100 text-sky-800'
                               : msg.status === 'replied'
@@ -1730,7 +1729,7 @@ export const AdminPage: React.FC = () => {
                         <td className="py-3 px-4">
                           <span
                             className={cn(
-                              'px-2 py-0.5 rounded font-bold text-[10px]',
+                              'px-2 py-0.5 rounded font-bold text-[11px]',
                               u.role === 'admin' ? 'bg-pink-100 text-pink-700' : 'bg-ink-100 text-ink-700'
                             )}
                           >
@@ -1740,7 +1739,7 @@ export const AdminPage: React.FC = () => {
                         <td className="py-3 px-4">
                           <span
                             className={cn(
-                              'px-2 py-0.5 rounded font-bold text-[10px]',
+                              'px-2 py-0.5 rounded font-bold text-[11px]',
                               u.isBlocked ? 'bg-pink-100 text-pink-700' : 'bg-sky-50 text-sky-700'
                             )}
                           >

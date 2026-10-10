@@ -85,17 +85,18 @@ export const SearchPage: React.FC = () => {
             <Search className="w-5 h-5 absolute start-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
             <input
               type="text"
+              aria-label="عبارت جستجو"
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="جستجو در دوره‌ها، بوم‌ها، کتب، تجارب، رویدادها و ایده‌ها..."
-              className="w-full h-12 ps-12 pe-10 bg-ink-50 border border-ink-200 rounded-xl text-sm text-ink-900 focus:outline-none focus:border-sky-600 focus:bg-white transition-colors"
+              className="w-full h-12 ps-12 pe-10 bg-ink-50 border border-ink-200 rounded-xl text-sm text-ink-900 focus:outline-none focus:border-sky-600 focus-visible:ring-2 focus-visible:ring-sky-600/40 focus:bg-white transition-colors"
               autoFocus
             />
             {query && (
               <button
                 type="button"
                 onClick={() => handleQueryChange('')}
-                className="absolute end-3 top-1/2 -translate-y-1/2 p-1.5 text-ink-400 hover:text-ink-700"
+                aria-label="پاک کردن عبارت جستجو" className="absolute end-3 top-1/2 -translate-y-1/2 p-1.5 text-ink-400 hover:text-ink-700"
               >
                 <X className="w-4 h-4" />
               </button>

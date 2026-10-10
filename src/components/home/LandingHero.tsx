@@ -63,7 +63,7 @@ export const LandingHero: React.FC = () => {
           <div>
             <Link
               to="/about"
-              className="inline-flex items-center gap-1.5 text-sm sm:text-base font-semibold text-sky-700 hover:text-sky-800 transition-colors group"
+              className="inline-flex items-center gap-1.5 text-sm sm:text-base font-semibold text-sky-700 hover:text-sky-800 transition-colors group py-2"
             >
               <span>آشنایی بیشتر با نوآفر</span>
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />

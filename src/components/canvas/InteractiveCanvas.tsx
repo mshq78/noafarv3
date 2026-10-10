@@ -249,7 +249,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-sky-50/50 border border-sky-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-sky-900">۱. مسئله و چالش اصلی</span>
-                  <span className="text-[10px] text-sky-600">۳ درد اصلی جامعه</span>
+                  <span className="text-[11px] text-sky-600">۳ درد اصلی جامعه</span>
                 </div>
                 <textarea
                   value={notes['box-1'] || ''}
@@ -263,7 +263,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-amber-900">۲. بخش‌بندی ذینفعان</span>
-                  <span className="text-[10px] text-amber-700">مشتریان و مددجویان</span>
+                  <span className="text-[11px] text-amber-700">مشتریان و مددجویان</span>
                 </div>
                 <textarea
                   value={notes['box-2'] || ''}
@@ -277,7 +277,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-pink-50/50 border border-pink-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-pink-900">۳. ارزش پیشنهادی منحصربه‌فرد</span>
-                  <span className="text-[10px] text-pink-600">پیام شفاف</span>
+                  <span className="text-[11px] text-pink-600">پیام شفاف</span>
                 </div>
                 <textarea
                   value={notes['box-3'] || ''}
@@ -291,7 +291,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-ink-50 border border-ink-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink-900">۴. راه‌حل کلیدی</span>
-                  <span className="text-[10px] text-ink-500">۳ ویژگی اصلی</span>
+                  <span className="text-[11px] text-ink-500">۳ ویژگی اصلی</span>
                 </div>
                 <textarea
                   value={notes['box-4'] || ''}
@@ -305,7 +305,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-ink-50 border border-ink-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink-900">۵. مسیرهای دسترسی و کانال‌ها</span>
-                  <span className="text-[10px] text-ink-500">نحوه رساندن پیام</span>
+                  <span className="text-[11px] text-ink-500">نحوه رساندن پیام</span>
                 </div>
                 <textarea
                   value={notes['box-5'] || ''}
@@ -319,7 +319,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({ tool, canv
               <div className="p-4 bg-ink-50 border border-ink-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink-900">۶. سنجه‌های موفقیت و اثر</span>
-                  <span className="text-[10px] text-ink-500">شاخص‌های ارزیابی</span>
+                  <span className="text-[11px] text-ink-500">شاخص‌های ارزیابی</span>
                 </div>
                 <textarea
                   value={notes['box-6'] || ''}

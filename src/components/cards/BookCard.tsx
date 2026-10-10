@@ -61,9 +61,9 @@ export const BookCard: React.FC<BookCardProps> = ({ book, emphasis = 'normal' })
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-1.5">
           <Link to={`/library/${book.slug}`}>
-            <h3 className="text-sm font-bold text-ink-900 line-clamp-2 group-hover:text-amber-700 transition-colors leading-snug">
+            <h2 className="text-sm font-bold text-ink-900 line-clamp-2 group-hover:text-amber-700 transition-colors leading-snug">
               {book.title}
-            </h3>
+            </h2>
           </Link>
 
           {/* Authors */}

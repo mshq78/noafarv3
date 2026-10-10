@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -8,6 +9,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** Render as a router link (a real <a>) instead of a <button>. */
+  to?: string;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -21,6 +24,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       disabled = false,
       leftIcon,
       rightIcon,
+      to,
       type = 'button',
       ...props
     },
@@ -52,6 +56,28 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     return (
+      to ? (
+        <Link
+          to={to}
+          className={cn(
+          'inline-flex items-center justify-center font-medium transition-colors select-none whitespace-nowrap cursor-pointer',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+          'disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed',
+          sizeClasses[size],
+          variantClasses[variant],
+          className
+        )}
+          {...(props as object)}
+        >
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin text-current shrink-0" />
+        ) : (
+          leftIcon && <span className="shrink-0">{leftIcon}</span>
+        )}
+        <span>{children}</span>
+        {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
+        </Link>
+      ) : (
       <button
         ref={ref}
         type={type}
@@ -74,6 +100,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <span>{children}</span>
         {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
       </button>
+      )
     );
   }
 );

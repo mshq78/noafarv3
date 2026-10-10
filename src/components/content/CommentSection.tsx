@@ -63,9 +63,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-sky-600" />
-          <h3 className="text-lg font-bold text-ink-900">
+          <h2 className="text-lg font-bold text-ink-900">
             دیدگاه‌ها و گفتگوها ({toFaDigits(comments.length)})
-          </h3>
+          </h2>
         </div>
       </div>
 

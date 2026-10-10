@@ -86,15 +86,12 @@ export const Header: React.FC = () => {
         {/* Left side: Search + Points/User CTA + Mobile menu */}
         <div className="flex items-center gap-2.5">
           {/* Quick Search Button */}
-          <Link to="/search">
-            <IconButton
-              aria-label="جستجو در نوآفر"
-              variant="secondary"
-              size="sm"
-              className="text-ink-600"
-            >
-              <Search className="w-4 h-4" />
-            </IconButton>
+          <Link
+            to="/search"
+            aria-label="جستجو در نوآفر"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-white text-ink-600 border border-ink-200 hover:bg-ink-50 transition-colors"
+          >
+            <Search className="w-4 h-4" />
           </Link>
 
           {/* If Authenticated: Points Pill & User Menu */}
@@ -206,11 +203,9 @@ export const Header: React.FC = () => {
               )}
             </div>
           ) : (
-            <Link to="/login">
-              <Button size="sm" variant="primary" rightIcon={<User className="w-3.5 h-3.5" />}>
+            <Button to="/login" size="sm" variant="primary" rightIcon={<User className="w-3.5 h-3.5" />}>
                 ورود / عضویت
               </Button>
-            </Link>
           )}
 
           {/* Mobile Hamburger Toggle */}
@@ -239,7 +234,7 @@ export const Header: React.FC = () => {
                     className="p-2.5 rounded-lg text-xs font-bold border border-ink-200/70 bg-ink-50/50 text-ink-400 select-none cursor-not-allowed flex items-center justify-between opacity-60"
                   >
                     <span>{sec.nameFa}</span>
-                    <span className="text-[10px] font-medium text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
+                    <span className="text-[11px] font-medium text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
                       به‌زودی
                     </span>
                   </div>
