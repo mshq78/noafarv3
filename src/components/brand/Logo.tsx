@@ -39,7 +39,6 @@ export const Logo: React.FC<LogoProps> = ({
     return (
       <Link
         to="/"
-        id="brand-logo-link"
         className={`inline-flex items-center text-ink-900 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-sky-600 rounded-md ${className}`}
         aria-label="بازگشت به صفحه اصلی"
       >
@@ -57,7 +56,6 @@ export const Logo: React.FC<LogoProps> = ({
   return (
     <Link
       to="/"
-      id="brand-logo-link"
       className={`inline-flex items-center gap-1.5 text-ink-900 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-sky-600 rounded-md ${className}`}
       aria-label="نوآفر - بازگشت به صفحه اصلی"
     >

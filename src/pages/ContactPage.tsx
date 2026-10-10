@@ -92,7 +92,7 @@ export const ContactPage: React.FC = () => {
           {/* Info Side */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-ink-200 space-y-6 shadow-2xs">
-              <h3 className="text-base font-bold text-ink-900">اطلاعات تماس مستقیم</h3>
+              <h2 className="text-base font-bold text-ink-900">اطلاعات تماس مستقیم</h2>
               <TricolorRule height={3} />
 
               <div className="space-y-4 text-xs text-ink-600">
@@ -134,10 +134,10 @@ export const ContactPage: React.FC = () => {
             </div>
 
             <div className="bg-sky-50 border border-sky-200 rounded-2xl p-6 text-xs text-sky-900 space-y-2">
-              <h4 className="font-bold flex items-center gap-2">
+              <h3 className="font-bold flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-sky-700" />
                 <span>پاسخگویی سریع</span>
-              </h4>
+              </h3>
               <p className="text-sky-800 leading-relaxed">
                 پیام‌های ارسالی از طریق این فرم در روزهای کاری ظرف حداکثر ۲۴ ساعت کاری بررسی و پاسخ داده خواهند شد.
               </p>
@@ -152,7 +152,7 @@ export const ContactPage: React.FC = () => {
                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
-                  <h3 className="text-lg font-bold text-ink-900">پیام شما با موفقیت ثبت شد</h3>
+                  <h2 className="text-lg font-bold text-ink-900">پیام شما با موفقیت ثبت شد</h2>
                   <p className="text-xs text-ink-500 max-w-sm mx-auto leading-relaxed">
                     سپاس از همراهی شما. همکاران دبیرخانه نوآفر پیام شما را بررسی کرده و در اسرع وقت پاسخ خواهند داد.
                   </p>
@@ -169,13 +169,13 @@ export const ContactPage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form noValidate onSubmit={handleSubmit} className="space-y-5">
                   <h2 className="text-base font-bold text-ink-900">فرم ارسال پیام به دبیرخانه</h2>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-ink-800">نام و نام خانوادگی</label>
-                      <Input
+                      <label htmlFor="contact-f1" className="text-xs font-bold text-ink-800">نام و نام خانوادگی</label>
+                      <Input id="contact-f1"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -184,8 +184,8 @@ export const ContactPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-ink-800">رایانامه یا شماره تماس</label>
-                      <Input
+                      <label htmlFor="contact-f2" className="text-xs font-bold text-ink-800">رایانامه یا شماره تماس</label>
+                      <Input id="contact-f2"
                         required
                         value={contact}
                         onChange={(e) => setContact(e.target.value)}
@@ -196,8 +196,8 @@ export const ContactPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-ink-800">موضوع پیام</label>
-                    <select
+                    <label htmlFor="contact-f3" className="text-xs font-bold text-ink-800">موضوع پیام</label>
+                    <select id="contact-f3"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       className="w-full h-10 px-3 bg-white border border-ink-200 rounded-xl text-xs text-ink-900 focus:outline-none focus:border-sky-600"
@@ -211,7 +211,7 @@ export const ContactPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-ink-800">متن پیام و جزئیات (ویرایشگر پیشرفته با قابلیت درج تصویر/سند)</label>
+                    <p className="text-xs font-bold text-ink-800">متن پیام و جزئیات (ویرایشگر پیشرفته با قابلیت درج تصویر/سند)</p>
                     <RichTextEditor
                       value={message}
                       onChange={setMessage}

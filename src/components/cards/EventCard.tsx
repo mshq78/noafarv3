@@ -89,9 +89,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-2">
           <Link to={`/gathering/${event.slug}`}>
-            <h3 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-pink-600 transition-colors leading-snug">
+            <h2 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-pink-600 transition-colors leading-snug">
               {event.title}
-            </h3>
+            </h2>
           </Link>
 
           {/* Location */}
@@ -112,7 +112,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
           {isPast ? (
             <Link
               to={`/gathering/${event.slug}`}
-              className="inline-flex items-center gap-1 text-xs font-bold text-ink-600 hover:text-ink-900"
+              className="inline-flex items-center gap-1 text-xs font-bold text-ink-600 hover:text-ink-900 py-2.5 -my-2"
             >
               <FileText className="w-3.5 h-3.5 text-ink-400" />
               <span>مشاهده گزارش</span>
@@ -121,7 +121,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
           ) : (
             <Link
               to={`/gathering/${event.slug}`}
-              className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700"
+              className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 py-2.5 -my-2"
             >
               <span>ثبت نام در رویداد</span>
               <ArrowLeft className="w-3.5 h-3.5" />

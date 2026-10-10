@@ -391,7 +391,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 type="button"
                 onClick={() => setViewMode('visual')}
                 className={cn(
-                  'px-2 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1',
+                  'px-2.5 py-2 rounded-md transition-colors cursor-pointer flex items-center gap-1',
                   viewMode === 'visual' ? 'bg-white text-sky-800 shadow-xs' : 'text-ink-600 hover:text-ink-900'
                 )}
                 title="ویرایشگر بصری (WYSIWYG)"
@@ -402,7 +402,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 type="button"
                 onClick={() => setViewMode('html')}
                 className={cn(
-                  'px-2 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1',
+                  'px-2.5 py-2 rounded-md transition-colors cursor-pointer flex items-center gap-1',
                   viewMode === 'html' ? 'bg-white text-sky-800 shadow-xs' : 'text-ink-600 hover:text-ink-900'
                 )}
                 title="کد HTML خام"
@@ -414,7 +414,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 type="button"
                 onClick={() => setViewMode('preview')}
                 className={cn(
-                  'px-2 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1',
+                  'px-2.5 py-2 rounded-md transition-colors cursor-pointer flex items-center gap-1',
                   viewMode === 'preview' ? 'bg-white text-sky-800 shadow-xs' : 'text-ink-600 hover:text-ink-900'
                 )}
                 title="پیش‌نمایش نهایی"
@@ -944,7 +944,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     >
                       <img src={img.url} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-2 flex flex-col justify-end text-white">
-                        <span className="text-[10px] px-1.5 py-0.5 bg-sky-600/90 rounded text-white self-start font-medium mb-1">
+                        <span className="text-[11px] px-1.5 py-0.5 bg-sky-600/90 rounded text-white self-start font-medium mb-1">
                           {img.category}
                         </span>
                         <span className="text-xs font-bold leading-tight line-clamp-2">{img.title}</span>

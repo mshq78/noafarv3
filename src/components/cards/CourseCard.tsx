@@ -57,9 +57,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'norm
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-2">
           <Link to={`/academy/${course.slug}`}>
-            <h3 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-sky-700 transition-colors leading-snug">
+            <h2 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-sky-700 transition-colors leading-snug">
               {course.title}
-            </h3>
+            </h2>
           </Link>
           <p className="text-xs text-ink-500 line-clamp-2 leading-relaxed">
             {course.summary}

@@ -27,11 +27,9 @@ export const NotFoundPage: React.FC = () => {
         </div>
 
         <div className="pt-2 flex justify-center gap-3">
-          <Link to="/">
-            <Button variant="primary" rightIcon={<Home className="w-4 h-4" />}>
+          <Button to="/" variant="primary" rightIcon={<Home className="w-4 h-4" />}>
               بازگشت به صفحه اصلی
             </Button>
-          </Link>
         </div>
       </div>
     </div>

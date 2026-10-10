@@ -358,20 +358,16 @@ export const ProfilePage: React.FC = () => {
         {activeTab === 'submissions' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-ink-900">
+              <h2 className="text-base font-bold text-ink-900">
                 وضعیت ایده‌ها و تجربیات ارسالی شما
-              </h3>
+              </h2>
               <div className="flex gap-2">
-                <Link to="/spark/submit">
-                  <Button size="sm" variant="accent" rightIcon={<PlusCircle className="w-3.5 h-3.5" />}>
+                <Button to="/spark/submit" size="sm" variant="accent" rightIcon={<PlusCircle className="w-3.5 h-3.5" />}>
                     ثبت ایده نو
                   </Button>
-                </Link>
-                <Link to="/journey/submit">
-                  <Button size="sm" variant="primary" rightIcon={<PlusCircle className="w-3.5 h-3.5" />}>
+                <Button to="/journey/submit" size="sm" variant="primary" rightIcon={<PlusCircle className="w-3.5 h-3.5" />}>
                     ثبت تجربه
                   </Button>
-                </Link>
               </div>
             </div>
 
@@ -491,18 +487,16 @@ export const ProfilePage: React.FC = () => {
         {/* 2. Canvases Tab */}
         {activeTab === 'canvases' && (
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-ink-900">
+            <h2 className="text-base font-bold text-ink-900">
               بوم‌های تعاملی ذخیره‌شده شما در نوآفر
-            </h3>
+            </h2>
 
             {canvases.length === 0 ? (
               <EmptyState
                 title="هنوز بومی ایجاد یا ذخیره نکرده‌اید"
                 description="به جعبه‌ابزار مراجعه کنید و بوم مورد نظر خود را به صورت آنلاین تکمیل نمایید."
                 action={
-                  <Link to="/toolbox">
-                    <Button variant="primary">مشاهده جعبه‌ابزار نوآفر</Button>
-                  </Link>
+                  <Button to="/toolbox" variant="primary">مشاهده جعبه‌ابزار نوآفر</Button>
                 }
               />
             ) : (
@@ -537,11 +531,14 @@ export const ProfilePage: React.FC = () => {
                     </div>
 
                     <div className="pt-3 border-t border-ink-100 flex justify-end">
-                      <Link to={`/toolbox/${can.toolSlug || can.toolId}/canvas`}>
-                        <Button size="sm" variant="secondary" rightIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
-                          ادامه تکمیل بوم
-                        </Button>
-                      </Link>
+                      <Button
+                        to={`/toolbox/${can.toolSlug || can.toolId}/canvas`}
+                        size="sm"
+                        variant="secondary"
+                        rightIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                      >
+                        ادامه تکمیل بوم
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -553,9 +550,9 @@ export const ProfilePage: React.FC = () => {
         {/* 3. Bookmarks Tab */}
         {activeTab === 'bookmarks' && (
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-ink-900">
+            <h2 className="text-base font-bold text-ink-900">
               مطالب و دوره‌های ذخیره‌شده شما
-            </h3>
+            </h2>
 
             {bookmarks.length === 0 ? (
               <EmptyState
@@ -601,9 +598,9 @@ export const ProfilePage: React.FC = () => {
         {/* 4. History Tab */}
         {activeTab === 'history' && (
           <div className="bg-white rounded-xl border border-ink-200 p-6 space-y-4 shadow-2xs">
-            <h3 className="text-base font-bold text-ink-900">
+            <h2 className="text-base font-bold text-ink-900">
               ریز تراکنش‌های امتیازات نوآفری
-            </h3>
+            </h2>
 
             {transactions.length === 0 && (
               <p className="text-xs text-ink-400 py-6 text-center">
@@ -646,9 +643,9 @@ export const ProfilePage: React.FC = () => {
         {activeTab === 'edit' && (
           <div className="space-y-6 max-w-xl">
           <div className="bg-white rounded-xl border border-ink-200 p-6 space-y-4 shadow-2xs">
-            <h3 className="text-base font-bold text-ink-900">
+            <h2 className="text-base font-bold text-ink-900">
               ویرایش مشخصات حساب کاربری
-            </h3>
+            </h2>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <FileUpload
@@ -727,10 +724,10 @@ export const ProfilePage: React.FC = () => {
           {/* Email + password: a second way into the account. */}
           <div className="bg-white rounded-xl border border-ink-200 p-6 space-y-4 shadow-2xs">
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-ink-900 flex items-center gap-2">
+              <h2 className="text-base font-bold text-ink-900 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-sky-600" />
                 <span>{user.hasPassword ? 'تغییر گذرواژه' : 'ورود با رایانامه و گذرواژه'}</span>
-              </h3>
+              </h2>
               <p className="text-xs text-ink-500 leading-relaxed">
                 {user.hasPassword
                   ? 'با تغییر گذرواژه، از سایر دستگاه‌ها خارج می‌شوید.'

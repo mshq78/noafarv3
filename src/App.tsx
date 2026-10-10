@@ -48,7 +48,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-white text-ink-900 selection:bg-sky-100 selection:text-sky-900">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 min-h-[70vh]">
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
       <Footer />

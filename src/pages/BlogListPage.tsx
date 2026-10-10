@@ -10,12 +10,21 @@ export const BlogListPage: React.FC = () => {
   usePageMeta('بلاگ نوآفر');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let live = true;
+    setIsLoading(true);
+    setFailed(false);
     getBlogPosts()
-      .then(setPosts)
-      .finally(() => setIsLoading(false));
-  }, []);
+      .then((items) => live && setPosts(items))
+      .catch(() => live && setFailed(true))
+      .finally(() => live && setIsLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
   return (
     <div className="min-h-screen bg-ink-50/40 py-8 sm:py-12">
@@ -46,6 +55,17 @@ export const BlogListPage: React.FC = () => {
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-64 rounded-xl" />
             ))}
+          </div>
+        ) : failed ? (
+          <div role="alert" className="bg-white border border-ink-200 rounded-2xl p-8 text-center space-y-3">
+            <p className="text-sm text-ink-700">بارگذاری مقالات انجام نشد. اتصال خود را بررسی کنید و دوباره تلاش کنید.</p>
+            <button
+              type="button"
+              onClick={() => setAttempt((n) => n + 1)}
+              className="px-4 py-2 text-sm font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 cursor-pointer"
+            >
+              تلاش دوباره
+            </button>
           </div>
         ) : posts.length === 0 ? (
           <EmptyState title="هنوز مقاله‌ای منتشر نشده است" />

@@ -11,9 +11,9 @@
   --color-ink-100: #eeeff2;
   --color-ink-200: #dcdee4;
   --color-ink-300: #c5c7d1;
-  --color-ink-400: #999bae;
-  --color-ink-500: #747688;
-  --color-ink-600: #616272;
+  --color-ink-400: #6f7185;
+  --color-ink-500: #666879;
+  --color-ink-600: #5a5b6b;
   --color-ink-700: #535463;
   --color-ink-800: #3b3c47;
   --color-ink-900: #25262e;
@@ -246,5 +246,20 @@ body {
     padding: 0 !important;
     border: 0 !important;
     background: none !important;
+  }
+}
+
+/* Keyboard users always get a visible focus indicator, including on plain
+   links and inputs that opt out of the browser default. */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  summary:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-sky-600);
+    outline-offset: 2px;
   }
 }

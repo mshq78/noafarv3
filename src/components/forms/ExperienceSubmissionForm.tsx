@@ -132,9 +132,9 @@ export const ExperienceSubmissionForm: React.FC = () => {
           <div className="p-2 bg-sky-50 text-sky-700 rounded-lg">
             <Footprints className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-black text-ink-900">
+          <h1 className="text-xl font-black text-ink-900">
             ثبت روایت تجربه میدانی در درگاه تور نوآوری
-          </h2>
+          </h1>
         </div>
         <p className="text-xs sm:text-sm text-ink-500 leading-relaxed">
           روایت تجارب موفق و شکست‌های آموزنده در اجرای طرح‌های بومی، الهام‌بخش صدها کنشگر دیگر در سراسر کشور خواهد بود (+۱۰۰ امتیاز نوآفری).

@@ -100,24 +100,24 @@ export const Footer: React.FC = () => {
 
           {/* Column 2: The 6 Sections */}
           <div className="space-y-3">
-            <h4 className="text-sm font-bold text-ink-900 tracking-wider">
+            <h2 className="text-sm font-bold text-ink-900 tracking-wider">
               درگاه‌های نوآفر
-            </h4>
-            <ul className="space-y-2">
+            </h2>
+            <ul className="space-y-0.5">
               {SECTION_LIST.map((sec) => (
                 <li key={sec.slug}>
                   {sec.comingSoon ? (
                     <div className="text-ink-400 cursor-not-allowed select-none flex items-center justify-between opacity-60">
                       <span>{sec.nameFa}</span>
-                      <span className="text-[10px] text-ink-500 bg-ink-100 px-1.5 py-0.5 rounded">به زودی</span>
+                      <span className="text-[11px] text-ink-500 bg-ink-100 px-1.5 py-0.5 rounded">به زودی</span>
                     </div>
                   ) : (
                     <Link
                       to={`/${sec.slug}`}
-                      className="text-ink-600 hover:text-ink-900 transition-colors flex items-center justify-between"
+                      className="text-ink-600 hover:text-ink-900 transition-colors flex items-center justify-between py-2"
                     >
                       <span>{sec.nameFa}</span>
-                      <span className="text-[10px] text-ink-400 font-sans">{sec.slug}</span>
+                      <span className="text-[11px] text-ink-400 font-sans">{sec.slug}</span>
                     </Link>
                   )}
                 </li>
@@ -127,38 +127,38 @@ export const Footer: React.FC = () => {
 
           {/* Column 3: Quick Links & Resources */}
           <div className="space-y-3">
-            <h4 className="text-sm font-bold text-ink-900 tracking-wider">
+            <h2 className="text-sm font-bold text-ink-900 tracking-wider">
               بخش‌های تکمیلی
-            </h4>
-            <ul className="space-y-2">
+            </h2>
+            <ul className="space-y-0.5">
               <li>
-                <Link to="/blog" className="text-ink-600 hover:text-ink-900 transition-colors">
+                <Link to="/blog" className="text-ink-600 hover:text-ink-900 transition-colors inline-block py-2">
                   بلاگ و یادداشت‌های تخصصی
                 </Link>
               </li>
               <li>
-                <Link to="/spark/submit" className="text-ink-600 hover:text-ink-900 transition-colors">
+                <Link to="/spark/submit" className="text-ink-600 hover:text-ink-900 transition-colors inline-block py-2">
                   ثبت ایده نوآوری اجتماعی
                 </Link>
               </li>
               <li>
-                <Link to="/journey/submit" className="text-ink-600 hover:text-ink-900 transition-colors">
+                <Link to="/journey/submit" className="text-ink-600 hover:text-ink-900 transition-colors inline-block py-2">
                   ثبت روایت تجربه میدانی
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-ink-600 hover:text-ink-900 transition-colors">
+                <Link to="/about" className="text-ink-600 hover:text-ink-900 transition-colors inline-block py-2">
                   درباره پلتفرم نوآفر
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-ink-600 hover:text-ink-900 transition-colors">
+                <Link to="/contact" className="text-ink-600 hover:text-ink-900 transition-colors inline-block py-2">
                   تماس و همکاری سازمانی
                 </Link>
               </li>
               {isAdmin && (
                 <li>
-                  <Link to="/admin" className="text-sky-700 hover:text-sky-900 transition-colors font-bold flex items-center gap-1">
+                  <Link to="/admin" className="text-sky-700 hover:text-sky-900 transition-colors font-bold flex items-center gap-1 py-2">
                     <Shield className="w-3.5 h-3.5" />
                     <span>پنل مدیریت و راهبری</span>
                   </Link>
@@ -169,9 +169,9 @@ export const Footer: React.FC = () => {
 
           {/* Column 4: Contact & Office */}
           <div className="space-y-3">
-            <h4 className="text-sm font-bold text-ink-900 tracking-wider">
+            <h2 className="text-sm font-bold text-ink-900 tracking-wider">
               ارتباط با دبیرخانه
-            </h4>
+            </h2>
             <div className="space-y-2.5 text-xs text-ink-600">
               {settings.contactAddress && (
                 <p className="flex items-start gap-2">

@@ -99,7 +99,7 @@ export const AboutPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center font-black">
               ۱
             </div>
-            <h3 className="text-lg font-bold text-ink-900">ترویج و دانش‌افزایی</h3>
+            <h2 className="text-lg font-bold text-ink-900">ترویج و دانش‌افزایی</h2>
             <p className="text-xs text-ink-500 leading-relaxed">
               ارائه رایگان دوره‌ها، مقالات، درس‌گفتارها و ترجمه آخرین منابع معتبر بین‌المللی نوآوری اجتماعی به زبان فارسی روان و کاربردی.
             </p>
@@ -109,7 +109,7 @@ export const AboutPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-black">
               ۲
             </div>
-            <h3 className="text-lg font-bold text-ink-900">ابزارسازی و بوم‌های بومی</h3>
+            <h2 className="text-lg font-bold text-ink-900">ابزارسازی و بوم‌های بومی</h2>
             <p className="text-xs text-ink-500 leading-relaxed">
               توسعه بوم‌های تعاملی استاندارد (مانند بوم کسب‌وکار اجتماعی، بوم نظریه تغییر و بوم همدلی) قابل کار آنلاین با خروجی برداری.
             </p>
@@ -119,7 +119,7 @@ export const AboutPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
               ۳
             </div>
-            <h3 className="text-lg font-bold text-ink-900">هم‌افزایی و جامعه‌سازی</h3>
+            <h2 className="text-lg font-bold text-ink-900">هم‌افزایی و جامعه‌سازی</h2>
             <p className="text-xs text-ink-500 leading-relaxed">
               ایجاد بستری برای ثبت تجارب تلخ و شیرین میدانی کارآفرینان اجتماعی و دریافت بازخورد سازنده از اعضای جامعه نوآفر.
             </p>
@@ -145,7 +145,7 @@ export const AboutPage: React.FC = () => {
                     <span className="text-sm font-bold text-ink-900 group-hover:text-sky-700 transition-colors">
                       {sec.nameFa}
                     </span>
-                    <span className="text-[10px] font-sans px-2 py-0.5 rounded bg-ink-100 text-ink-600">
+                    <span className="text-[11px] font-sans px-2 py-0.5 rounded bg-ink-100 text-ink-600">
                       {sec.slug}
                     </span>
                   </div>
@@ -187,22 +187,18 @@ export const AboutPage: React.FC = () => {
 
         {/* CTA */}
         <div className="text-center space-y-4 pt-4">
-          <h3 className="text-xl font-bold text-ink-900">شما هم عضوی از شبکه نوآفر باشید</h3>
+          <h2 className="text-xl font-bold text-ink-900">شما هم عضوی از شبکه نوآفر باشید</h2>
           <p className="text-xs text-ink-500 max-w-md mx-auto">
             تجربه یا ایده خود را ثبت کنید و به جریان تحول اجتماعی کشور بپیوندید.
           </p>
           {/* Side by side once there is room; stacked on a narrow phone. */}
           <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <Link to="/spark/submit">
-              <Button variant="primary" size="md" className="w-full sm:w-auto">
+            <Button to="/spark/submit" variant="primary" size="md" className="w-full sm:w-auto">
                 ثبت ایده نوآوری اجتماعی
               </Button>
-            </Link>
-            <Link to="/contact">
-              <Button variant="secondary" size="md" className="w-full sm:w-auto">
+            <Button to="/contact" variant="secondary" size="md" className="w-full sm:w-auto">
                 ارتباط با دبیرخانه
               </Button>
-            </Link>
           </div>
         </div>
       </section>

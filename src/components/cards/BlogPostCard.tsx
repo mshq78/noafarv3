@@ -37,9 +37,9 @@ export const BlogPostCard: React.FC<BlogPostCardProps> = ({ post }) => {
           </div>
 
           <Link to={`/blog/${post.slug}`}>
-            <h3 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-sky-700 transition-colors leading-snug">
+            <h2 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-sky-700 transition-colors leading-snug">
               {post.title}
-            </h3>
+            </h2>
           </Link>
 
           <p className="text-xs text-ink-500 line-clamp-2 leading-relaxed">
@@ -50,7 +50,7 @@ export const BlogPostCard: React.FC<BlogPostCardProps> = ({ post }) => {
         <div className="pt-2 border-t border-ink-100 flex justify-end">
           <Link
             to={`/blog/${post.slug}`}
-            className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-800"
+            className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-800 py-2.5 -my-2"
           >
             <span>ادامه مطلب</span>
             <ArrowLeft className="w-3.5 h-3.5" />

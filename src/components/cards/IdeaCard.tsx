@@ -32,9 +32,9 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({ idea, emphasis = 'normal' })
 
         {/* Title */}
         <Link to={`/spark/${idea.slug}`}>
-          <h3 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-amber-700 transition-colors leading-snug">
+          <h2 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-amber-700 transition-colors leading-snug">
             {idea.title}
-          </h3>
+          </h2>
         </Link>
 
         {/* Summary */}

@@ -160,10 +160,11 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
           <Search className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
           <input
             type="text"
+            aria-label="جستجو در فهرست"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="جستجو در عنوان، کلیدواژه‌ها یا توضیحات..."
-            className="w-full h-10 ps-10 pe-9 bg-ink-50 border border-ink-200 rounded-lg text-xs sm:text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-sky-600 focus:bg-white transition-colors"
+            className="w-full h-10 ps-10 pe-9 bg-ink-50 border border-ink-200 rounded-lg text-xs sm:text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-sky-600 focus-visible:ring-2 focus-visible:ring-sky-600/40 focus:bg-white transition-colors"
           />
           {searchQuery && (
             <button
@@ -269,7 +270,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                 <button
                   type="button"
                   onClick={() => handleScrollStep('left')}
-                  className="absolute start-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/95 hover:bg-white text-ink-700 hover:text-sky-700 rounded-full shadow-md border border-ink-200 flex items-center justify-center transition-all cursor-pointer hover:scale-105"
+                  className="absolute start-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/95 hover:bg-white text-ink-700 hover:text-sky-700 rounded-full shadow-md border border-ink-200 flex items-center justify-center transition-all cursor-pointer hover:scale-105"
                   title="مشاهده سایر دسته‌ها"
                   aria-label="مشاهده سایر دسته‌ها"
                 >
@@ -283,7 +284,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
               type="button"
               onClick={() => setIsWrapView(!isWrapView)}
               className={cn(
-                'shrink-0 h-7 px-2 text-[11px] font-bold rounded-lg border flex items-center gap-1 transition-colors cursor-pointer',
+                'shrink-0 h-8 px-2.5 text-[11px] font-bold rounded-lg border flex items-center gap-1 transition-colors cursor-pointer',
                 isWrapView
                   ? 'bg-sky-50 text-sky-800 border-sky-300'
                   : 'bg-ink-50 text-ink-600 border-ink-200 hover:bg-ink-100 hover:text-ink-900'
@@ -313,6 +314,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
             <>
               <div className="w-40">
                 <Select
+                  aria-label="فیلتر قالب"
                   value={extraFilters.format || ''}
                   onChange={(e) => onExtraFilterChange('format', e.target.value || undefined)}
                   options={[
@@ -323,6 +325,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
               </div>
               <div className="w-36">
                 <Select
+                  aria-label="فیلتر سطح"
                   value={extraFilters.difficulty || ''}
                   onChange={(e) => onExtraFilterChange('difficulty', e.target.value || undefined)}
                   options={[
@@ -342,6 +345,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
           {section === 'library' && (
             <div className="w-40">
               <Select
+                aria-label="فیلتر نوع"
                 value={extraFilters.kind || ''}
                 onChange={(e) => onExtraFilterChange('kind', e.target.value || undefined)}
                 options={[
@@ -356,6 +360,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
             <>
               <div className="w-40">
                 <Select
+                  aria-label="فیلتر نوع"
                   value={extraFilters.kind || ''}
                   onChange={(e) => onExtraFilterChange('kind', e.target.value || undefined)}
                   options={[
@@ -366,6 +371,7 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
               </div>
               <div className="w-40">
                 <Select
+                  aria-label="فیلتر وضعیت"
                   value={extraFilters.status || ''}
                   onChange={(e) => onExtraFilterChange('status', e.target.value || undefined)}
                   options={[

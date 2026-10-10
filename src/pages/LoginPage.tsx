@@ -85,7 +85,7 @@ const EmailPane: React.FC<EmailPaneProps> = ({
   const needsPassword = mode !== 'forgot';
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 pt-4">
+    <form noValidate onSubmit={onSubmit} className="space-y-4 pt-4">
       {copy.title && (
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-ink-800">{copy.title}</span>
@@ -101,8 +101,8 @@ const EmailPane: React.FC<EmailPaneProps> = ({
 
       {mode === 'register' && (
         <div className="space-y-1">
-          <label className="text-xs font-bold text-ink-800">نام و نام خانوادگی (اختیاری)</label>
-          <Input
+          <label htmlFor="login-f1" className="text-xs font-bold text-ink-800">نام و نام خانوادگی (اختیاری)</label>
+          <Input id="login-f1"
             type="text"
             autoComplete="name"
             value={displayName}
@@ -114,10 +114,10 @@ const EmailPane: React.FC<EmailPaneProps> = ({
 
       {needsEmail && (
         <div className="space-y-1">
-          <label className="text-xs font-bold text-ink-800">نشانی رایانامه</label>
+          <label htmlFor="login-f2" className="text-xs font-bold text-ink-800">نشانی رایانامه</label>
           <div className="relative">
             <Mail className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-            <Input
+            <Input id="login-f2"
               type="email"
               autoComplete="email"
               value={email}
@@ -134,27 +134,27 @@ const EmailPane: React.FC<EmailPaneProps> = ({
       {needsPassword && (
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-ink-800">
+            <label htmlFor="login-f3" className="text-xs font-bold text-ink-800">
               {mode === 'login' ? 'گذرواژه' : 'گذرواژه تازه'}
             </label>
             {mode === 'login' && canMailReset && (
               <button
                 type="button"
                 onClick={() => onModeChange('forgot')}
-                className="text-[11px] text-sky-600 font-bold hover:underline cursor-pointer"
+                className="text-xs text-sky-600 font-bold hover:underline cursor-pointer py-2 -my-2"
               >
                 گذرواژه را فراموش کرده‌اید؟
               </button>
             )}
             {mode === 'login' && !canMailReset && (
-              <Link to="/contact" className="text-[11px] text-ink-500 hover:underline">
+              <Link to="/contact" className="text-xs text-ink-500 hover:underline py-2 -my-2 inline-block">
                 رمز را فراموش کرده‌اید؟ با ما تماس بگیرید
               </Link>
             )}
           </div>
           <div className="relative">
             <Lock className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-            <Input
+            <Input id="login-f3"
               type={showPassword ? 'text' : 'password'}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={password}
@@ -167,7 +167,7 @@ const EmailPane: React.FC<EmailPaneProps> = ({
             <button
               type="button"
               onClick={onToggleShowPassword}
-              className="absolute end-3 top-1/2 -translate-y-1/2 p-1 text-ink-400 hover:text-ink-700 cursor-pointer"
+              className="absolute end-1.5 top-1/2 -translate-y-1/2 p-2.5 text-ink-500 hover:text-ink-700 cursor-pointer"
               aria-label={showPassword ? 'پنهان کردن گذرواژه' : 'نمایش گذرواژه'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -200,7 +200,7 @@ const EmailPane: React.FC<EmailPaneProps> = ({
           <button
             type="button"
             onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')}
-            className="text-[11px] text-ink-500 hover:text-sky-700 cursor-pointer"
+            className="text-xs text-ink-500 hover:text-sky-700 cursor-pointer py-2.5"
           >
             {mode === 'login' ? (
               <>
@@ -375,16 +375,12 @@ export const LoginPage: React.FC = () => {
           <h2 className="text-xl font-black text-ink-900">شما از قبل وارد شده‌اید</h2>
           <p className="text-xs text-ink-500">حساب کاربری فعال شما در پلتفرم نوآفر آماده است.</p>
           <div className="flex gap-2 justify-center pt-2">
-            <Link to="/profile">
-              <Button variant="primary" size="sm">
+            <Button to="/profile" variant="primary" size="sm">
                 مشاهده میز کار
               </Button>
-            </Link>
-            <Link to="/">
-              <Button variant="secondary" size="sm">
+            <Button to="/" variant="secondary" size="sm">
                 بازگشت به صفحه اصلی
               </Button>
-            </Link>
           </div>
         </div>
       </div>
@@ -457,14 +453,14 @@ export const LoginPage: React.FC = () => {
               onSubmit={submitEmailForm}
             />
           ) : step === 'phone' ? (
-            <form onSubmit={handleSendOtp} className="space-y-4 pt-4">
+            <form noValidate onSubmit={handleSendOtp} className="space-y-4 pt-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-ink-800">
+                <label htmlFor="login-f4" className="text-xs font-bold text-ink-800">
                   شماره تلفن همراه
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                  <Input
+                  <Input id="login-f4"
                     type="tel"
                     inputMode="numeric"
                     autoComplete="tel"
@@ -496,7 +492,7 @@ export const LoginPage: React.FC = () => {
               </Button>
             </form>
           ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4 pt-4">
+            <form noValidate onSubmit={handleVerifyOtp} className="space-y-4 pt-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-ink-500 font-sans">
                   ارسال شده به {toFaDigits(phone)}
@@ -515,12 +511,12 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-ink-800">
+                <label htmlFor="login-f5" className="text-xs font-bold text-ink-800">
                   کد ۵ رقمی پیامک‌شده
                 </label>
                 <div className="relative">
                   <ShieldCheck className="w-4 h-4 absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                  <Input
+                  <Input id="login-f5"
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"

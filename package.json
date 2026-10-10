@@ -17,6 +17,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server",
     "lint": "tsc --noEmit && tsc --noEmit -p server/tsconfig.json",
+    "audit": "node scripts/audit/run.mjs",
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {

@@ -65,9 +65,9 @@ export const BlogDetailPage: React.FC = () => {
           </p>
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-ink-400 font-sans pt-2 border-t border-ink-100">
-            <span className="flex items-center gap-1 text-ink-700 font-bold">
-              <User className="w-3.5 h-3.5 text-sky-600" />
-              <span>
+            <span className="flex items-center gap-1 text-ink-700 font-bold min-w-0 max-w-full">
+              <User className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+              <span className="min-w-0 break-words">
                 {post.author
                   ? typeof post.author === 'string'
                     ? post.author

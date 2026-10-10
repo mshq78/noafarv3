@@ -334,7 +334,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCours
               <span className="text-xs font-bold text-amber-300 block">پنل راهبری دوره (مخصوص مدیران ارشد)</span>
               <span className="text-[11px] text-ink-300">مدیریت ویدیو، آپلود رسانه و تنظیم سرفصل‌های آموزشی</span>
             </div>
-            <Chip size="sm" variant="sky" className="font-sans font-bold text-[10px]">
+            <Chip size="sm" variant="sky" className="font-sans font-bold text-[11px]">
               Admin Tools
             </Chip>
           </div>
@@ -581,7 +581,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCours
             <div className="flex items-center justify-between border-b border-ink-800 pb-3">
               <div>
                 <h4 className="text-sm font-bold text-white">سرفصل‌های آموزشی</h4>
-                <span className="text-xs text-ink-400">
+                <span className="text-xs text-ink-300">
                   {toFaDigits(completedLessonIds.length)} از {toFaDigits(lessons.length)} درس گذرانده‌شده
                 </span>
               </div>
@@ -632,13 +632,13 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCours
                       <div className="truncate">
                         <span className="truncate block">{lesson.title}</span>
                         {lesson.description && (
-                          <span className="text-[10px] opacity-70 truncate block">{lesson.description}</span>
+                          <span className="text-[11px] opacity-70 truncate block">{lesson.description}</span>
                         )}
                       </div>
                     </button>
 
                     <div className="flex items-center gap-2 shrink-0 ms-2">
-                      <span className="text-[10px] opacity-75 font-sans">
+                      <span className="text-[11px] opacity-75 font-sans">
                         {formatMinutes(lesson.durationMinutes)}
                       </span>
                     </div>
@@ -651,14 +651,14 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCours
           {/* Progress Summary at Bottom */}
           <div className="pt-4 border-t border-ink-800 space-y-2">
             <div className="flex items-center justify-between text-xs font-medium">
-              <span className="text-ink-400">پیشرفت کل دوره:</span>
+              <span className="text-ink-300">پیشرفت کل دوره:</span>
               <span className="text-sky-400 font-sans font-bold">
                 {toFaDigits(progressPercent)}٪
               </span>
             </div>
             <ProgressBar percent={progressPercent} showLabel={false} color="sky" height="md" />
             
-            <p className="text-[11px] text-ink-400 leading-tight flex items-center gap-1.5 pt-1">
+            <p className="text-[11px] text-ink-300 leading-tight flex items-center gap-1.5 pt-1">
               <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>با تکمیل کل سرفصل‌ها +۱۵۰ امتیاز نوآفری دریافت می‌کنید.</span>
             </p>
@@ -723,7 +723,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({ course: initialCours
                       ? 'در حال بارگذاری فایل…'
                       : uploadedFileName || 'کلیک کنید یا فایل ویدیویی را اینجا بکشید و رها کنید'}
                   </p>
-                  <p className="text-[11px] text-ink-400">
+                  <p className="text-[11px] text-ink-300">
                     پشتیبانی از فایل‌های MP4 و WebM در حد سقف تعیین‌شده سرور
                   </p>
                 </div>

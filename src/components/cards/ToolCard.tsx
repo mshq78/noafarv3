@@ -76,9 +76,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-2">
           <Link to={`/toolbox/${tool.slug}`}>
-            <h3 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-pink-600 transition-colors leading-snug">
+            <h2 className="text-base font-bold text-ink-900 line-clamp-2 group-hover:text-pink-600 transition-colors leading-snug">
               {tool.title}
-            </h3>
+            </h2>
           </Link>
           <p className="text-xs text-ink-500 line-clamp-2 leading-relaxed">
             {tool.summary}
@@ -89,7 +89,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
           <DifficultyDots difficulty={tool.difficulty} />
           <Link
             to={`/toolbox/${tool.slug}`}
-            className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 transition-colors"
+            className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 transition-colors py-2.5 -my-2"
           >
             <span>استفاده از ابزار</span>
             <ArrowLeft className="w-3.5 h-3.5" />
