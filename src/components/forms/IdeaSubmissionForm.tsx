@@ -200,11 +200,12 @@ export const IdeaSubmissionForm: React.FC = () => {
           onChange={setFile}
         />
 
-        <div className="pt-4 border-t border-ink-100 flex items-center justify-between">
+        <div className="pt-4 border-t border-ink-100 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs text-ink-400">
             با ثبت ایده، شما به مالکیت معنوی و اهداف عام‌المنفعه پایبند هستید.
           </span>
           <Button
+            className="w-full sm:w-auto"
             type="submit"
             variant="accent"
             size="lg"

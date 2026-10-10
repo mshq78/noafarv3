@@ -239,7 +239,8 @@ export const SixTileGrid: React.FC = () => {
           viewport={{ once: true, margin: "-100px" }}
           className="text-center space-y-3 max-w-4xl mx-auto px-4"
         >
-          <span className="text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
+          {/* inline-block: an inline span ignores the vertical margin `space-y` adds, so the pill sat on the heading below it */}
+          <span className="inline-block text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
             نقشه جامع پلتفرم
           </span>
           {/*
