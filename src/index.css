@@ -142,3 +142,109 @@ body {
     transform: none;
   }
 }
+
+/* ==========================================================================
+   Rich content — headings, lists, quotes and tables for authored HTML
+   The editor and every page that shows its output share this one class. The
+   `prose` classes it replaces came from @tailwindcss/typography, which this
+   project never installed, so Tailwind's preflight (which resets every
+   heading to body size and strips list markers) went unopposed and an H1
+   looked exactly like a paragraph.
+   Sizes are in `em` so the block scales with whatever text size the wrapper
+   sets; spacing and indents use logical properties so RTL needs no overrides.
+   `:where()` keeps the specificity at zero, so a utility class on an element
+   inside still wins.
+   ========================================================================== */
+@layer components {
+  .rich-content {
+    color: var(--color-ink-800);
+    overflow-wrap: anywhere;
+  }
+
+  .rich-content :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-ink-900);
+    font-weight: 800;
+    line-height: 1.5;
+    margin-block: 1.4em 0.5em;
+  }
+  .rich-content :where(h1) { font-size: 1.75em; }
+  .rich-content :where(h2) { font-size: 1.45em; }
+  .rich-content :where(h3) { font-size: 1.2em; font-weight: 700; }
+  .rich-content :where(h4) { font-size: 1.05em; font-weight: 700; }
+  .rich-content :where(h5, h6) { font-size: 1em; font-weight: 700; }
+
+  .rich-content :where(p, ul, ol, blockquote, pre, table, figure, hr) {
+    margin-block: 0.9em;
+  }
+  .rich-content > :first-child { margin-block-start: 0; }
+  .rich-content > :last-child { margin-block-end: 0; }
+
+  .rich-content :where(ul) { list-style: disc outside; padding-inline-start: 1.6em; }
+  .rich-content :where(ol) { list-style: decimal outside; padding-inline-start: 1.6em; }
+  .rich-content :where(li) { margin-block: 0.3em; padding-inline-start: 0.2em; }
+  .rich-content :where(li > ul, li > ol) { margin-block: 0.3em; }
+
+  .rich-content :where(blockquote) {
+    border-inline-start: 4px solid var(--color-sky-300);
+    background: var(--color-ink-50);
+    color: var(--color-ink-600);
+    padding: 0.6em 1em;
+    border-start-end-radius: 0.5em;
+    border-end-end-radius: 0.5em;
+  }
+
+  .rich-content :where(a) {
+    color: var(--color-sky-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .rich-content :where(a:hover) { color: var(--color-sky-900); }
+
+  .rich-content :where(strong, b) { font-weight: 700; color: var(--color-ink-900); }
+  .rich-content :where(img, video) { max-width: 100%; height: auto; border-radius: 0.75em; }
+  .rich-content :where(hr) { border: 0; border-top: 1px solid var(--color-ink-200); }
+
+  .rich-content :where(code) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: var(--color-ink-100);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3em;
+    direction: ltr;
+    unicode-bidi: embed;
+  }
+  .rich-content :where(pre) {
+    background: var(--color-ink-900);
+    color: var(--color-ink-100);
+    padding: 1em;
+    border-radius: 0.75em;
+    overflow-x: auto;
+    direction: ltr;
+    text-align: left;
+  }
+  .rich-content :where(pre code) { background: transparent; padding: 0; color: inherit; }
+
+  .rich-content :where(table) {
+    border-collapse: collapse;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .rich-content :where(th, td) {
+    border: 1px solid var(--color-ink-200);
+    padding: 0.5em 0.75em;
+    text-align: start;
+  }
+  .rich-content :where(th) { background: var(--color-ink-50); font-weight: 700; }
+
+  /* One-line previews (admin list): keep the words, drop the block layout. */
+  .rich-content-flat > * {
+    display: inline;
+    margin: 0 !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+  }
+}

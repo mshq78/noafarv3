@@ -291,5 +291,6 @@ export interface SiteSettings {
   telegramUrl?: string;
   aparatUrl?: string;
   linkedinUrl?: string;
-
+  /** Whether this host can really deliver a password-reset email / a login SMS. */
+  delivery?: { email: boolean; sms: boolean };
 }

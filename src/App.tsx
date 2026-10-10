@@ -10,16 +10,10 @@ import { Footer } from './components/layout/Footer';
 import { HomePage } from './pages/HomePage';
 import { SectionListPage } from './pages/SectionListPage';
 import { ContentDetailPage } from './pages/ContentDetailPage';
-import { ToolCanvasPage } from './pages/ToolCanvasPage';
-import { SparkSubmitPage } from './pages/SparkSubmitPage';
-import { JourneySubmitPage } from './pages/JourneySubmitPage';
 import { SearchPage } from './pages/SearchPage';
-import { ProfilePage } from './pages/ProfilePage';
 import { BlogListPage } from './pages/BlogListPage';
 import { BlogDetailPage } from './pages/BlogDetailPage';
-import { LoginPage } from './pages/LoginPage';
 import { AboutPage } from './pages/AboutPage';
-import { ContactPage } from './pages/ContactPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -28,6 +22,15 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 const AdminPage = lazy(() =>
   import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })),
 );
+
+// Pages most visitors never open (sign-in, profile, forms, the full-screen
+// canvas) load on demand rather than inflating the first download.
+const ToolCanvasPage = lazy(() => import('./pages/ToolCanvasPage').then((m) => ({ default: m.ToolCanvasPage })));
+const SparkSubmitPage = lazy(() => import('./pages/SparkSubmitPage').then((m) => ({ default: m.SparkSubmitPage })));
+const JourneySubmitPage = lazy(() => import('./pages/JourneySubmitPage').then((m) => ({ default: m.JourneySubmitPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })));
 
 // Scroll to top on route change helper
 const ScrollToTop: React.FC = () => {
@@ -67,6 +70,7 @@ export default function App() {
         <ToastProvider>
           <BrowserRouter>
           <ScrollToTop />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Fullscreen Canvas Route (without default header/footer) */}
             <Route path="/toolbox/:slug/canvas" element={<ToolCanvasPage />} />
@@ -241,6 +245,7 @@ export default function App() {
               }
             />
           </Routes>
+          </Suspense>
         </BrowserRouter>
         </ToastProvider>
       </SiteSettingsProvider>

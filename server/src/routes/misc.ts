@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { env } from '../env.js';
 import { queryOne, queryRows, transaction } from '../db.js';
 import { requireAuth } from '../lib/auth.js';
-import { asyncRoute, badRequest, conflict, notFound } from '../lib/http.js';
+import { asyncRoute, badRequest, conflict, notFound, describeValidationIssues } from '../lib/http.js';
 import { clientIp, rateLimit } from '../lib/rateLimit.js';
 import { mapContent, mapRegistration, type ContentRow } from '../lib/mappers.js';
-import { CONTENT_COLUMNS, NO_VIEWER_COLUMNS, isSection, viewerColumns } from '../lib/content.js';
+import {
+  foldPersianSql,
+  normalizePersianText,
+  CONTENT_COLUMNS,
+  NO_VIEWER_COLUMNS,
+  PUBLIC_CONTENT_SQL,
+  isSection,
+  viewerColumns,
+} from '../lib/content.js';
 import { sanitizeMultilineText, sanitizePlainText } from '../lib/sanitize.js';
 import { POINT_VALUES, awardPoints } from '../lib/points.js';
 import crypto from 'node:crypto';
@@ -19,7 +28,7 @@ const SEARCHABLE_SECTIONS = ['academy', 'toolbox', 'library', 'journey', 'gather
 miscRouter.get(
   '/search',
   asyncRoute(async (req, res) => {
-    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
+    const q = typeof req.query.q === 'string' ? normalizePersianText(req.query.q.trim().slice(0, 120)) : '';
     const section = typeof req.query.section === 'string' ? req.query.section : '';
     if (section && !isSection(section)) throw badRequest('بخش انتخابی معتبر نیست.');
 
@@ -42,13 +51,13 @@ miscRouter.get(
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.status = 'published'
+        WHERE ${PUBLIC_CONTENT_SQL}
           AND ($2::text = '' OR c.section = $2)
-          AND (c.title ILIKE $1 ESCAPE '\\'
-            OR c.summary ILIKE $1 ESCAPE '\\'
+          AND (${foldPersianSql('c.title')} ILIKE $1 ESCAPE '\\'
+            OR ${foldPersianSql('c.summary')} ILIKE $1 ESCAPE '\\'
             OR EXISTS (
                  SELECT 1 FROM jsonb_array_elements(c.tags) AS tag
-                  WHERE tag->>'nameFa' ILIKE $1 ESCAPE '\\'))
+                  WHERE ${foldPersianSql("tag->>'nameFa'")} ILIKE $1 ESCAPE '\\'))
         ORDER BY c.published_at DESC
         LIMIT 120`,
       params,
@@ -86,7 +95,7 @@ miscRouter.get(
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.section = 'blog' AND c.status = 'published'
+        WHERE c.section = 'blog' AND ${PUBLIC_CONTENT_SQL}
         ORDER BY c.published_at DESC
         LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
@@ -107,7 +116,7 @@ miscRouter.get(
     const row = await queryOne<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${viewer}
          FROM content c
-        WHERE c.section = 'blog' AND c.slug = $1 AND c.status = 'published'`,
+        WHERE c.section = 'blog' AND c.slug = $1 AND ${PUBLIC_CONTENT_SQL}`,
       params,
     );
     if (!row) throw notFound('مطلب بلاگ یافت نشد.');
@@ -135,7 +144,7 @@ miscRouter.post(
   asyncRoute(async (req, res) => {
     const parsed = contactSchema.safeParse(req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات فرم کامل نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات فرم کامل نیست.');
     }
 
     const contact = sanitizePlainText(parsed.data.phone, 160);
@@ -179,7 +188,7 @@ miscRouter.post(
     const registration = await transaction(async (client) => {
       const event = await client.query<{ id: string; title: string; data: Record<string, unknown> }>(
         `SELECT id, title, data FROM content
-          WHERE id = $1 AND section = 'gathering' AND status = 'published'
+          WHERE id = $1 AND section = 'gathering' AND status = 'published' AND published_at <= now()
           FOR UPDATE`,
         [req.params.id],
       );
@@ -278,6 +287,10 @@ miscRouter.get(
     for (const key of PUBLIC_SETTINGS_KEYS) {
       if (data[key] !== undefined) result[key] = data[key];
     }
+    // Whether a message can actually reach a person. With no SMTP host or SMS
+    // provider the code or link is only printed to the server log, so the app
+    // must not promise "we sent you a link" to someone who will never get it.
+    result.delivery = { email: Boolean(env.smtpHost), sms: env.smsProvider !== 'console' || env.otpDebugReturn };
     res.json(result);
   }),
 );

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { query, queryOne, queryRows, transaction } from '../db.js';
 import { requireAdmin, requireOperator, revokeAllSessionsForUser } from '../lib/auth.js';
 import { rateLimit } from '../lib/rateLimit.js';
-import { asyncRoute, badRequest, forbidden, notFound } from '../lib/http.js';
+import { asyncRoute, badRequest, forbidden, notFound, describeValidationIssues } from '../lib/http.js';
 import {
   mapComment,
   mapContactMessage,
@@ -16,7 +16,14 @@ import {
   type SubmissionRow,
   type UserRow,
 } from '../lib/mappers.js';
-import { CONTENT_COLUMNS, NO_VIEWER_COLUMNS, isSection, uniqueSlug } from '../lib/content.js';
+import {
+  CONTENT_COLUMNS,
+  NO_VIEWER_COLUMNS,
+  foldPersianSql,
+  isSection,
+  normalizePersianText,
+  uniqueSlug,
+} from '../lib/content.js';
 import {
   sanitizeMultilineText,
   sanitizePlainText,
@@ -46,13 +53,13 @@ adminRouter.get(
     const section = typeof req.query.section === 'string' ? req.query.section : '';
     if (section && !isSection(section)) throw badRequest('بخش انتخابی معتبر نیست.');
     const search = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    const like = search ? `%${search.replace(/[%_\\]/g, (m) => `\\${m}`)}%` : '';
+    const like = search ? `%${normalizePersianText(search).replace(/[%_\\]/g, (m) => `\\${m}`)}%` : '';
 
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${NO_VIEWER_COLUMNS}
          FROM content c
         WHERE ($1::text = '' OR c.section = $1)
-          AND ($2::text = '' OR c.title ILIKE $2 ESCAPE '\\' OR c.summary ILIKE $2 ESCAPE '\\')
+          AND ($2::text = '' OR ${foldPersianSql('c.title')} ILIKE $2 ESCAPE '\\' OR ${foldPersianSql('c.summary')} ILIKE $2 ESCAPE '\\')
         ORDER BY c.updated_at DESC
         LIMIT 500`,
       [section, like],
@@ -253,7 +260,7 @@ adminRouter.post(
 
     const parsed = contentSchema.safeParse((req.body as { content?: unknown }).content ?? req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات محتوا کامل نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات محتوا کامل نیست.');
     }
     const input = parsed.data;
 
@@ -298,7 +305,7 @@ adminRouter.patch(
 
     const parsed = contentSchema.partial({ title: true }).safeParse(req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات محتوا معتبر نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات محتوا معتبر نیست.');
     }
     const input = parsed.data;
 

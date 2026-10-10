@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, ArrowRight } from 'lucide-react';
 import { BlogPost } from '../types';
@@ -15,6 +16,7 @@ export const BlogDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [post, setPost] = useState<BlogPost | null>(null);
+  usePageMeta(post?.title, post?.summary, post?.heroImage?.url);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export const BlogDetailPage: React.FC = () => {
         )}
 
         {/* Body Text */}
-        <div className="prose prose-ink max-w-none text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
+        <div className="rich-content text-sm sm:text-base text-ink-800 leading-loose space-y-4 pt-4">
           <SafeHtml className="leading-relaxed" html={post.body} />
         </div>
 

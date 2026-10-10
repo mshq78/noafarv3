@@ -218,6 +218,23 @@ authRouter.post(
   }),
 );
 
+/**
+ * "Who am I?" for the page's first load. A visitor who is not signed in is the
+ * normal case, not an error, so this answers 200 with `user: null` instead of
+ * a 401 that the browser prints to the console on every anonymous page view.
+ */
+authRouter.get(
+  '/session',
+  asyncRoute(async (req, res) => {
+    if (!req.user) {
+      res.json({ user: null });
+      return;
+    }
+    const row = await queryOne<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [req.user.id]);
+    res.json({ user: row ? mapUser(row) : null });
+  }),
+);
+
 authRouter.get(
   '/me',
   requireAuth,

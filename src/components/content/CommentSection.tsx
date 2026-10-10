@@ -24,11 +24,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
 
   useEffect(() => {
     let isMounted = true;
-    getComments(contentId).then((res) => {
-      if (isMounted) {
-        setComments(res.items);
-      }
-    });
+    getComments(contentId)
+      .then((res) => {
+        if (isMounted) {
+          setComments(res.items);
+        }
+      })
+      .catch(() => {});
     return () => {
       isMounted = false;
     };
@@ -150,7 +152,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
               </div>
 
               <SafeHtml
-                className="text-sm text-ink-700 leading-relaxed ps-10 prose prose-sm max-w-none"
+                className="text-sm text-ink-700 leading-relaxed ps-10 rich-content"
                 html={comment.body}
               />
             </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -18,6 +19,7 @@ import { SafeHtml } from '../components/ui/SafeHtml';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export const AboutPage: React.FC = () => {
+  usePageMeta('درباره نوآفر');
   const settings = useSiteSettings();
 
   return (
@@ -41,7 +43,7 @@ export const AboutPage: React.FC = () => {
 
           {/* Editable from the admin panel (تنظیمات سامانه → متن درباره نوآفر). */}
           <SafeHtml
-            className="text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto"
+            className="rich-content text-sm sm:text-base text-ink-600 leading-relaxed max-w-2xl mx-auto"
             html={settings.aboutText}
           />
 

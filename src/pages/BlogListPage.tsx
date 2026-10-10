@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { BlogPost } from '../types';
 import { getBlogPosts } from '../services/endpoints';
 import { BlogPostCard } from '../components/cards/BlogPostCard';
@@ -6,6 +7,7 @@ import { Skeleton, EmptyState } from '../components/ui';
 import { DotPattern } from '../components/brand/DotPattern';
 
 export const BlogListPage: React.FC = () => {
+  usePageMeta('بلاگ نوآفر');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

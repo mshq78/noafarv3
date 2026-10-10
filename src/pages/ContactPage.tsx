@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Sparkles, Building2 } from 'lucide-react';
 import { Button, Input, Textarea, RichTextEditor } from '../components/ui';
 import { TricolorRule } from '../components/brand/TricolorRule';
@@ -9,6 +10,7 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 import { ApiError } from '../services/api';
 
 export const ContactPage: React.FC = () => {
+  usePageMeta('تماس با ما');
   const { showToast } = useToast();
   const settings = useSiteSettings();
   const [name, setName] = useState('');

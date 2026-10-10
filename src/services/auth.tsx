@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { User } from '../types';
 import {
   getMe,
+  getSession,
   logout as apiLogout,
   loginWithEmail as apiLoginWithEmail,
   registerWithEmail as apiRegisterWithEmail,
@@ -78,9 +79,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   useEffect(() => {
     let cancelled = false;
-    getMe()
+    getSession()
       .then((user) => {
-        if (!cancelled) dispatch({ type: 'LOGIN', payload: user });
+        if (cancelled) return;
+        dispatch(user ? { type: 'LOGIN', payload: user } : { type: 'LOGOUT' });
       })
       .catch(() => {
         if (!cancelled) dispatch({ type: 'LOGOUT' });

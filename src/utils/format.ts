@@ -2,6 +2,11 @@
  * Convert Latin/English digits to Persian digits (۰۱۲۳۴۵۶۷۸۹)
  * Enforced globally for all user-facing numbers.
  */
+/** Folds Arabic ي/ى/ك to the Persian ی/ک, so text typed on either keyboard compares equal. */
+export function foldPersian(input: string): string {
+  return input.replace(/[يى]/g, 'ی').replace(/ك/g, 'ک');
+}
+
 export function toFaDigits(input: string | number | null | undefined): string {
   if (input === null || input === undefined) return '';
   const str = String(input);

@@ -1,10 +1,12 @@
 import React from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Link } from 'react-router-dom';
 import { Home, Compass } from 'lucide-react';
 import { Button } from '../components/ui';
 import { NoafarMark } from '../components/brand/NoafarMark';
 
 export const NotFoundPage: React.FC = () => {
+  usePageMeta('صفحه پیدا نشد');
   return (
     <div className="min-h-[70vh] flex items-center justify-center bg-white px-4 py-16">
       <div className="max-w-md text-center space-y-6">
