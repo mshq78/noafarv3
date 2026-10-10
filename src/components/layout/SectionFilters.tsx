@@ -227,7 +227,10 @@ export const SectionFilters: React.FC<SectionFiltersProps> = ({
                   'transition-all duration-200 select-none',
                   isWrapView
                     ? 'flex flex-wrap gap-1.5 py-1'
-                    : 'flex items-center gap-1.5 overflow-x-auto pb-2.5 pt-0.5 custom-scrollbar cursor-grab active:cursor-grabbing scroll-smooth'
+                    : 'flex items-center gap-1.5 overflow-x-auto pb-2.5 pt-0.5 custom-scrollbar cursor-grab active:cursor-grabbing scroll-smooth',
+                  // Reserve room for the scroll arrows, which are absolutely positioned and
+                  // would otherwise sit on top of the first or last chip's text.
+                  !isWrapView && (canScrollLeft || canScrollRight) && 'px-8'
                 )}
               >
                 <Chip

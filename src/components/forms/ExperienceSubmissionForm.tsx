@@ -237,11 +237,12 @@ export const ExperienceSubmissionForm: React.FC = () => {
           onChange={setFile}
         />
 
-        <div className="pt-4 border-t border-ink-100 flex items-center justify-between">
+        <div className="pt-4 border-t border-ink-100 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs text-ink-400">
             تجارب پس از راستی‌آزمایی و ویرایش نگارشی با نام شما منتشر خواهند شد.
           </span>
           <Button
+            className="w-full sm:w-auto"
             type="submit"
             variant="primary"
             size="lg"
