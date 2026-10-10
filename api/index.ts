@@ -26,7 +26,9 @@ export default function handler(req: IncomingMessage, res: ServerResponse): void
     const query = incoming.searchParams.toString();
     // `__path` never carries the leading slash; the capture group starts after
     // `/api/`.
-    req.url = `/api/${original}${query ? `?${query}` : ''}`;
+    // robots.txt and sitemap.xml live at the site root, not under /api.
+    const isRootFile = original === 'robots.txt' || original === 'sitemap.xml';
+    req.url = `${isRootFile ? '/' : '/api/'}${original}${query ? `?${query}` : ''}`;
   }
 
   (app as unknown as NodeHandler)(req, res);

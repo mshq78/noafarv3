@@ -276,4 +276,17 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   window_ends timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS rate_limits_window_idx ON rate_limits (window_ends);
+
+-- ------------------------------------------- sample images: stop hot-linking ----
+-- The sample catalogue used third-party stock photos, which many visitors cannot
+-- reach (cards then show only the grey fallback). Rows still pointing there are
+-- moved to the brand illustrations served from this site. Idempotent: once
+-- moved they no longer match, and an editor's own images are never touched.
+UPDATE content SET hero_image = jsonb_set(hero_image, '{url}', to_jsonb(
+    CASE section WHEN 'academy' THEN '/mock/course-thumb.svg' WHEN 'library' THEN '/mock/book-cover.svg'
+                 WHEN 'toolbox' THEN '/mock/canvas-preview.svg' WHEN 'gathering' THEN '/mock/event-cover.svg'
+                 WHEN 'blog' THEN '/mock/blog-cover.svg' ELSE '/mock/journey-cover.svg' END::text))
+ WHERE hero_image->>'url' LIKE 'https://images.unsplash.com/%';
+UPDATE content SET data = jsonb_set(data, '{coverImage,url}', to_jsonb('/mock/book-cover.svg'::text))
+ WHERE data->'coverImage'->>'url' LIKE 'https://images.unsplash.com/%';
 `;

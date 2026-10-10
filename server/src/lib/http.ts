@@ -44,6 +44,14 @@ export const CONTENT_FIELD_LABELS: Record<string, string> = {
   data: 'فیلدهای ویژهٔ این بخش',
   url: 'نشانی فایل',
   fileName: 'نام فایل',
+  name: 'نام',
+  phone: 'راه ارتباطی',
+  subject: 'موضوع',
+  message: 'پیام',
+  email: 'رایانامه',
+  fieldSlug: 'حوزه',
+  fieldNameFa: 'حوزه',
+  heroImageUrl: 'تصویر',
 };
 
 interface ValidationIssue {
@@ -85,7 +93,8 @@ export function describeValidationIssues(
       case 'too_big':
         return `${prefix}${isText ? `بیش از ${faDigits(issue.maximum)} نویسه مجاز نیست` : `بیش از ${faDigits(issue.maximum)} مورد مجاز نیست`}`;
       case 'invalid_type':
-        return `${prefix}مقدار واردشده نوع درستی ندارد`;
+        // zod reports a missing field as a type error whose message says "received undefined".
+        return /received undefined/i.test(issue.message) ? `${prefix}الزامی است` : `${prefix}مقدار واردشده نوع درستی ندارد`;
       case 'invalid_value':
         return `${prefix}مقدار انتخاب‌شده معتبر نیست`;
       default:

@@ -55,36 +55,37 @@ export interface RichTextEditorProps {
   className?: string;
 }
 
-// Curated high quality social innovation stock photos for quick insertion
+// Brand illustrations served from this site. These used to be hot-linked stock
+// photos from a third-party host that is unreachable for many visitors.
 const SOCIAL_INNOVATION_STOCK_IMAGES = [
   {
     title: 'کارگاه تفکر طراحی و ایده پردازی',
-    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/course-thumb.svg',
     category: 'آموزش و کارگاه',
   },
   {
     title: 'جلسه هم‌افزایی جامعه محلی و نوآوران',
-    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/journey-cover.svg',
     category: 'مشارکت و تعاون',
   },
   {
     title: 'صنایع دستی و توانمندسازی معیشت پایدار',
-    url: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/event-cover.svg',
     category: 'اشتغال و معیشت',
   },
   {
     title: 'کاشت نهال و احیای محیط‌زیست بومی',
-    url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/blog-cover.svg',
     category: 'محیط‌زیست',
   },
   {
     title: 'کلاس درس و آموزش کودکان در مناطق محروم',
-    url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/book-cover.svg',
     category: 'تعلیم و تربیت',
   },
   {
     title: 'برنامه‌ریزی استراتژیک روی بوم مدل کسب‌وکار',
-    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+    url: '/mock/canvas-preview.svg',
     category: 'ابزارها و بوم‌ها',
   },
 ];

@@ -84,6 +84,10 @@ export function logout(): Promise<{ success: boolean }> {
   return post<{ success: boolean }>('/auth/logout');
 }
 
+export function getSession(): Promise<User | null> {
+  return request<{ user: User | null }>('/auth/session', { redirectOnUnauthorized: false }).then((r) => r.user);
+}
+
 export function getMe(): Promise<User> {
   // A signed-out visitor is an expected state here, not a reason to redirect.
   return request<User>('/auth/me', { method: 'GET', redirectOnUnauthorized: false });
@@ -347,7 +351,9 @@ export function registerForEvent(eventId: string): Promise<EventRegistration> {
 }
 
 export function getMyEventRegistrations(): Promise<EventRegistration[]> {
-  return get<EventRegistration[]>('/me/events');
+  // Asked while a page is being drawn, for a visitor who may not be signed in:
+  // a 401 here must not bounce them to the login page.
+  return get<EventRegistration[]>('/me/events', undefined, { redirectOnUnauthorized: false });
 }
 
 // ==========================================

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { SectionSlug, ContentBase, Category } from '../types';
@@ -22,6 +23,7 @@ export const SectionListPage: React.FC<SectionListPageProps> = ({ explicitSectio
   const params = useParams<{ sectionSlug?: string }>();
   const currentSlug = (explicitSection || params.sectionSlug || 'academy') as SectionSlug;
   const sectionMeta = SECTIONS[currentSlug] || SECTIONS.academy;
+  usePageMeta(sectionMeta.nameFa, sectionMeta.descriptionFa);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);

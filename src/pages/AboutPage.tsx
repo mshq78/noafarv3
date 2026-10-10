@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -18,6 +19,7 @@ import { SafeHtml } from '../components/ui/SafeHtml';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export const AboutPage: React.FC = () => {
+  usePageMeta('درباره نوآفر');
   const settings = useSiteSettings();
 
   return (

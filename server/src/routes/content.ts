@@ -8,6 +8,8 @@ import {
   CONTENT_COLUMNS,
   NO_VIEWER_COLUMNS,
   PUBLIC_CONTENT_SQL,
+  foldPersianSql,
+  normalizePersianText,
   isSection,
   listContentRows,
   viewerColumns,
@@ -269,11 +271,11 @@ contentRouter.get(
       if (field) conditions.push(`c.data->'field'->>'slug' = ${pushParam(field)}`);
     }
 
-    const search = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const search = typeof req.query.q === 'string' ? normalizePersianText(req.query.q.trim()) : '';
     if (search) {
       const like = `%${search.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
       conditions.push(
-        `(c.title ILIKE ${pushParam(like)} ESCAPE '\\' OR c.summary ILIKE $${params.length} ESCAPE '\\')`,
+        `(${foldPersianSql('c.title')} ILIKE ${pushParam(like)} ESCAPE '\\' OR ${foldPersianSql('c.summary')} ILIKE $${params.length} ESCAPE '\\')`,
       );
     }
 

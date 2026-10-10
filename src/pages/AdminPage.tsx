@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -83,7 +84,7 @@ import { isOperatorRole } from '../services/auth';
 import { Button, Input, Textarea, Chip, Modal, RichTextEditor, MediaUploadField } from '../components/ui';
 import { ScheduleField } from '../components/admin/ScheduleField';
 import { useToast } from '../components/ui/Toast';
-import { toFaDigits } from '../utils/format';
+import { toFaDigits, foldPersian } from '../utils/format';
 import { formatPersianDate } from '../utils/date';
 import { formatIranDateTime, fromIranDateTime, toIranDateTime, type IranDateTime } from '../utils/jalali';
 import { cn } from '../utils/cn';
@@ -134,6 +135,7 @@ function defaultSchedule(): IranDateTime {
 }
 
 export const AdminPage: React.FC = () => {
+  usePageMeta('پنل مدیریت');
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   // Authorisation is the server's answer, echoed here only to decide what to
   // render: every admin endpoint re-checks the caller's role independently.
@@ -186,6 +188,7 @@ export const AdminPage: React.FC = () => {
   /** A file still on its way up must not be left out of the save that follows. */
   const [busyUploads, setBusyUploads] = useState({ image: false, pdf: false });
   const [contentFilterState, setContentFilterState] = useState<string>('all');
+  const [contentPage, setContentPage] = useState(1);
 
   // Submission action modal
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -729,11 +732,20 @@ export const AdminPage: React.FC = () => {
     if (contentFilterSection !== 'all' && item.sectionSlug !== contentFilterSection) return false;
     if (contentFilterState !== 'all' && publishStateOf(item) !== contentFilterState) return false;
     if (contentSearchQuery.trim()) {
-      const q = contentSearchQuery.toLowerCase();
-      return item.title.toLowerCase().includes(q) || item.summary?.toLowerCase().includes(q);
+      const q = foldPersian(contentSearchQuery.toLowerCase());
+      return foldPersian(item.title.toLowerCase()).includes(q) || foldPersian(item.summary?.toLowerCase() ?? '').includes(q);
     }
     return true;
   });
+
+  // The list can hold hundreds of rows; show it a page at a time.
+  const CONTENT_PAGE_SIZE = 25;
+  const contentPageCount = Math.max(1, Math.ceil(filteredContent.length / CONTENT_PAGE_SIZE));
+  const currentContentPage = Math.min(contentPage, contentPageCount);
+  const pagedContent = filteredContent.slice(
+    (currentContentPage - 1) * CONTENT_PAGE_SIZE,
+    currentContentPage * CONTENT_PAGE_SIZE,
+  );
 
   // Filtered submissions
   const filteredSubmissions = submissions.filter((s) => {
@@ -1229,7 +1241,7 @@ export const AdminPage: React.FC = () => {
                 ].map((s) => (
                   <button
                     key={s.slug}
-                    onClick={() => setContentFilterSection(s.slug)}
+                    onClick={() => { setContentFilterSection(s.slug); setContentPage(1); }}
                     className={cn(
                       'px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer',
                       contentFilterSection === s.slug
@@ -1247,7 +1259,7 @@ export const AdminPage: React.FC = () => {
                   <Input
                     placeholder="جستجو در عناوین..."
                     value={contentSearchQuery}
-                    onChange={(e) => setContentSearchQuery(e.target.value)}
+                    onChange={(e) => { setContentSearchQuery(e.target.value); setContentPage(1); }}
                     className="h-9 text-xs ps-8"
                   />
                   <Search className="w-3.5 h-3.5 text-ink-400 absolute start-2.5 top-3" />
@@ -1266,7 +1278,7 @@ export const AdminPage: React.FC = () => {
               ].map((st) => (
                 <button
                   key={st.slug}
-                  onClick={() => setContentFilterState(st.slug)}
+                  onClick={() => { setContentFilterState(st.slug); setContentPage(1); }}
                   className={cn(
                     'px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer',
                     contentFilterState === st.slug
@@ -1295,7 +1307,7 @@ export const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100">
-                    {filteredContent.map((item) => (
+                    {pagedContent.map((item) => (
                       <tr key={item.id} className="hover:bg-ink-50/50 transition-colors">
                         <td className="py-3 px-4">
                           <div className="font-bold text-ink-900 line-clamp-1">{item.title}</div>
@@ -1355,6 +1367,24 @@ export const AdminPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              {filteredContent.length === 0 && (
+                <p className="py-10 text-center text-sm text-ink-500">محتوایی با این فیلتر پیدا نشد.</p>
+              )}
+              {contentPageCount > 1 && (
+                <div className="flex items-center justify-between gap-3 border-t border-ink-100 px-4 py-3 text-xs">
+                  <span className="text-ink-500">
+                    {toFaDigits(filteredContent.length)} مورد · صفحهٔ {toFaDigits(currentContentPage)} از {toFaDigits(contentPageCount)}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" disabled={currentContentPage <= 1} onClick={() => setContentPage(currentContentPage - 1)}>
+                      قبلی
+                    </Button>
+                    <Button variant="secondary" size="sm" disabled={currentContentPage >= contentPageCount} onClick={() => setContentPage(currentContentPage + 1)}>
+                      بعدی
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

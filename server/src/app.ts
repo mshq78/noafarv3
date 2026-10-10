@@ -9,6 +9,7 @@ import { pool } from './db.js';
 import { ensureReady } from './migrate.js';
 import { attachUser } from './lib/auth.js';
 import { HttpError } from './lib/http.js';
+import { PUBLIC_CONTENT_SQL } from './lib/content.js';
 import { authRouter } from './routes/auth.js';
 import { contentRouter } from './routes/content.js';
 import { submissionsRouter } from './routes/submissions.js';
@@ -323,6 +324,51 @@ app.use('/api', miscRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ message: 'این نشانی در سرویس نوآفر وجود ندارد.', code: 'not_found' });
+});
+
+// ---------------------------------------------------- robots / sitemap -----
+/**
+ * Both used to fall through to the SPA shell, so a crawler asking for them got
+ * index.html with a 200. They are built here from the live catalogue. Sections
+ * that are "coming soon" in the interface are left out so search engines do
+ * not index pages the site itself does not link to.
+ */
+const SITEMAP_SKIP_SECTIONS = new Set(['spark']);
+
+function siteOrigin(req: express.Request): string {
+  return env.publicUrl || `${req.protocol}://${req.get('host') ?? ''}`;
+}
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(
+    ['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /profile', '', `Sitemap: ${siteOrigin(req)}/sitemap.xml`, ''].join('\n'),
+  );
+});
+
+app.get('/sitemap.xml', async (req, res, next) => {
+  try {
+    const origin = siteOrigin(req);
+    const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const rows = await pool.query<{ section: string; slug: string; updated_at: Date }>(
+      `SELECT section, slug, updated_at FROM content c
+        WHERE ${PUBLIC_CONTENT_SQL} ORDER BY updated_at DESC LIMIT 5000`,
+    );
+    const fixed = ['/', '/academy', '/toolbox', '/library', '/journey', '/gathering', '/blog', '/about', '/contact'];
+    const urls = [
+      ...fixed.map((p) => `<url><loc>${esc(origin + p)}</loc></url>`),
+      ...rows.rows
+        .filter((r) => !SITEMAP_SKIP_SECTIONS.has(r.section))
+        .map((r) => {
+          const path = `/${r.section}/${encodeURIComponent(r.slug)}`;
+          return `<url><loc>${esc(origin + path)}</loc><lastmod>${new Date(r.updated_at).toISOString()}</lastmod></url>`;
+        }),
+    ];
+    res
+      .type('application/xml')
+      .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // ------------------------------------------------------- static assets -----

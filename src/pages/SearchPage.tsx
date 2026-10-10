@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { ContentBase, SectionSlug } from '../types';
@@ -10,6 +11,7 @@ import { toFaDigits } from '../utils/format';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 export const SearchPage: React.FC = () => {
+  usePageMeta('جستجو');
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialSection = (searchParams.get('section') || 'all') as SectionSlug | 'all';

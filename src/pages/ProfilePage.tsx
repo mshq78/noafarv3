@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Award,
@@ -56,6 +57,7 @@ function pointsLevel(points: number): string {
 }
 
 export const ProfilePage: React.FC = () => {
+  usePageMeta('حساب کاربری من');
   const { user, isAuthenticated, isLoading: isAuthLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();

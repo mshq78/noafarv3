@@ -24,11 +24,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ contentId }) => 
 
   useEffect(() => {
     let isMounted = true;
-    getComments(contentId).then((res) => {
-      if (isMounted) {
-        setComments(res.items);
-      }
-    });
+    getComments(contentId)
+      .then((res) => {
+        if (isMounted) {
+          setComments(res.items);
+        }
+      })
+      .catch(() => {});
     return () => {
       isMounted = false;
     };

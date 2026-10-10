@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { usePageMeta } from '../hooks/usePageMeta';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import {
   Calendar,
   User,
@@ -56,6 +57,7 @@ export const ContentDetailPage: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
 
   const [content, setContent] = useState<ContentBase | null>(null);
+  usePageMeta(content?.title, content?.summary, content?.heroImage?.url);
   const [related, setRelated] = useState<ContentBase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [myRegistration, setMyRegistration] = useState<EventRegistration | null>(null);
@@ -79,17 +81,12 @@ export const ContentDetailPage: React.FC = () => {
         if (isMounted) {
           setContent(data);
           // Fetch related
-          getRelatedContent(data.sectionSlug, data.slug).then((rel) => {
-            if (isMounted) setRelated(rel);
-          });
+          getRelatedContent(data.sectionSlug, data.slug)
+            .then((rel) => {
+              if (isMounted) setRelated(rel);
+            })
+            .catch(() => {});
 
-          // If this is an event, check if already registered
-          if (data.sectionSlug === 'gathering') {
-            getMyEventRegistrations().then((regs) => {
-              const reg = regs.find((r) => r.eventId === data.id && r.status === 'confirmed');
-              if (isMounted && reg) setMyRegistration(reg);
-            });
-          }
         }
       })
       .catch(() => {
@@ -125,6 +122,28 @@ export const ContentDetailPage: React.FC = () => {
       setIsRegistering(false);
     }
   };
+
+  // Whether the visitor is already registered for this event. Only asked once
+  // we know they are signed in: for a visitor it would be a guaranteed 401.
+  useEffect(() => {
+    if (!isAuthenticated || content?.sectionSlug !== 'gathering') return;
+    let isMounted = true;
+    getMyEventRegistrations()
+      .then((regs) => {
+        const reg = regs.find((r) => r.eventId === content.id && r.status === 'confirmed');
+        if (isMounted && reg) setMyRegistration(reg);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, content?.id, content?.sectionSlug]);
+
+  // A section that is "coming soon" is not linked anywhere; its sample items must
+  // not be reachable by address either, or the site shows what it says it lacks.
+  if (sectionSlug && SECTIONS[sectionSlug as keyof typeof SECTIONS]?.comingSoon) {
+    return <Navigate to={`/${sectionSlug}`} replace />;
+  }
 
   if (notFound) {
     return <NotFoundPage />;

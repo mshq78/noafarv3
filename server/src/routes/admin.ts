@@ -16,7 +16,14 @@ import {
   type SubmissionRow,
   type UserRow,
 } from '../lib/mappers.js';
-import { CONTENT_COLUMNS, NO_VIEWER_COLUMNS, isSection, uniqueSlug } from '../lib/content.js';
+import {
+  CONTENT_COLUMNS,
+  NO_VIEWER_COLUMNS,
+  foldPersianSql,
+  isSection,
+  normalizePersianText,
+  uniqueSlug,
+} from '../lib/content.js';
 import {
   sanitizeMultilineText,
   sanitizePlainText,
@@ -46,13 +53,13 @@ adminRouter.get(
     const section = typeof req.query.section === 'string' ? req.query.section : '';
     if (section && !isSection(section)) throw badRequest('بخش انتخابی معتبر نیست.');
     const search = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    const like = search ? `%${search.replace(/[%_\\]/g, (m) => `\\${m}`)}%` : '';
+    const like = search ? `%${normalizePersianText(search).replace(/[%_\\]/g, (m) => `\\${m}`)}%` : '';
 
     const rows = await queryRows<ContentRow>(
       `SELECT ${CONTENT_COLUMNS}, ${NO_VIEWER_COLUMNS}
          FROM content c
         WHERE ($1::text = '' OR c.section = $1)
-          AND ($2::text = '' OR c.title ILIKE $2 ESCAPE '\\' OR c.summary ILIKE $2 ESCAPE '\\')
+          AND ($2::text = '' OR ${foldPersianSql('c.title')} ILIKE $2 ESCAPE '\\' OR ${foldPersianSql('c.summary')} ILIKE $2 ESCAPE '\\')
         ORDER BY c.updated_at DESC
         LIMIT 500`,
       [section, like],

@@ -26,6 +26,16 @@ export function isSection(value: unknown): value is Section {
  */
 export const PUBLIC_CONTENT_SQL = `c.status = 'published' AND c.published_at <= now()`;
 
+/**
+ * Keyboards and pasted text mix Arabic and Persian letterforms: ي/ى for ی and ك
+ * for ک. They look identical, so a search for "كتاب" must find "کتاب". Both the
+ * query and the searched columns are folded to the Persian forms.
+ */
+export function normalizePersianText(input: string): string {
+  return input.replace(/[يى]/g, 'ی').replace(/ك/g, 'ک');
+}
+export const foldPersianSql = (column: string): string => `translate(${column}, 'يىك', 'ییک')`;
+
 export const CONTENT_COLUMNS = `c.id, c.section, c.slug, c.title, c.summary, c.body,
   c.hero_image, c.gallery, c.attachments, c.category, c.tags, c.author, c.data,
   c.status, c.view_count, c.like_count, c.comment_count, c.published_at`;

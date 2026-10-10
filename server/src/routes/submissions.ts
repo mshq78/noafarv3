@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { queryOne, queryRows } from '../db.js';
 import { requireAuth } from '../lib/auth.js';
-import { asyncRoute, badRequest, forbidden, notFound } from '../lib/http.js';
+import { asyncRoute, badRequest, forbidden, notFound, describeValidationIssues } from '../lib/http.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { mapSubmission, type SubmissionRow } from '../lib/mappers.js';
 import { sanitizePlainText, sanitizeRichText } from '../lib/sanitize.js';
@@ -81,7 +81,7 @@ submissionsRouter.post(
   asyncRoute(async (req, res) => {
     const parsed = ideaSchema.safeParse(req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی کامل نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات ارسالی کامل نیست.');
     }
     const input = parsed.data;
 
@@ -127,7 +127,7 @@ submissionsRouter.post(
   asyncRoute(async (req, res) => {
     const parsed = experienceSchema.safeParse(req.body);
     if (!parsed.success) {
-      throw badRequest(parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی کامل نیست.');
+      throw badRequest(describeValidationIssues(parsed.error.issues) || 'اطلاعات ارسالی کامل نیست.');
     }
     const input = parsed.data;
 
