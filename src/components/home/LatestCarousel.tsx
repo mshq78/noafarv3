@@ -123,14 +123,14 @@ export const LatestCarousel: React.FC = () => {
         ) : (
           <div
             ref={trackRef}
-            className="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 custom-scrollbar items-start"
+            className="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 custom-scrollbar items-stretch"
           >
             {items.map((item) => (
               <div
                 key={item.id}
-                className="w-[78%] sm:w-72 lg:w-80 shrink-0 snap-start"
+                className="w-[78%] sm:w-72 lg:w-80 shrink-0 snap-start [&>*]:h-full [&>*]:!mb-0"
               >
-                <ContentCard item={item} />
+                <ContentCard item={item} emphasis="compact" />
               </div>
             ))}
             {activeSection && (
