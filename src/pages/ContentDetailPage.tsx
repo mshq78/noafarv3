@@ -16,6 +16,7 @@ import {
   ContentBase,
   Course,
   Experience,
+  Tool,
   Event,
   EventRegistration,
 } from '../types';
@@ -255,7 +256,7 @@ export const ContentDetailPage: React.FC = () => {
         )}
 
         {/* 2. TOOLBOX: Canvas Interactive Launch Banner */}
-        {content.sectionSlug === 'toolbox' && (
+        {content.sectionSlug === 'toolbox' && (content as Tool).supportsDigitalCanvas && (
           <div className="bg-gradient-to-r from-pink-50 via-white to-pink-50/40 p-6 rounded-2xl border-2 border-pink-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-start">
               <span className="text-xs font-bold text-pink-700">

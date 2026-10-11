@@ -21,7 +21,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:58:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -44,7 +44,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:57:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -67,7 +67,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:56:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -90,7 +90,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:55:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -113,7 +113,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:54:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -136,7 +136,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:53:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -159,7 +159,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:52:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -182,7 +182,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:51:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -205,7 +205,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:50:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -228,7 +228,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:49:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
@@ -251,7 +251,7 @@ export const JOURNEY_ITEMS = [
       "sectionSlug": "journey"
     },
     "tags": [],
-    "publishedAt": "2026-10-11T08:00:00Z",
+    "publishedAt": "2026-10-11T08:48:00Z",
     "likeCount": 0,
     "commentCount": 0,
     "viewCount": 0,
