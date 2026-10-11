@@ -165,11 +165,57 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | n
   return counts;
 }
 
+/**
+ * Loads only the client-supplied content (toolbox tools and journey stories).
+ * `replaceToolbox` then removes the remaining toolbox rows, i.e. the design-time
+ * samples. New rows go in first so the toolbox is never empty, and nothing is
+ * deleted unless `confirm` is set — without it the call only reports counts.
+ */
+export async function seedClientContent(
+  { replaceToolbox = false, confirm = false } = {},
+): Promise<void> {
+  const log = (message: string, extra?: unknown) =>
+    // eslint-disable-next-line no-console
+    console.info(`[noafar][seed] ${message}`, extra ?? '');
+
+  const stale = await pool.query<{ id: string; slug: string }>(
+    `SELECT id, slug FROM content WHERE section = 'toolbox' AND id NOT LIKE 'tool-nf-%' ORDER BY id`,
+  );
+  log(`ابزارهای قدیمی/نمونه در پایگاه‌داده: ${stale.rowCount ?? 0}`);
+
+  if (!confirm) {
+    log('اجرای آزمایشی: چیزی نوشته یا حذف نشد. برای اجرای واقعی --yes اضافه کنید.');
+    return;
+  }
+
+  const counts = {
+    toolbox: await insertSection('toolbox', TOOLBOX_ITEMS as unknown as SeedItem[]),
+    journey: await insertSection('journey', JOURNEY_ITEMS as unknown as SeedItem[]),
+  };
+  log('محتوای مشتری ثبت شد:', counts);
+
+  if (replaceToolbox) {
+    const removed = await pool.query(
+      `DELETE FROM content WHERE section = 'toolbox' AND id NOT LIKE 'tool-nf-%'`,
+    );
+    log(`ابزارهای نمونهٔ حذف‌شده: ${removed.rowCount ?? 0}`);
+  }
+}
+
 // Allow `node dist-server/seed.js` as a one-off command.
+//   node dist-server/seed.js                          full sample seed
+//   node dist-server/seed.js --client [--replace-toolbox] [--yes]
 const invokedDirectly = process.argv[1]?.includes('seed');
 if (invokedDirectly) {
+  const args = new Set(process.argv.slice(2));
   migrate()
-    .then(() => seed())
+    .then(async () => {
+      if (args.has('--client')) {
+        await seedClientContent({ replaceToolbox: args.has('--replace-toolbox'), confirm: args.has('--yes') });
+      } else {
+        await seed();
+      }
+    })
     .then(() => pool.end())
     .then(() => process.exit(0))
     .catch((error) => {
