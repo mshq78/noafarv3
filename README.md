@@ -10,6 +10,7 @@
 src/            رابط کاربری React (Vite + TypeScript + Tailwind v4)
   services/     لایهٔ ارتباط با API و احراز هویت
   mocks/        محتوای نمونهٔ اولیه — فقط برای seed کردن پایگاه‌داده
+  data/         محتوای واقعی (مثلاً ابزارهای جعبه‌ابزار) — منبع seed
 server/src/     سرویس API
   schema.sql    ساختار پایگاه‌داده (idempotent، در هر بوت اجرا می‌شود)
   routes/       مسیرهای API

@@ -129,6 +129,7 @@ const DATA_FIELD_SANITISERS: Record<string, (value: unknown) => unknown> = {
   format: (v) => sanitizePlainText(v, 40),
   difficulty: (v) => sanitizePlainText(v, 40),
   estimatedMinutes: (v) => clampNumber(v, 0, 10_000),
+  timeLabel: (v) => sanitizePlainText(v, 80),
   printablePdfUrl: (v) => sanitizeUrl(v),
   supportsDigitalCanvas: (v) => Boolean(v),
   // library

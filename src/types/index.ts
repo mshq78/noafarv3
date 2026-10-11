@@ -110,6 +110,8 @@ export interface Tool extends ContentBase {
   format: ToolFormat;
   difficulty: Difficulty;
   estimatedMinutes: number;
+  /** Free-text duration shown instead of `estimatedMinutes` when set (e.g. «۳۰ تا ۶۰ دقیقه»). */
+  timeLabel?: string;
   printablePdfUrl?: string;
   supportsDigitalCanvas: boolean;
   /** Optional line-art preview used on the toolbox card. */

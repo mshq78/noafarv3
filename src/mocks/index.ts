@@ -6,7 +6,6 @@
  * which the admin panel is the only way content changes.
  */
 export { MOCK_COURSES } from './courses';
-export { MOCK_TOOLS } from './tools';
 export { MOCK_BOOKS } from './books';
 export { MOCK_EXPERIENCES } from './experiences';
 export { MOCK_EVENTS } from './events';

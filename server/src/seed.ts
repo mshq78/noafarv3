@@ -6,7 +6,7 @@
 import { pool } from './db.js';
 import { migrate } from './migrate.js';
 import { MOCK_COURSES } from '../../src/mocks/courses.js';
-import { MOCK_TOOLS } from '../../src/mocks/tools.js';
+import { TOOLBOX_ITEMS } from '../../src/data/tools.js';
 import { MOCK_BOOKS } from '../../src/mocks/books.js';
 import { MOCK_EXPERIENCES } from '../../src/mocks/experiences.js';
 import { MOCK_EVENTS } from '../../src/mocks/events.js';
@@ -145,7 +145,7 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | n
 
   const counts = {
     academy: await insertSection('academy', MOCK_COURSES as unknown as SeedItem[]),
-    toolbox: await insertSection('toolbox', MOCK_TOOLS as unknown as SeedItem[]),
+    toolbox: await insertSection('toolbox', TOOLBOX_ITEMS as unknown as SeedItem[]),
     library: await insertSection('library', MOCK_BOOKS as unknown as SeedItem[]),
     journey: await insertSection('journey', MOCK_EXPERIENCES as unknown as SeedItem[]),
     gathering: await insertSection('gathering', MOCK_EVENTS as unknown as SeedItem[]),
