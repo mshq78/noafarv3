@@ -364,7 +364,8 @@ export const ContentDetailPage: React.FC = () => {
         {/* Hero image for Library / Articles / General */}
         {content.sectionSlug !== 'academy' && (() => {
           const cover = content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url;
-          return isRealImage(cover) ? (
+          // A cover that is already part of the story text would just repeat there.
+          return isRealImage(cover) && !content.body?.includes(cover) ? (
             <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
               <CoverImage src={cover} alt={content.title} seed={content.slug} showTitle={false} />
             </div>
