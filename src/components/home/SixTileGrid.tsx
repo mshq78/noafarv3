@@ -4,7 +4,6 @@ import { GraduationCap, ArrowLeft } from 'lucide-react';
 import { SECTION_LIST } from '../../config/sections';
 import { ICON_MAP } from '../../config/sectionIcons';
 import { SectionMeta } from '../../types';
-import { useInViewColor } from '../../hooks/useInViewColor';
 import { cn } from '../../utils/cn';
 import { motion } from 'framer-motion';
 
@@ -23,7 +22,6 @@ const itemVariants = {
 };
 
 const SectionTile: React.FC<TileProps> = ({ section }) => {
-  const { ref, isInView } = useInViewColor<HTMLAnchorElement>();
 
   /**
    * The active state paints the tile in the portal's own brand colour — the
@@ -137,15 +135,13 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
   return (
     <motion.div variants={itemVariants} className="h-full">
       <Link
-        ref={ref}
         to={`/${section.slug}`}
         className={cn(
           'group relative h-full flex flex-col justify-between p-6 sm:p-7 rounded-2xl border transition-all duration-300 overflow-hidden',
           'bg-white border-ink-200 shadow-2xs hover:shadow-lg',
-          // Grey until pointed at, then the portal's own colour arrives.
           'tile-desaturate',
           theme.cardBorder,
-          isInView ? theme.activeBg : theme.hoverBg
+          theme.activeBg
         )}
       >
         {/* Background Section Mark/Watermark */}
@@ -159,7 +155,7 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
             <div
               className={cn(
                 'p-3 rounded-xl transition-colors duration-200',
-                isInView ? theme.activeIconBg : theme.iconBg,
+                theme.activeIconBg,
                 theme.hoverIconBg
               )}
             >
@@ -185,7 +181,7 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
                 // The active tile is painted in a light brand colour, so the
                 // secondary text stays in ink rather than going white.
                 'text-xs font-semibold transition-colors',
-                isInView ? 'text-ink-800' : theme.accentText,
+                'text-ink-800',
                 'group-hover:text-ink-800'
               )}
             >
@@ -197,7 +193,7 @@ const SectionTile: React.FC<TileProps> = ({ section }) => {
           <p
             className={cn(
               'text-xs sm:text-sm leading-relaxed transition-colors',
-              isInView ? 'text-ink-800' : 'text-ink-500',
+              'text-ink-800',
               'group-hover:text-ink-800'
             )}
           >

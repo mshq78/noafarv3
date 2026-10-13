@@ -3,14 +3,11 @@ import { cn } from '../../utils/cn';
 
 type Tone = 'sky' | 'pink' | 'amber';
 
-/**
- * Light brand tints: cards sit desaturated until hovered, so a pale cover
- * stays airy at rest and turns into the brand colour on hover.
- */
-const TONES: Record<Tone, { bg: string; bgEnd: string; line: string; text: string }> = {
-  sky: { bg: '#def4fc', bgEnd: '#bee9f8', line: '#0ea1cf', text: '#0a4c64' },
-  pink: { bg: '#fce4ed', bgEnd: '#f9cadc', line: '#d9256e', text: '#6c0d32' },
-  amber: { bg: '#fef4db', bgEnd: '#fde3b3', line: '#d48a17', text: '#6f3c0b' },
+/** Saturated brand gradients with white text; `line` is the light accent for the shapes. */
+const TONES: Record<Tone, { bg: string; bgEnd: string; line: string }> = {
+  sky: { bg: '#0ea1cf', bgEnd: '#065e7c', line: '#def4fc' },
+  pink: { bg: '#d9256e', bgEnd: '#830c3b', line: '#fce4ed' },
+  amber: { bg: '#d48a17', bgEnd: '#874c07', line: '#fef4db' },
 };
 const TONE_ORDER: Tone[] = ['sky', 'pink', 'amber'];
 
@@ -23,36 +20,52 @@ function hashSeed(seed: string): number {
   return h >>> 0;
 }
 
-/** Simple geometric line work on a 120×160 canvas, clipped by the card. */
+/**
+ * One calm shape per cover on a 120×160 canvas, kept to a corner so the title
+ * stays easy to read. The shapes are soft fills rather than busy line work.
+ */
 function renderPattern(variant: number, line: string): React.ReactNode {
-  const common = { fill: 'none', stroke: line, strokeWidth: 1.2, opacity: 0.4 } as const;
+  const soft = { fill: line, opacity: 0.16 } as const;
+  const ring = { fill: 'none', stroke: line, strokeWidth: 1.5, opacity: 0.35 } as const;
   switch (variant) {
-    case 0: // concentric circles from the lower corner
-      return [18, 36, 54, 72, 90, 108].map((r) => <circle key={r} cx={120} cy={160} r={r} {...common} />);
-    case 1: // diagonal lines
-      return Array.from({ length: 14 }, (_, i) => (
-        <line key={i} x1={-20 + i * 16} y1={160} x2={60 + i * 16} y2={0} {...common} />
-      ));
-    case 2: // grid of diamonds
-      return Array.from({ length: 5 * 7 }, (_, i) => {
-        const x = 12 + (i % 5) * 24;
-        const y = 12 + Math.floor(i / 5) * 24;
-        return <path key={i} d={`M${x} ${y - 7}L${x + 7} ${y}L${x} ${y + 7}L${x - 7} ${y}Z`} {...common} />;
-      });
-    case 3: // overlapping half-circles (scales)
-      return Array.from({ length: 6 * 8 }, (_, i) => {
-        const row = Math.floor(i / 6);
-        const x = (i % 6) * 24 + (row % 2 ? 12 : 0);
-        const y = row * 14 + 14;
-        return <path key={i} d={`M${x - 12} ${y}A12 12 0 0 1 ${x + 12} ${y}`} {...common} />;
-      });
-    case 4: // nested squares
-      return [20, 40, 60, 80, 100].map((s) => (
-        <rect key={s} x={120 - s} y={0} width={s} height={s} {...common} />
-      ));
-    default: // dotted grid
-      return Array.from({ length: 6 * 8 }, (_, i) => (
-        <circle key={i} cx={10 + (i % 6) * 20} cy={10 + Math.floor(i / 6) * 20} r={2} fill={line} opacity={0.4} />
+    case 0: // two large circles
+      return (
+        <>
+          <circle cx={118} cy={150} r={62} {...soft} />
+          <circle cx={118} cy={150} r={34} {...ring} />
+        </>
+      );
+    case 1: // a diagonal band
+      return (
+        <>
+          <path d="M120 0V70L50 160H0Z" {...soft} opacity={0.12} />
+          <line x1={120} y1={48} x2={30} y2={160} {...ring} />
+        </>
+      );
+    case 2: // one big diamond
+      return (
+        <>
+          <path d="M100 8L148 56L100 104L52 56Z" {...soft} />
+          <path d="M100 32L124 56L100 80L76 56Z" {...ring} />
+        </>
+      );
+    case 3: // rising half-circle
+      return (
+        <>
+          <path d="M-10 160A70 70 0 0 1 130 160Z" {...soft} />
+          <path d="M20 160A40 40 0 0 1 100 160" {...ring} />
+        </>
+      );
+    case 4: // stepped corner
+      return (
+        <>
+          <rect x={52} y={0} width={68} height={68} {...soft} />
+          <rect x={80} y={0} width={40} height={40} {...ring} />
+        </>
+      );
+    default: // small dot cluster
+      return Array.from({ length: 12 }, (_, i) => (
+        <circle key={i} cx={70 + (i % 4) * 14} cy={14 + Math.floor(i / 4) * 14} r={2.4} fill={line} opacity={0.5} />
       ));
   }
 }
@@ -79,7 +92,7 @@ export const GeneratedCover: React.FC<GeneratedCoverProps> = ({ title, seed, sho
   return (
     <div
       className={cn('relative w-full h-full overflow-hidden', className)}
-      style={{ background: `linear-gradient(160deg, ${tone.bg}, ${tone.bgEnd})`, containerType: 'inline-size' }}
+      style={{ background: `linear-gradient(155deg, ${tone.bg}, ${tone.bgEnd})`, containerType: 'inline-size' }}
       role="img"
       aria-label={title}
     >
@@ -94,8 +107,8 @@ export const GeneratedCover: React.FC<GeneratedCoverProps> = ({ title, seed, sho
       {showTitle && title && (
         <div className="absolute inset-0 flex items-center px-[8cqw] py-[16cqw]">
           <p
-            className="font-bold leading-snug line-clamp-4 text-start"
-            style={{ fontSize: 'clamp(13px, 7cqw, 24px)', color: tone.text }}
+            className="font-bold leading-snug line-clamp-4 text-start text-white"
+            style={{ fontSize: 'clamp(13px, 7cqw, 24px)', textShadow: '0 1px 4px rgba(0,0,0,.25)' }}
           >
             {title}
           </p>
