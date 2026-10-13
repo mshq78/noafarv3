@@ -4,7 +4,7 @@ import { Clock, BookOpen, User } from 'lucide-react';
 import { Course } from '../../types';
 import { DifficultyDots, ProgressBar, Chip } from '../ui';
 import { formatMinutes, toFaDigits } from '../../utils/format';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 
 interface CourseCardProps {
   course: Course;
@@ -22,12 +22,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'norm
         to={`/academy/${course.slug}`}
         className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-video'} bg-ink-100 overflow-hidden block`}
       >
-        <SmartImage
-          src={course.heroImage?.url || course.posterUrl || '/mock/course-thumb.svg'}
+        <CoverImage
+          src={course.heroImage?.url || course.posterUrl}
           alt={course.title}
-          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-          loading="lazy"
-          fallbackSrc="/mock/course-thumb.svg"
+          seed={course.slug}
+          imgClassName="group-hover:scale-103 transition-transform duration-300"
         />
 
         {/* Hover / Focus Summary Overlay */}

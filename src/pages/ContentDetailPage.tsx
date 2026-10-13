@@ -28,7 +28,7 @@ import { CommentSection } from '../components/content/CommentSection';
 import { RelatedContent } from '../components/content/RelatedContent';
 import { AttachmentsList, collectDownloads } from '../components/content/AttachmentsList';
 import { Chip, Button, Skeleton } from '../components/ui';
-import { SmartImage } from '../components/ui/SmartImage';
+import { CoverImage, isRealImage } from '../components/ui/CoverImage';
 import { NotFoundPage } from './NotFoundPage';
 import { LoginPromptModal } from '../components/modals/LoginPromptModal';
 import { useAuth } from '../hooks/useAuth';
@@ -362,16 +362,14 @@ export const ContentDetailPage: React.FC = () => {
         )}
 
         {/* Hero image for Library / Articles / General */}
-        {content.sectionSlug !== 'academy' && (content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url) && (
-          <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
-            <SmartImage
-              src={content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url}
-              alt={content.title}
-              className="w-full h-full object-cover"
-              fallbackSrc="/mock/course-thumb.svg"
-            />
-          </div>
-        )}
+        {content.sectionSlug !== 'academy' && (() => {
+          const cover = content.heroImage?.url || (content as unknown as { coverImage?: { url?: string } }).coverImage?.url;
+          return isRealImage(cover) ? (
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-ink-100 border border-ink-200">
+              <CoverImage src={cover} alt={content.title} seed={content.slug} showTitle={false} />
+            </div>
+          ) : null;
+        })()}
 
         {/* Detailed Body Narrative (Markdown / Paragraphs) */}
         {content.body && (

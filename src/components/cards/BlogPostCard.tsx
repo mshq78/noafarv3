@@ -4,7 +4,7 @@ import { Clock, Calendar, ArrowLeft } from 'lucide-react';
 import { BlogPost } from '../../types';
 import { formatPersianDate } from '../../utils/date';
 import { formatMinutes } from '../../utils/format';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 
 interface BlogPostCardProps {
   post: BlogPost;
@@ -14,15 +14,12 @@ export const BlogPostCard: React.FC<BlogPostCardProps> = ({ post }) => {
   return (
     <div className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-sky-300 transition-all duration-200">
       <Link to={`/blog/${post.slug}`} className="relative aspect-[16/9] bg-ink-100 overflow-hidden block">
-        {post.heroImage?.url && (
-          <SmartImage
-            src={post.heroImage.url}
-            alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-            loading="lazy"
-            fallbackSrc="/mock/blog-cover.svg"
-          />
-        )}
+        <CoverImage
+          src={post.heroImage?.url}
+          alt={post.title}
+          seed={post.slug}
+          imgClassName="group-hover:scale-103 transition-transform duration-300"
+        />
         <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-sans">
           <Clock className="w-3.5 h-3.5" />
           <span>{formatMinutes(post.readingMinutes)} مطالعه</span>

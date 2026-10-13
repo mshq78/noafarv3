@@ -5,7 +5,7 @@ import { Event } from '../../types';
 import { Chip } from '../ui';
 import { formatPersianDate } from '../../utils/date';
 import { cn } from '../../utils/cn';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 
 interface EventCardProps {
   event: Event;
@@ -31,15 +31,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal'
         to={`/gathering/${event.slug}`}
         className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[16/9]'} bg-ink-100 overflow-hidden block`}
       >
-        <SmartImage
-          src={event.heroImage?.url || '/mock/event-cover.svg'}
+        <CoverImage
+          src={event.heroImage?.url}
           alt={event.title}
-          className={cn(
-            'w-full h-full object-cover transition-transform duration-300',
+          seed={event.slug}
+          imgClassName={cn(
+            'transition-transform duration-300',
             isPast ? 'grayscale-30 group-hover:grayscale-0' : 'group-hover:scale-103'
           )}
-          loading="lazy"
-          fallbackSrc="/mock/event-cover.svg"
         />
 
         {/* Hover / Focus Summary Overlay */}
