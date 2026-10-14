@@ -26,7 +26,7 @@ export * from './BlogPostCard';
 
 export interface ContentCardProps {
   item: ContentBase;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({ item, emphasis = 'normal' }) => {

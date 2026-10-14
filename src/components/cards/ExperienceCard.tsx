@@ -8,7 +8,7 @@ import { toFaDigits } from '../../utils/format';
 
 interface ExperienceCardProps {
   experience: Experience;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const ExperienceCard: React.FC<ExperienceCardProps> = ({ experience, emphasis = 'normal' }) => {

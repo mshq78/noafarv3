@@ -8,7 +8,7 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface ToolCardProps {
   tool: Tool;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' }) => {

@@ -9,7 +9,7 @@ import { CoverImage } from '../ui/CoverImage';
 
 interface EventCardProps {
   event: Event;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal' }) => {
