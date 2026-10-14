@@ -8,7 +8,7 @@ import { CoverImage } from '../ui/CoverImage';
 
 interface CourseCardProps {
   course: Course;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, emphasis = 'normal' }) => {
