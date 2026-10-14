@@ -1,0 +1,7 @@
+# DOMAIN comes from deploy/.env.
+#   noafar.ir, www.noafar.ir  -> HTTPS with an automatic certificate
+#   :80                        -> plain HTTP on the server's IP (first test only)
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app:4000
+}
