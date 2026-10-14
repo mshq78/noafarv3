@@ -6,7 +6,9 @@
 import { pool } from './db.js';
 import { migrate } from './migrate.js';
 import { MOCK_COURSES } from '../../src/mocks/courses.js';
-import { MOCK_TOOLS } from '../../src/mocks/tools.js';
+import { TOOLBOX_ITEMS } from '../../src/data/tools.js';
+import { JOURNEY_ITEMS } from '../../src/data/journey.js';
+import { LIBRARY_ITEMS } from '../../src/data/library.js';
 import { MOCK_BOOKS } from '../../src/mocks/books.js';
 import { MOCK_EXPERIENCES } from '../../src/mocks/experiences.js';
 import { MOCK_EVENTS } from '../../src/mocks/events.js';
@@ -145,9 +147,9 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | n
 
   const counts = {
     academy: await insertSection('academy', MOCK_COURSES as unknown as SeedItem[]),
-    toolbox: await insertSection('toolbox', MOCK_TOOLS as unknown as SeedItem[]),
-    library: await insertSection('library', MOCK_BOOKS as unknown as SeedItem[]),
-    journey: await insertSection('journey', MOCK_EXPERIENCES as unknown as SeedItem[]),
+    toolbox: await insertSection('toolbox', TOOLBOX_ITEMS as unknown as SeedItem[]),
+    library: await insertSection('library', [...LIBRARY_ITEMS, ...MOCK_BOOKS] as unknown as SeedItem[]),
+    journey: await insertSection('journey', [...JOURNEY_ITEMS, ...MOCK_EXPERIENCES] as unknown as SeedItem[]),
     gathering: await insertSection('gathering', MOCK_EVENTS as unknown as SeedItem[]),
     spark: await insertSection('spark', MOCK_IDEAS as unknown as SeedItem[]),
     blog: await insertSection('blog', MOCK_BLOG_POSTS as unknown as SeedItem[]),
@@ -164,11 +166,58 @@ export async function seed({ onlyIfEmpty = false } = {}): Promise<SeedCounts | n
   return counts;
 }
 
+/**
+ * Loads only the client-supplied content (toolbox tools, journey stories and library booklets).
+ * `replaceToolbox` then removes the remaining toolbox rows, i.e. the design-time
+ * samples. New rows go in first so the toolbox is never empty, and nothing is
+ * deleted unless `confirm` is set — without it the call only reports counts.
+ */
+export async function seedClientContent(
+  { replaceToolbox = false, confirm = false } = {},
+): Promise<void> {
+  const log = (message: string, extra?: unknown) =>
+    // eslint-disable-next-line no-console
+    console.info(`[noafar][seed] ${message}`, extra ?? '');
+
+  const stale = await pool.query<{ id: string; slug: string }>(
+    `SELECT id, slug FROM content WHERE section = 'toolbox' AND id NOT LIKE 'tool-nf-%' ORDER BY id`,
+  );
+  log(`ابزارهای قدیمی/نمونه در پایگاه‌داده: ${stale.rowCount ?? 0}`);
+
+  if (!confirm) {
+    log('اجرای آزمایشی: چیزی نوشته یا حذف نشد. برای اجرای واقعی --yes اضافه کنید.');
+    return;
+  }
+
+  const counts = {
+    toolbox: await insertSection('toolbox', TOOLBOX_ITEMS as unknown as SeedItem[]),
+    journey: await insertSection('journey', JOURNEY_ITEMS as unknown as SeedItem[]),
+    library: await insertSection('library', LIBRARY_ITEMS as unknown as SeedItem[]),
+  };
+  log('محتوای مشتری ثبت شد:', counts);
+
+  if (replaceToolbox) {
+    const removed = await pool.query(
+      `DELETE FROM content WHERE section = 'toolbox' AND id NOT LIKE 'tool-nf-%'`,
+    );
+    log(`ابزارهای نمونهٔ حذف‌شده: ${removed.rowCount ?? 0}`);
+  }
+}
+
 // Allow `node dist-server/seed.js` as a one-off command.
+//   node dist-server/seed.js                          full sample seed
+//   node dist-server/seed.js --client [--replace-toolbox] [--yes]
 const invokedDirectly = process.argv[1]?.includes('seed');
 if (invokedDirectly) {
+  const args = new Set(process.argv.slice(2));
   migrate()
-    .then(() => seed())
+    .then(async () => {
+      if (args.has('--client')) {
+        await seedClientContent({ replaceToolbox: args.has('--replace-toolbox'), confirm: args.has('--yes') });
+      } else {
+        await seed();
+      }
+    })
     .then(() => pool.end())
     .then(() => process.exit(0))
     .catch((error) => {

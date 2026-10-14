@@ -4,7 +4,7 @@ import { Book as BookIcon, FileText, Headphones, Video, User } from 'lucide-reac
 import { Book, LibraryKind } from '../../types';
 import { Chip } from '../ui';
 import { toFaDigits } from '../../utils/format';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 
 interface BookCardProps {
   book: Book;
@@ -33,12 +33,11 @@ export const BookCard: React.FC<BookCardProps> = ({ book, emphasis = 'normal' })
         to={`/library/${book.slug}`}
         className={`relative ${isCompact ? 'aspect-video' : isTall ? 'aspect-[4/5]' : 'aspect-[3/4]'} bg-ink-100 overflow-hidden block flex items-center justify-center`}
       >
-        <SmartImage
-          src={book.coverImage?.url || book.heroImage?.url || '/mock/book-cover.svg'}
+        <CoverImage
+          src={book.coverImage?.url || book.heroImage?.url}
           alt={book.title}
-          className={`w-full h-full ${isCompact ? 'object-contain p-3' : 'object-cover'} group-hover:scale-103 transition-transform duration-300`}
-          loading="lazy"
-          fallbackSrc="/mock/book-cover.svg"
+          seed={book.slug}
+          imgClassName={`${isCompact ? 'object-contain p-3' : ''} group-hover:scale-103 transition-transform duration-300`}
         />
 
         {/* Hover / Focus Summary Overlay */}

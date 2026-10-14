@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Users, TrendingUp, Calendar } from 'lucide-react';
 import { Experience } from '../../types';
 import { Chip } from '../ui';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 import { toFaDigits } from '../../utils/format';
 
 interface ExperienceCardProps {
@@ -21,12 +21,11 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({ experience, emph
         to={`/journey/${experience.slug}`}
         className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-video'} bg-ink-100 overflow-hidden block`}
       >
-        <SmartImage
-          src={experience.heroImage?.url || '/mock/journey-cover.svg'}
+        <CoverImage
+          src={experience.heroImage?.url}
           alt={experience.title}
-          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-          loading="lazy"
-          fallbackSrc="/mock/journey-cover.svg"
+          seed={experience.slug}
+          imgClassName="group-hover:scale-103 transition-transform duration-300"
         />
 
         {/* Hover / Focus Summary Overlay */}

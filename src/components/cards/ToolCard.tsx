@@ -67,7 +67,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
         <div className="flex items-center justify-between text-xs text-ink-500 font-sans relative z-10">
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            <span>زمان تقریبی: {formatMinutes(tool.estimatedMinutes)}</span>
+            <span>زمان تقریبی: {tool.timeLabel || formatMinutes(tool.estimatedMinutes)}</span>
           </span>
         </div>
       </Link>
