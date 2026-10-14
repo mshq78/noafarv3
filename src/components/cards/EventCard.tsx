@@ -9,7 +9,7 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface EventCardProps {
   event: Event;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, emphasis = 'normal' }) => {

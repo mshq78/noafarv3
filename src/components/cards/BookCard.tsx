@@ -8,11 +8,13 @@ import { SmartImage } from '../ui/SmartImage';
 
 interface BookCardProps {
   book: Book;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const BookCard: React.FC<BookCardProps> = ({ book, emphasis = 'normal' }) => {
   const isTall = emphasis === 'tall';
+  // Carousels need a cover that matches the other cards' landscape media.
+  const isCompact = emphasis === 'compact';
   const kindConfigs: Record<LibraryKind, { label: string; icon: React.ReactNode; color: 'sky' | 'pink' | 'amber' | 'ink' }> = {
     book: { label: 'کتاب', icon: <BookIcon className="w-3.5 h-3.5" />, color: 'sky' },
     booklet: { label: 'کتابچه کاربردی', icon: <BookIcon className="w-3.5 h-3.5" />, color: 'sky' },
@@ -29,12 +31,12 @@ export const BookCard: React.FC<BookCardProps> = ({ book, emphasis = 'normal' })
       {/* Cover */}
       <Link
         to={`/library/${book.slug}`}
-        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[3/4]'} bg-ink-100 overflow-hidden block flex items-center justify-center`}
+        className={`relative ${isCompact ? 'aspect-video' : isTall ? 'aspect-[4/5]' : 'aspect-[3/4]'} bg-ink-100 overflow-hidden block flex items-center justify-center`}
       >
         <SmartImage
           src={book.coverImage?.url || book.heroImage?.url || '/mock/book-cover.svg'}
           alt={book.title}
-          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+          className={`w-full h-full ${isCompact ? 'object-contain p-3' : 'object-cover'} group-hover:scale-103 transition-transform duration-300`}
           loading="lazy"
           fallbackSrc="/mock/book-cover.svg"
         />

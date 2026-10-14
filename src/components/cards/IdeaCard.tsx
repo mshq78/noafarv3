@@ -7,7 +7,7 @@ import { toFaDigits } from '../../utils/format';
 
 interface IdeaCardProps {
   idea: Idea;
-  emphasis?: 'normal' | 'tall';
+  emphasis?: 'normal' | 'tall' | 'compact';
 }
 
 export const IdeaCard: React.FC<IdeaCardProps> = ({ idea, emphasis = 'normal' }) => {
