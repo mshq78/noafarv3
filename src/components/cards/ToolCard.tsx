@@ -4,7 +4,7 @@ import { Clock, Layout, FileText, BookOpen, ArrowLeft } from 'lucide-react';
 import { Tool, ToolFormat } from '../../types';
 import { DifficultyDots, Chip } from '../ui';
 import { formatMinutes } from '../../utils/format';
-import { SmartImage } from '../ui/SmartImage';
+import { CoverImage } from '../ui/CoverImage';
 
 interface ToolCardProps {
   tool: Tool;
@@ -27,14 +27,21 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
 
   return (
     <div className="group tile-desaturate break-inside-avoid mb-5 flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden shadow-xs hover:shadow-md hover:border-pink-300 transition-all duration-200">
-      {/* Cover / Visual Banner */}
+      {/* Cover & Badges */}
       <Link
         to={`/toolbox/${tool.slug}`}
-        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-[16/9]'} bg-gradient-to-br from-ink-50 to-pink-50/40 p-4 flex flex-col justify-between overflow-hidden block border-b border-ink-100`}
+        className={`relative ${isTall ? 'aspect-[4/5]' : 'aspect-video'} bg-ink-100 overflow-hidden block`}
       >
+        <CoverImage
+          src={tool.heroImage?.url}
+          alt={tool.title}
+          seed={tool.slug}
+          imgClassName="group-hover:scale-103 transition-transform duration-300"
+        />
+
         {/* Hover / Focus Summary Overlay */}
         {tool.summary && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent pt-10 px-4 pb-4 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
             <span className="text-[11px] font-bold text-pink-300 mb-1">معرفی و کاربرد ابزار:</span>
             <p className="text-xs leading-relaxed line-clamp-3 text-ink-100">
               {tool.summary}
@@ -42,7 +49,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full relative z-10">
+        <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between gap-2 z-20">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur-xs text-ink-800 shadow-2xs">
             {formatConfig.icon}
             <span>{formatConfig.label}</span>
@@ -53,22 +60,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, emphasis = 'normal' })
             </Chip>
           )}
         </div>
-
-        {/* Preview image */}
-        <div className="flex items-center justify-center py-2 relative z-10">
-          <SmartImage
-            src={tool.previewSvgUrl || '/mock/canvas-preview.svg'}
-            alt={tool.title}
-            className={`${isTall ? 'h-28' : 'h-20'} w-auto object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200`}
-            fallbackSrc="/mock/canvas-preview.svg"
-          />
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-ink-500 font-sans relative z-10">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span>زمان تقریبی: {tool.timeLabel || formatMinutes(tool.estimatedMinutes)}</span>
-          </span>
+        <div className="absolute bottom-2.5 end-2.5 bg-ink-950/75 backdrop-blur-xs text-white text-xs px-2 py-0.5 rounded-md flex items-center gap-1 font-sans z-20 transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0">
+          <Clock className="w-3.5 h-3.5" />
+          <span>{tool.timeLabel || formatMinutes(tool.estimatedMinutes)}</span>
         </div>
       </Link>
 
